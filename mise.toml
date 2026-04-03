@@ -14,14 +14,14 @@
 # Bootstrap & host management
 # ---------------------------------------------------------------------------
 
-[tasks."nix:init"]
+[tasks.init]
 description = "Full init for a new machine: install Nix (+ Homebrew on Mac), then apply config"
 usage = '''
 arg "<hostname>" {
   help "Hostname to assign to this machine"
   long_help """
   The hostname used as the nix config identifier.
-  Delegates to nix:add-host to create the host directory, then installs
+  Delegates to add-host to create the host directory, then installs
   prerequisites (Nix, Homebrew) and builds/activates the configuration.
   """
 }
@@ -35,9 +35,9 @@ HOSTNAME="${usage_hostname:?}"
 OS="$(uname -s)"
 
 # ------------------------------------------------------------------ #
-# Create host directory (delegates to nix:add-host)
+# Create host directory (delegates to add-host)
 # ------------------------------------------------------------------ #
-mise run nix:add-host "$HOSTNAME"
+mise run add-host "$HOSTNAME"
 
 # Stage everything before the nix build
 git checkout -b "host/$HOSTNAME" 2>/dev/null || true
@@ -92,7 +92,7 @@ echo ""
 echo "Done! Open a new shell to pick up all changes."
 """
 
-[tasks."nix:switch"]
+[tasks.switch]
 description = "Apply the nix config for the current host (auto-detects Darwin or NixOS)"
 run = """
 #!/usr/bin/env bash
@@ -105,7 +105,7 @@ else
 fi
 """
 
-[tasks."nix:debug"]
+[tasks.debug]
 description = "Apply the nix config with verbose output for debugging"
 run = """
 #!/usr/bin/env bash
@@ -118,7 +118,7 @@ else
 fi
 """
 
-[tasks."nix:add-host"]
+[tasks.add-host]
 description = "Register a new host by creating its hosts/ directory (no flake.nix editing needed)"
 usage = '''
 arg "<hostname>" {
@@ -211,39 +211,39 @@ fi
 # Nix maintenance tasks
 # ---------------------------------------------------------------------------
 
-[tasks."nix:up"]
+[tasks.up]
 description = "Update all flake inputs"
 run = "nix flake update"
 
-[tasks."nix:upp"]
+[tasks.upp]
 description = "Update a single flake input"
 usage = 'arg "<input>" help="Flake input to update (e.g. nixpkgs, home-manager, darwin)"'
 run = "nix flake update ${usage_input:?}"
 
-[tasks."nix:history"]
+[tasks.history]
 description = "List all system profile generations"
 run = "nix profile history --profile /nix/var/nix/profiles/system"
 
-[tasks."nix:repl"]
+[tasks.repl]
 description = "Open a nix repl with nixpkgs"
 run = "nix repl --expr 'import (builtins.getFlake \"nixpkgs\") {}'"
 
-[tasks."nix:clean"]
+[tasks.clean]
 description = "Remove all profile generations older than 7 days"
 run = "sudo nix profile wipe-history --profile /nix/var/nix/profiles/system --older-than 7d"
 
-[tasks."nix:gc"]
+[tasks.gc]
 description = "Garbage-collect all unused nix store entries (system + user)"
 run = [
   "sudo nix-collect-garbage --delete-older-than 7d",
   "nix-collect-garbage --delete-older-than 7d",
 ]
 
-[tasks."nix:fmt"]
+[tasks.fmt]
 description = "Format all .nix files in this repo"
 run = "nix fmt"
 
-[tasks."nix:iterm-export"]
+[tasks.iterm-export]
 description = "Re-export iTerm2 preferences plist into the repo"
 run = """
 #!/usr/bin/env bash
@@ -265,11 +265,11 @@ echo "Review with: git diff --stat"
 echo "Then commit: git add -A && git commit -m 'chore: update iTerm2 preferences'"
 """
 
-[tasks."nix:gcroot"]
+[tasks.gcroot]
 description = "Show auto GC roots in the nix store"
 run = "ls -al /nix/var/nix/gcroots/auto/"
 
-[tasks."nix:uninstall"]
+[tasks.uninstall]
 description = "Completely uninstall Nix from this machine"
 confirm = "This will completely remove Nix, the /nix store, and all managed packages. Continue?"
 run = """

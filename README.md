@@ -50,7 +50,7 @@ Or if you've already cloned the repo:
 ```
 .
 ├── flake.nix                  # Entry point — flake-parts + easy-hosts
-├── mise.toml                  # Task runner (nix:init, nix:switch, etc.)
+├── mise.toml                  # Task runner (init, switch, etc.)
 ├── bootstrap.sh               # One-liner bootstrap (curl | bash friendly)
 │
 ├── hosts/                     # Auto-discovered by easy-hosts
@@ -64,7 +64,7 @@ Or if you've already cloned the repo:
 │       └── <hostname>/
 │           └── default.nix
 │
-├── templates/                 # Host templates (copied by nix:add-host)
+├── templates/                 # Host templates (copied by add-host)
 │   ├── darwin/
 │   │   └── default.nix
 │   └── nixos/
@@ -100,23 +100,23 @@ Or if you've already cloned the repo:
 mise tasks
 
 # Apply config on the current machine (auto-detects hostname + platform)
-mise run nix:switch
+mise run switch
 
 # Debug a failing build
-mise run nix:debug
+mise run debug
 
 # Update all flake inputs
-mise run nix:up
+mise run up
 
 # Update a single input
-mise run nix:upp nixpkgs
+mise run upp nixpkgs
 
 # Garbage-collect old generations
-mise run nix:gc
-mise run nix:clean
+mise run gc
+mise run clean
 
 # Format all .nix files
-mise run nix:fmt
+mise run fmt
 ```
 
 ---
@@ -128,7 +128,7 @@ Adding a host requires **no flake.nix editing** — easy-hosts auto-discovers ho
 ### Quick way (from any machine with mise)
 
 ```bash
-mise run nix:add-host <hostname> [system]
+mise run add-host <hostname> [system]
 ```
 
 This creates `hosts/<arch>-<class>/<hostname>/` from the appropriate template. The `system` argument is optional and defaults to the current machine's platform.
@@ -153,8 +153,8 @@ This creates `hosts/<arch>-<class>/<hostname>/` from the appropriate template. T
 
 ## Notes
 
-- **`flake.lock` is committed** — this pins all inputs for reproducible builds. Run `mise run nix:up` to update.
-- **Homebrew** is macOS-only. The `nix:init` task installs it automatically on a fresh machine.
+- **`flake.lock` is committed** — this pins all inputs for reproducible builds. Run `mise run up` to update.
+- **Homebrew** is macOS-only. The `init` task installs it automatically on a fresh machine.
 - **Linux packages** are managed entirely through NixOS + home-manager (no Homebrew).
 - Cross-platform CLI tools live in `home/common/core.nix` — available on both platforms.
 - macOS-specific shell aliases and PATH entries in `home/common/shell.nix` are guarded with `pkgs.stdenv.isDarwin`.
