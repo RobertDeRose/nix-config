@@ -1,14 +1,16 @@
 # nix-config
 
-Rob's reproducible system configuration using [Nix flakes](https://nixos.wiki/wiki/Flakes),
+My reproducible system configuration using [Nix flakes](https://nixos.wiki/wiki/Flakes),
 [nix-darwin](https://github.com/LnL7/nix-darwin), [NixOS](https://nixos.org/), and
 [home-manager](https://github.com/nix-community/home-manager).
 
-Built on [flake-parts](https://flake.parts) with [easy-hosts](https://github.com/tgirlcloud/easy-hosts) for auto-discovered host management.
+Built on [flake-parts](https://flake.parts) with [easy-hosts](https://github.com/tgirlcloud/easy-hosts) for
+auto-discovered host management.
 
 Works on **macOS (Apple Silicon & Intel)** and **NixOS Linux**.
 
-Tasks are managed with [mise](https://mise.jdx.dev). The bootstrap script installs mise, then hands off to it for everything else.
+Tasks are managed with [mise](https://mise.jdx.dev). The bootstrap script installs mise, then hands off to it for
+everything else.
 
 ---
 
@@ -131,7 +133,8 @@ Adding a host requires **no flake.nix editing** — easy-hosts auto-discovers ho
 mise run add-host <hostname> [system]
 ```
 
-This creates `hosts/<arch>-<class>/<hostname>/` from the appropriate template. The `system` argument is optional and defaults to the current machine's platform.
+This creates `hosts/<arch>-<class>/<hostname>/` from the appropriate template. The `system` argument is optional and
+defaults to the current machine's platform.
 
 ### Manual way
 

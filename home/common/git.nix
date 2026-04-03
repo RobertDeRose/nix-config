@@ -2,6 +2,7 @@
 # Cross-platform git configuration.
 {
   lib,
+  pkgs,
   username,
   useremail,
   fullname,
@@ -13,6 +14,11 @@
   home.activation.removeExistingGitconfig = lib.hm.dag.entryBefore ["checkLinkTargets"] ''
     [ -e ~/.gitconfig ] && mv -f ~/.gitconfig ~/.gitconfig.before_nix || true
   '';
+
+  # Allowed signers file for SSH commit signature verification.
+  # Maps your email to your public key so `git log --show-signature` works.
+  home.file.".config/git/allowed_signers".text =
+    "${useremail} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA";
 
   programs.difftastic.git.enable = true;
 
@@ -26,7 +32,7 @@
         whitespace   = "trailing-space,space-before-tab";
         excludesfile = "~/.config/git/global_gitignore";
       };
-      commit.gpgsign             = false;
+      commit.gpgsign             = pkgs.stdenv.isDarwin;
       credential.helper          = "cache --timeout=3600";
       grep.lineNumber            = true;
       gpg.ssh.allowedSignersFile = "~/.config/git/allowed_signers";
@@ -54,8 +60,8 @@
       }
     ];
     signing = {
-      format = "ssh";
-      # signingkey = "~/.ssh/id_ed25519.pub";
+      format     = "ssh";
+      signingkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA";
     };
   };
 
