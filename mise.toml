@@ -60,9 +60,11 @@ if [ ! -e /nix/receipt.json ]; then
   echo "    Installing Nix via nix-installer..."
   # Planner must be explicit when not running interactively
   INSTALL_ARGS=("--enable-flakes")
-  [ "$OS" = "Darwin" ] && INSTALL_ARGS+=("--ssl-cert-file" "/etc/ssl/cert.pem")
+  if [ "$OS" = "Darwin" ]; then
+    INSTALL_ARGS+=("--ssl-cert-file" "/etc/ssl/cert.pem")
+  fi
 
-  curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install  "${INSTALL_ARGS[@]}"
+  curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install -- "${INSTALL_ARGS[@]}"
 else
   echo "    Nix already installed, skipping."
 fi
