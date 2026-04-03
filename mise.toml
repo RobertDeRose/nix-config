@@ -66,6 +66,20 @@ fi
 source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 
 # ------------------------------------------------------------------ #
+# Ensure the Nix daemon can find SSL certificates (fresh installs)
+# https://github.com/NixOS/nix/issues/2899
+# ------------------------------------------------------------------ #
+if [ "$OS" = "Darwin" ]; then
+  CERT_FILE="/nix/var/nix/profiles/default/etc/ssl/certs/ca-bundle.crt"
+  if [ -e "$CERT_FILE" ]; then
+    echo "==> Setting NIX_SSL_CERT_FILE on Nix daemon..."
+    sudo launchctl setenv NIX_SSL_CERT_FILE "$CERT_FILE"
+    sudo launchctl kickstart -k system/org.nixos.nix-daemon
+    sleep 2
+  fi
+fi
+
+# ------------------------------------------------------------------ #
 # Build and activate
 # ------------------------------------------------------------------ #
 if [ "$OS" = "Darwin" ]; then
