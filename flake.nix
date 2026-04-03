@@ -84,6 +84,7 @@
               ./modules/common/nix-core.nix
               ./modules/darwin/system.nix
               ./modules/darwin/apps.nix
+              ./modules/darwin/iterm2.nix
 
               inputs.home-manager.darwinModules.home-manager
               {

@@ -51,6 +51,7 @@
       "balenaetcher"
       "imageoptim"
       "insomnia"   # REST client
+      "ghostty"
       "iterm2"
       "macos-fuse-t/cask/fuse-t"
       "macos-fuse-t/cask/fuse-t-sshfs"
