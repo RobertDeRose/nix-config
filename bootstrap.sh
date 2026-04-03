@@ -86,4 +86,4 @@ else
 fi
 
 echo "==> Handing off to mise..."
-mise run "nix:init" "$HOSTNAME"
+mise run init "$HOSTNAME"
