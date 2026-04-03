@@ -56,17 +56,17 @@ fi
 # Install Nix if missing
 # ------------------------------------------------------------------ #
 echo "==> Checking for Nix..."
-if [ ! -e /nix/receipt.json ]; then
+if command -v nix &>/dev/null; then
+  echo "    Nix already installed, skipping."
+else
   echo "    Installing Nix via nix-installer..."
   # Planner must be explicit when not running interactively
-  INSTALL_ARGS=("--enable-flakes" "--no-confirm")
+  INSTALL_ARGS=("--no-confirm" "--enable-flakes")
   if [ "$OS" = "Darwin" ]; then
-    INSTALL_ARGS+=("--ssl-cert-file" "/etc/ssl/cert.pem")
-  fi
+  INSTALL_ARGS+=("--ssl-cert-file" "/etc/ssl/cert.pem")
+fi
 
-  curl -sSfL https://artifacts.nixos.org/nix-installer | sudo sh -s -- install -- "${INSTALL_ARGS[@]}"
-else
-  echo "    Nix already installed, skipping."
+  curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install -- "${INSTALL_ARGS[@]}"
 fi
 
 source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
