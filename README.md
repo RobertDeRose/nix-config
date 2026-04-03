@@ -14,33 +14,34 @@ Tasks are managed with [mise](https://mise.jdx.dev). The bootstrap script instal
 
 ## Bootstrapping a New Machine
 
-### macOS
+Run this on a fresh machine — it handles everything (Xcode CLT, git clone, mise, Nix, Homebrew, config build):
 
 ```bash
-git clone https://github.com/RobertDeRose/nix-config
-cd nix-config
+curl -sSfL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh | bash -s -- <hostname>
+```
+
+Or if you've already cloned the repo:
+
+```bash
 ./bootstrap.sh <hostname>
 ```
 
-`bootstrap.sh` installs mise, then runs `mise run nix:init <hostname>` which:
-1. Creates `hosts/aarch64-darwin/<hostname>/` from the darwin template
-2. Installs Homebrew (if missing)
-3. Installs Nix (if missing)
-4. Builds and activates the Darwin configuration
+### What it does
 
-### NixOS / Linux
+**macOS:**
+1. Installs Xcode Command Line Tools (if missing)
+2. Clones this repo (if not already inside it)
+3. Creates `hosts/aarch64-darwin/<hostname>/` from the darwin template
+4. Installs Homebrew (if missing)
+5. Installs Nix (if missing)
+6. Builds and activates the Darwin configuration
 
-```bash
-git clone https://github.com/RobertDeRose/nix-config
-cd nix-config
-./bootstrap.sh <hostname>
-```
-
-`bootstrap.sh` installs mise, then runs `mise run nix:init <hostname>` which:
-1. Creates `hosts/x86_64-nixos/<hostname>/` from the nixos template
-2. Auto-copies or generates `hardware-configuration.nix` into the host directory
-3. Installs Nix (if missing)
-4. Builds and activates the NixOS configuration
+**NixOS / Linux:**
+1. Clones this repo (if not already inside it)
+2. Creates `hosts/x86_64-nixos/<hostname>/` from the nixos template
+3. Auto-copies or generates `hardware-configuration.nix` into the host directory
+4. Installs Nix (if missing)
+5. Builds and activates the NixOS configuration
 
 ---
 
@@ -50,7 +51,7 @@ cd nix-config
 .
 ├── flake.nix                  # Entry point — flake-parts + easy-hosts
 ├── mise.toml                  # Task runner (nix:init, nix:switch, etc.)
-├── bootstrap.sh               # Installs mise → runs nix:init
+├── bootstrap.sh               # One-liner bootstrap (curl | bash friendly)
 │
 ├── hosts/                     # Auto-discovered by easy-hosts
 │   ├── aarch64-darwin/        # macOS Apple Silicon hosts
