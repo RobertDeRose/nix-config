@@ -178,6 +178,19 @@ else
   cp -r "templates/$TEMPLATE"/* "$HOST_DIR"/
 fi
 
+# On NixOS, auto-copy hardware-configuration.nix if running on the target machine
+if [ "$TEMPLATE" = "nixos" ] && [ ! -e "$HOST_DIR/hardware-configuration.nix" ]; then
+  if [ -e /etc/nixos/hardware-configuration.nix ]; then
+    echo "==> Copying /etc/nixos/hardware-configuration.nix into $HOST_DIR..."
+    cp /etc/nixos/hardware-configuration.nix "$HOST_DIR/"
+  else
+    echo "==> Generating hardware configuration..."
+    sudo nixos-generate-config --dir "$HOST_DIR"
+    # nixos-generate-config also creates configuration.nix which we don't need
+    rm -f "$HOST_DIR/configuration.nix"
+  fi
+fi
+
 git add -A
 git commit -m "chore: add host $HOSTNAME ($SYSTEM)" 2>/dev/null || true
 
@@ -189,10 +202,8 @@ if [ "$TEMPLATE" = "darwin" ]; then
   echo "   ./bootstrap.sh $HOSTNAME"
 else
   echo "   Next steps on the target machine:"
-  echo "   1. sudo nixos-generate-config"
-  echo "   2. cp /etc/nixos/hardware-configuration.nix $HOST_DIR/"
-  echo "   3. git add -A && git commit -m 'add hardware config for $HOSTNAME'"
-  echo "   4. ./bootstrap.sh $HOSTNAME"
+  echo "   1. Ensure $HOST_DIR/hardware-configuration.nix is present"
+  echo "   2. ./bootstrap.sh $HOSTNAME"
 fi
 """
 
@@ -215,7 +226,7 @@ run = "nix profile history --profile /nix/var/nix/profiles/system"
 
 [tasks."nix:repl"]
 description = "Open a nix repl with nixpkgs"
-run = "nix repl -f flake:nixpkgs"
+run = "nix repl --expr 'import (builtins.getFlake \"nixpkgs\") {}'"
 
 [tasks."nix:clean"]
 description = "Remove all profile generations older than 7 days"

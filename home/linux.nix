@@ -2,7 +2,7 @@
 # Linux home-manager entry point.
 # Imports shared config and sets the Linux-specific home directory.
 # Add Linux-specific programs (e.g. i3, rofi, picom) here.
-{ username, pkgs, lib, ... }: {
+{ username, pkgs, ... }: {
   imports = [ ./common ];
 
   home.homeDirectory = "/home/${username}";
