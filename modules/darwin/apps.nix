@@ -63,9 +63,9 @@
     ];
 
     # App Store apps via mas — install manually first so Apple has a purchase record.
-    # masApps = {
-    #   Amphetamine = 937984704;
-    #   Bitwarden   = 1352778147;
-    # };
+    masApps = {
+      Amphetamine = 937984704;
+      Bitwarden = 1352778147;
+    };
   };
 }
