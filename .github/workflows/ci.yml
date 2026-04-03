@@ -1,0 +1,70 @@
+name: Test Nix Config
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: cachix/install-nix-action@96951a368ba55167b55f1c916f7d416bac6505fe # v31.10.3
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
+
+      - name: Check flake evaluates
+        run: nix flake check --no-build
+
+      - name: Build Darwin configurations (macOS only)
+        if: matrix.os == 'macos-latest'
+        run: |
+          for host in $(nix eval --json '.#darwinConfigurations' 2>/dev/null | jq -r 'keys[]' 2>/dev/null); do
+            echo "==> Building darwinConfigurations.$host"
+            nix build ".#darwinConfigurations.$host.system" --no-link
+          done
+
+      - name: Build Linux system configurations (Linux only)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          for host in $(nix eval --json '.#systemConfigs' 2>/dev/null | jq -r 'keys[]' 2>/dev/null); do
+            echo "==> Building systemConfigs.$host"
+            nix build ".#systemConfigs.$host.system" --no-link
+          done
+
+      - name: Build Linux home-manager configurations (Linux only)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          for host in $(nix eval --json '.#homeConfigurations' 2>/dev/null | jq -r 'keys[]' 2>/dev/null); do
+            echo "==> Building homeConfigurations.$host.activationPackage"
+            nix build ".#homeConfigurations.$host.activationPackage" --no-link
+          done
+
+  bootstrap-steps:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Validate flake evaluates after install
+        run: |
+          ./bootstrap.sh ci-bootstrap
