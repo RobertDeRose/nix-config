@@ -31,23 +31,16 @@ cd nix-config
 ### NixOS / Linux
 
 ```bash
-# 1. Generate hardware config first
-sudo nixos-generate-config
-
-# 2. Bootstrap
 git clone https://github.com/RobertDeRose/nix-config
 cd nix-config
 ./bootstrap.sh <hostname>
-
-# 3. Copy hardware config into the host directory created by bootstrap
-cp /etc/nixos/hardware-configuration.nix hosts/x86_64-nixos/<hostname>/
-mise run nix:switch
 ```
 
 `bootstrap.sh` installs mise, then runs `mise run nix:init <hostname>` which:
 1. Creates `hosts/x86_64-nixos/<hostname>/` from the nixos template
-2. Installs Nix (if missing)
-3. Builds and activates the NixOS configuration
+2. Auto-copies or generates `hardware-configuration.nix` into the host directory
+3. Installs Nix (if missing)
+4. Builds and activates the NixOS configuration
 
 ---
 
