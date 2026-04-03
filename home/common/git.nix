@@ -11,7 +11,7 @@
   # to make git use this config file, `~/.gitconfig` should not exist!
   #    https://git-scm.com/docs/git-config#Documentation/git-config.txt---global
   home.activation.removeExistingGitconfig = lib.hm.dag.entryBefore ["checkLinkTargets"] ''
-    [ -e ~/.gitconfig ] && mv -f ~/.gitconfig ~/.gitconfig.before_nix
+    [ -e ~/.gitconfig ] && mv -f ~/.gitconfig ~/.gitconfig.before_nix || true
   '';
 
   programs.difftastic.git.enable = true;
@@ -30,10 +30,6 @@
       credential.helper          = "cache --timeout=3600";
       grep.lineNumber            = true;
       gpg.ssh.allowedSignersFile = "~/.config/git/allowed_signers";
-      includes = {
-        path      = "~/workspace/personal/.gitconfig";
-        condition = "gitdir:~/workspace/personal/";
-      };
       init.defaultBranch  = "main";
       merge.conflictstyle = "zdiff3";
       pull = {
@@ -51,6 +47,12 @@
       url."git@github.com:".insteadOf = "https://github.com/";
       tar."tar.xz".command = "xz -c";
     };
+    includes = [
+      {
+        path      = "~/workspace/personal/.gitconfig";
+        condition = "gitdir:~/workspace/personal/";
+      }
+    ];
     signing = {
       format = "ssh";
       # signingkey = "~/.ssh/id_ed25519.pub";
