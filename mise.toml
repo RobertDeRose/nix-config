@@ -85,27 +85,12 @@ fi
 SYSTEM="${ARCH}-${OS}"
 HOST_DIR="hosts/${SYSTEM}/${HOSTNAME}"
 
-[tasks.switch]
-description = "Apply the nix config for the current host (auto-detects Darwin or NixOS)"
-run = """
-#!/usr/bin/env bash
-set -xeuo pipefail
-
-if [ -n "${GITHUB_TOKEN:-}" ]; then
-  export NIX_CONFIG="${NIX_CONFIG:-}"$'\n'"access-tokens = github.com=${GITHUB_TOKEN}"
-fi
-
-set +u
-source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-set -u
-
-HOSTNAME="${usage_hostname:-$(hostname -s)}"
-
-# Define the target based on OS
-if [ "$(uname -s)" = "Darwin" ]; then
-  darwin-rebuild switch --flake ".#$HOST"
-else
-  sudo nixos-rebuild switch --flake ".#$HOST"
+if [ ! -d "${HOST_DIR}" ]; then
+  echo "==> Creating ${HOST_DIR} from templates/${OS}..."
+  mkdir -p "${HOST_DIR}"
+  cp -vr "templates/${OS}"/* "${HOST_DIR}/"
+  git checkout -b "host/${HOSTNAME}"
+  git add -A
 fi
 
 [ "${MISE_TASK:-}" != "add_host" ] && exit 0
@@ -136,7 +121,8 @@ set -u
 
 HOSTNAME="${usage_hostname:-$(hostname -s)}"
 if [ "$(uname -s)" = "Darwin" ]; then
-  darwin-rebuild switch --flake ".#$HOST" --show-trace --verbose
+  TARGET=(".#darwinConfigurations.${HOSTNAME}.system")
+  ACTIVATE_CMD=(sudo ./result/sw/bin/darwin-rebuild switch --flake .#${HOSTNAME})
 else
   sudo nixos-rebuild switch --flake ".#$HOST" --show-trace --verbose
 fi
