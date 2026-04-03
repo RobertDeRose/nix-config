@@ -1,13 +1,13 @@
 # nix-config
 
 My reproducible system configuration using [Nix flakes](https://nixos.wiki/wiki/Flakes),
-[nix-darwin](https://github.com/LnL7/nix-darwin), [NixOS](https://nixos.org/), and
+[nix-darwin](https://github.com/LnL7/nix-darwin), [system-manager](https://github.com/numtide/system-manager), and
 [home-manager](https://github.com/nix-community/home-manager).
 
 Built on [flake-parts](https://flake.parts) with [easy-hosts](https://github.com/tgirlcloud/easy-hosts) for
 auto-discovered host management.
 
-Works on **macOS (Apple Silicon & Intel)** and **NixOS Linux**.
+Works on **macOS (Apple Silicon & Intel)** and **Ubuntu Linux (headless servers)**.
 
 Tasks are managed with [mise](https://mise.jdx.dev). The bootstrap script installs mise, then hands off to it for
 everything else.
@@ -38,12 +38,11 @@ Or if you've already cloned the repo:
 5. Installs Nix (if missing)
 6. Builds and activates the Darwin configuration
 
-**NixOS / Linux:**
+**Ubuntu / Linux (headless):**
 1. Clones this repo (if not already inside it)
-2. Creates `hosts/x86_64-nixos/<hostname>/` from the nixos template
-3. Auto-copies or generates `hardware-configuration.nix` into the host directory
-4. Installs Nix (if missing)
-5. Builds and activates the NixOS configuration
+2. Creates `hosts/x86_64-linux/<hostname>/` from the linux template
+3. Installs Nix (if missing)
+4. Builds and activates the system-manager configuration
 
 ---
 
@@ -62,15 +61,18 @@ Or if you've already cloned the repo:
 │   ├── x86_64-darwin/         # macOS Intel hosts
 │   │   └── <hostname>/
 │   │       └── default.nix
-│   └── x86_64-nixos/          # NixOS x86_64 hosts
+│   ├── x86_64-linux/          # Ubuntu x86_64 hosts (headless)
+│   │   └── <hostname>/
+│   │       └── system.nix
+│   └── aarch64-linux/         # Ubuntu ARM hosts (headless)
 │       └── <hostname>/
-│           └── default.nix
+│           └── system.nix
 │
 ├── templates/                 # Host templates (copied by add-host)
 │   ├── darwin/
 │   │   └── default.nix
-│   └── nixos/
-│       └── default.nix
+│   └── linux/
+│       └── system.nix
 │
 ├── modules/
 │   ├── common/
@@ -79,8 +81,8 @@ Or if you've already cloned the repo:
 │   ├── darwin/
 │   │   ├── system.nix         # macOS system settings (Dock, Finder, trackpad…)
 │   │   └── apps.nix           # Homebrew casks + system-wide nix packages
-│   └── nixos/
-│       └── system.nix         # NixOS system settings (boot, networking, SSH…)
+│   └── linux/
+│       └── system.nix         # Shared system-manager config (SSH, users, packages…)
 │
 └── home/
     ├── darwin.nix             # macOS home-manager entry point
@@ -125,7 +127,8 @@ mise run fmt
 
 ## Adding a New Host
 
-Adding a host requires **no flake.nix editing** — easy-hosts auto-discovers hosts from the `hosts/` directory structure.
+Adding a host requires **no flake.nix editing** — easy-hosts auto-discovers macOS hosts from the `hosts/` directory,
+and system-manager auto-discovers Linux hosts from `hosts/*-linux/`.
 
 ### Quick way (from any machine with mise)
 
@@ -144,13 +147,12 @@ defaults to the current machine's platform.
    mkdir -p hosts/aarch64-darwin/<hostname>
    cp templates/darwin/* hosts/aarch64-darwin/<hostname>/
 
-   # NixOS x86_64
-   mkdir -p hosts/x86_64-nixos/<hostname>
-   cp templates/nixos/* hosts/x86_64-nixos/<hostname>/
+   # Ubuntu x86_64
+   mkdir -p hosts/x86_64-linux/<hostname>
+   cp templates/linux/* hosts/x86_64-linux/<hostname>/
    ```
-2. For NixOS: copy `hardware-configuration.nix` into the host directory
-3. `git add -A && git commit`
-4. Run `./bootstrap.sh <hostname>` on the target machine
+2. `git add -A && git commit`
+3. Run `./bootstrap.sh <hostname>` on the target machine
 
 ---
 
@@ -158,7 +160,8 @@ defaults to the current machine's platform.
 
 - **`flake.lock` is committed** — this pins all inputs for reproducible builds. Run `mise run up` to update.
 - **Homebrew** is macOS-only. The `init` task installs it automatically on a fresh machine.
-- **Linux packages** are managed entirely through NixOS + home-manager (no Homebrew).
+- **Linux system config** is managed via [system-manager](https://github.com/numtide/system-manager) — packages, services, users, etc.
+- **Linux user config** (dotfiles, shell) is managed via home-manager in `home/linux.nix`.
 - Cross-platform CLI tools live in `home/common/core.nix` — available on both platforms.
 - macOS-specific shell aliases and PATH entries in `home/common/shell.nix` are guarded with `pkgs.stdenv.isDarwin`.
 
@@ -171,6 +174,5 @@ defaults to the current machine's platform.
 - [easy-hosts](https://flake.parts/options/easy-hosts.html)
 - [nix-darwin options](https://daiderd.com/nix-darwin/manual/index.html)
 - [home-manager options](https://nix-community.github.io/home-manager/options.html)
-- [NixOS options](https://search.nixos.org/options)
-- [nixos-hardware](https://github.com/NixOS/nixos-hardware)
+- [system-manager docs](https://system-manager.net/)
 - [mise tasks docs](https://mise.jdx.dev/tasks/)

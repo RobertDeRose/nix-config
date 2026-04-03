@@ -1,32 +1,25 @@
-# modules/nixos/system.nix
-# Linux-only system configuration.
-# Add hardware, display-manager, desktop-environment, etc. here.
+# modules/linux/system.nix
+# Shared system-manager config for headless Ubuntu servers.
+# Uses NixOS-style module options, applied via system-manager.
 {
   pkgs,
   username,
+  hostname,
   ...
 }: {
-
-  imports = [ ../common/fonts.nix ];
-
-  # ------------------------------------------------------------------ #
-  # Boot
-  # ------------------------------------------------------------------ #
-  boot.loader = {
-    systemd-boot.enable      = true;
-    efi.canTouchEfiVariables = true;
-  };
-
-  # ------------------------------------------------------------------ #
-  # Networking
-  # ------------------------------------------------------------------ #
-  networking.networkmanager.enable = true;
+  # Allow running on non-NixOS distros
+  system-manager.allowAnyDistro = true;
 
   # ------------------------------------------------------------------ #
   # Locale / Time
   # ------------------------------------------------------------------ #
-  time.timeZone      = "America/New_York";
+  time.timeZone = "America/New_York";
   i18n.defaultLocale = "en_US.UTF-8";
+
+  # ------------------------------------------------------------------ #
+  # Networking
+  # ------------------------------------------------------------------ #
+  networking.hostName = hostname;
 
   # ------------------------------------------------------------------ #
   # Shell
@@ -36,7 +29,6 @@
 
   # ------------------------------------------------------------------ #
   # Common system packages
-  # (prefer home.packages in home-manager for user-level tools)
   # ------------------------------------------------------------------ #
   environment.systemPackages = with pkgs; [
     bat
@@ -49,18 +41,21 @@
   ];
 
   # ------------------------------------------------------------------ #
-  # Security
-  # ------------------------------------------------------------------ #
-  security.sudo.wheelNeedsPassword = true;
-
-  # ------------------------------------------------------------------ #
-  # Services
+  # SSH
   # ------------------------------------------------------------------ #
   services.openssh = {
-    enable                          = true;
+    enable = true;
     settings.PasswordAuthentication = false;
-    settings.PermitRootLogin        = "no";
+    settings.PermitRootLogin = "no";
   };
 
-  system.stateVersion = "25.11";
+  # ------------------------------------------------------------------ #
+  # User
+  # ------------------------------------------------------------------ #
+  users.users."${username}" = {
+    isNormalUser = true;
+    home = "/home/${username}";
+    shell = pkgs.zsh;
+    extraGroups = [ "wheel" "docker" ];
+  };
 }

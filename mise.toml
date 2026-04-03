@@ -80,9 +80,8 @@ if [ "$OS" = "Darwin" ]; then
     --extra-experimental-features 'nix-command flakes'
   sudo -E ./result/sw/bin/darwin-rebuild switch --flake ".#$HOSTNAME"
 else
-  echo "==> Building and activating NixOS configuration for '$HOSTNAME'..."
-  sudo nixos-rebuild switch --flake ".#$HOSTNAME" \\
-    --extra-experimental-features 'nix-command flakes'
+  echo "==> Building and activating system-manager configuration for '$HOSTNAME'..."
+  nix run 'github:numtide/system-manager' -- switch --flake ".#$HOSTNAME" --sudo
 fi
 
 git add -A
@@ -92,7 +91,7 @@ echo "Done! Open a new shell to pick up all changes."
 """
 
 [tasks.switch]
-description = "Apply the nix config for the current host (auto-detects Darwin or NixOS)"
+description = "Apply the nix config for the current host (auto-detects Darwin or Linux)"
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
@@ -100,7 +99,7 @@ HOST="$(hostname -s)"
 if [ "$(uname -s)" = "Darwin" ]; then
   sudo darwin-rebuild switch --flake ".#$HOST"
 else
-  sudo nixos-rebuild switch --flake ".#$HOST"
+  nix run 'github:numtide/system-manager' -- switch --flake ".#$HOST" --sudo
 fi
 """
 
@@ -113,7 +112,7 @@ HOST="$(hostname -s)"
 if [ "$(uname -s)" = "Darwin" ]; then
   sudo darwin-rebuild switch --flake ".#$HOST" --show-trace --verbose
 else
-  sudo nixos-rebuild switch --flake ".#$HOST" --show-trace --verbose
+  nix run 'github:numtide/system-manager' -- switch --flake ".#$HOST" --sudo -- --show-trace
 fi
 """
 
@@ -121,7 +120,7 @@ fi
 description = "Register a new host by creating its hosts/ directory (no flake.nix editing needed)"
 usage = '''
 arg "<hostname>" help="Hostname for the new machine" long_help="Used as both the nix config identifier and the machine hostname. Creates a hosts/<arch>-<class>/<hostname>/ directory from the appropriate template. easy-hosts auto-discovers hosts from the directory structure."
-arg "[system]" help="Nix system string (default: current machine)" long_help="Determines the host directory path: <arch>-darwin or <arch>-nixos. Inferred from the current machine if omitted." {
+arg "[system]" help="Nix system string (default: current machine)" long_help="Determines the host directory path: <arch>-darwin or <arch>-linux. Inferred from the current machine if omitted." {
   choices "aarch64-darwin" "x86_64-darwin" "x86_64-linux" "aarch64-linux"
 }
 '''
@@ -144,12 +143,12 @@ else
   esac
 fi
 
-# Map system string to easy-hosts directory convention
+# Map system string to directory convention
 case "$SYSTEM" in
   aarch64-darwin) DIR_PREFIX="aarch64-darwin"; TEMPLATE="darwin" ;;
   x86_64-darwin)  DIR_PREFIX="x86_64-darwin";  TEMPLATE="darwin" ;;
-  x86_64-linux)   DIR_PREFIX="x86_64-nixos";   TEMPLATE="nixos"  ;;
-  aarch64-linux)  DIR_PREFIX="aarch64-nixos";   TEMPLATE="nixos"  ;;
+  x86_64-linux)   DIR_PREFIX="x86_64-linux";   TEMPLATE="linux"  ;;
+  aarch64-linux)  DIR_PREFIX="aarch64-linux";   TEMPLATE="linux"  ;;
   *) echo "ERROR: Unknown system '$SYSTEM'"; exit 1 ;;
 esac
 
@@ -165,19 +164,6 @@ else
   cp -r "templates/$TEMPLATE"/* "$HOST_DIR"/
 fi
 
-# On NixOS, auto-copy hardware-configuration.nix if running on the target machine
-if [ "$TEMPLATE" = "nixos" ] && [ ! -e "$HOST_DIR/hardware-configuration.nix" ]; then
-  if [ -e /etc/nixos/hardware-configuration.nix ]; then
-    echo "==> Copying /etc/nixos/hardware-configuration.nix into $HOST_DIR..."
-    cp /etc/nixos/hardware-configuration.nix "$HOST_DIR/"
-  else
-    echo "==> Generating hardware configuration..."
-    sudo nixos-generate-config --dir "$HOST_DIR"
-    # nixos-generate-config also creates configuration.nix which we don't need
-    rm -f "$HOST_DIR/configuration.nix"
-  fi
-fi
-
 git add -A
 git commit -m "chore: add host $HOSTNAME ($SYSTEM)" 2>/dev/null || true
 
@@ -188,9 +174,8 @@ if [ "$TEMPLATE" = "darwin" ]; then
   echo "   To bootstrap the machine, clone this repo on it and run:"
   echo "   ./bootstrap.sh $HOSTNAME"
 else
-  echo "   Next steps on the target machine:"
-  echo "   1. Ensure $HOST_DIR/hardware-configuration.nix is present"
-  echo "   2. ./bootstrap.sh $HOSTNAME"
+  echo "   To bootstrap the machine, clone this repo on it and run:"
+  echo "   ./bootstrap.sh $HOSTNAME"
 fi
 """
 
