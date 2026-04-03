@@ -64,7 +64,7 @@ if [ ! -e /nix/receipt.json ]; then
     INSTALL_ARGS+=("--ssl-cert-file" "/etc/ssl/cert.pem")
   fi
 
-  curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install -- "${INSTALL_ARGS[@]}"
+  curl -sSfL https://artifacts.nixos.org/nix-installer | sudo sh -s -- install -- "${INSTALL_ARGS[@]}"
 else
   echo "    Nix already installed, skipping."
 fi
