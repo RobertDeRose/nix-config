@@ -60,8 +60,8 @@
       }
     ];
     signing = {
-      format     = "ssh";
-      signingkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA";
+      format = "ssh";
+      key    = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA";
     };
   };
 
