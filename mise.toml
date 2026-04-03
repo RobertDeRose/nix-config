@@ -41,13 +41,10 @@ export NIX_INSTALLER_NO_CONFIRM="true"
 export NIX_INSTALLER_ENABLE_FLAKES="true"
 [ $(uname -s) = 'Darwin' ] && export NIX_INSTALLER_SSL_CERT_FILE='/etc/ssl/cert.pem'
 
-# ------------------------------------------------------------------ #
-# Install Nix if missing
-# ------------------------------------------------------------------ #
-echo "==> Checking for Nix..."
-if [ ! -e /nix/receipt.json ]; then
-  echo "    Installing Nix via nix-installer..."
-  curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install
+echo "==> Installing Nix..."
+if [ "$(uname -sm)" = "Darwin x86_64" ]; then
+  echo "Detected macOS on x86_64. Using nix instead of lix"
+  curl -sSfL https://artifacts.nixos.org/nix-installer | bash -s -- install
 else
   curl -sSfL https://install.lix.systems/lix | bash -s -- install
 fi
