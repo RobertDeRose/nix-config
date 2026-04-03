@@ -6,7 +6,7 @@
 # (not symlinked — iTerm2 writes back to it) and the custom-folder pref is set.
 #
 # To re-export after changing settings in iTerm2:
-#   mise run nix:iterm-export
+#   mise run iterm-export
 { username, ... }:
 let
   prefsDir = "/Users/${username}/Library/Application Support/iTerm2/nix-managed";

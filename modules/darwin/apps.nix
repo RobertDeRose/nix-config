@@ -18,7 +18,7 @@
   environment.variables.EDITOR = "nvim";
 
   # NOTE: Homebrew must be installed manually first: https://brew.sh
-  # The nix:init mise task handles this automatically on a fresh machine.
+  # The init mise task handles this automatically on a fresh machine.
   homebrew = {
     enable = true;
 

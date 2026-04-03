@@ -63,7 +63,7 @@
       # ------------------------------------------------------------------ #
       # Host configuration — auto-discovered from hosts/<arch>-<class>/<hostname>/
       #
-      # To add a new host, run:  mise run nix:add-host <hostname> [system]
+      # To add a new host, run:  mise run add-host <hostname> [system]
       # This creates the directory; no flake.nix editing required.
       # ------------------------------------------------------------------ #
       easy-hosts = let
