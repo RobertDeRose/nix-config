@@ -63,4 +63,4 @@ if ! command -v mise &>/dev/null; then
 fi
 
 echo "==> Handing off to mise..."
-mise run "nix:init" "$HOSTNAME"
+mise run init "$HOSTNAME"
