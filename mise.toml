@@ -58,7 +58,13 @@ fi
 echo "==> Checking for Nix..."
 if [ ! -e /nix/receipt.json ]; then
   echo "    Installing Nix via nix-installer..."
-  curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install
+  # Use --enable-flakes instead of --extra-conf for experimental features
+  # Use --ssl-cert-file on macOS to persist cert in /etc/nix/nix.conf
+  # https://github.com/NixOS/nix/issues/2899
+  INSTALL_ARGS=("--enable-flakes")
+  [ "$OS" = "Darwin" ] && INSTALL_ARGS+=("--ssl-cert-file" "/etc/ssl/cert.pem")
+
+  curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install -- "${INSTALL_ARGS[@]}"
 else
   echo "    Nix already installed, skipping."
 fi
