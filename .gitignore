@@ -1,2 +1,10 @@
+# Nix build results
 result
-result/
+result-*
+.hm-result
+
+# Don't ignore flake.lock — it's what makes the config reproducible!
+# flake.lock
+
+# macOS
+.DS_Store
