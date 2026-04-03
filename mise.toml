@@ -1,0 +1,258 @@
+# mise.toml — task runner for nix-config
+# Install mise: curl https://mise.run | sh
+# List tasks:   mise tasks
+# Run a task:   mise run <task> [args]
+
+# ---------------------------------------------------------------------------
+# Tools
+# ---------------------------------------------------------------------------
+[tools]
+# Uncomment to pin tool versions:
+# usage = "latest"
+
+# ---------------------------------------------------------------------------
+# Bootstrap & host management
+# ---------------------------------------------------------------------------
+
+[tasks."nix:init"]
+description = "Full init for a new machine: install Nix (+ Homebrew on Mac), then apply config"
+usage = '''
+arg "<hostname>" {
+  help "Hostname to assign to this machine"
+  long_help """
+  The hostname used as the nix config identifier.
+  Delegates to nix:add-host to create the host directory, then installs
+  prerequisites (Nix, Homebrew) and builds/activates the configuration.
+  """
+}
+'''
+env = { NIX_INSTALLER_NO_CONFIRM = "true" }
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+HOSTNAME="${usage_hostname:?}"
+OS="$(uname -s)"
+
+# ------------------------------------------------------------------ #
+# Create host directory (delegates to nix:add-host)
+# ------------------------------------------------------------------ #
+mise run nix:add-host "$HOSTNAME"
+
+# Stage everything before the nix build
+git checkout -b "host/$HOSTNAME" 2>/dev/null || true
+git add -A
+
+# ------------------------------------------------------------------ #
+# macOS: install Homebrew if missing
+# ------------------------------------------------------------------ #
+if [ "$OS" = "Darwin" ]; then
+  echo "==> Checking for Homebrew..."
+  if ! command -v brew &>/dev/null; then
+    echo "    Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    echo >> ~/.zprofile
+    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  else
+    echo "    Homebrew already installed, skipping."
+  fi
+fi
+
+# ------------------------------------------------------------------ #
+# Install Nix if missing
+# ------------------------------------------------------------------ #
+echo "==> Checking for Nix..."
+if [ ! -e /nix/receipt.json ]; then
+  echo "    Installing Nix via nix-installer..."
+  curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install
+else
+  echo "    Nix already installed, skipping."
+fi
+
+source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+
+# ------------------------------------------------------------------ #
+# Build and activate
+# ------------------------------------------------------------------ #
+if [ "$OS" = "Darwin" ]; then
+  echo "==> Building and activating Darwin configuration for '$HOSTNAME'..."
+  nix build ".#darwinConfigurations.$HOSTNAME.system" \\
+    --extra-experimental-features 'nix-command flakes'
+  sudo -E ./result/sw/bin/darwin-rebuild switch --flake ".#$HOSTNAME"
+else
+  echo "==> Building and activating NixOS configuration for '$HOSTNAME'..."
+  sudo nixos-rebuild switch --flake ".#$HOSTNAME" \\
+    --extra-experimental-features 'nix-command flakes'
+fi
+
+git add -A
+git commit -m "chore: bootstrap $HOSTNAME" 2>/dev/null || true
+echo ""
+echo "Done! Open a new shell to pick up all changes."
+"""
+
+[tasks."nix:switch"]
+description = "Apply the nix config for the current host (auto-detects Darwin or NixOS)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+HOST="$(hostname -s)"
+if [ "$(uname -s)" = "Darwin" ]; then
+  darwin-rebuild switch --flake ".#$HOST"
+else
+  sudo nixos-rebuild switch --flake ".#$HOST"
+fi
+"""
+
+[tasks."nix:debug"]
+description = "Apply the nix config with verbose output for debugging"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+HOST="$(hostname -s)"
+if [ "$(uname -s)" = "Darwin" ]; then
+  darwin-rebuild switch --flake ".#$HOST" --show-trace --verbose
+else
+  sudo nixos-rebuild switch --flake ".#$HOST" --show-trace --verbose
+fi
+"""
+
+[tasks."nix:add-host"]
+description = "Register a new host by creating its hosts/ directory (no flake.nix editing needed)"
+usage = '''
+arg "<hostname>" {
+  help "Hostname for the new machine"
+  long_help """
+  Used as both the nix config identifier and the machine's actual hostname.
+  Creates a hosts/<arch>-<class>/<hostname>/ directory from the appropriate template.
+  easy-hosts auto-discovers hosts from the directory structure — no flake.nix editing needed.
+  """
+}
+arg "[system]" {
+  help "Nix system string (default: current machine's system)"
+  long_help """
+  Determines the host directory path: <arch>-darwin or <arch>-nixos.
+  Inferred from the current machine if omitted.
+  """
+  choices "aarch64-darwin" "x86_64-darwin" "x86_64-linux" "aarch64-linux"
+}
+'''
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+HOSTNAME="${usage_hostname:?}"
+
+# Default system to current machine if not provided
+if [ -n "${usage_system:-}" ]; then
+  SYSTEM="${usage_system}"
+else
+  case "$(uname -s)-$(uname -m)" in
+    Darwin-arm64)  SYSTEM="aarch64-darwin" ;;
+    Darwin-x86_64) SYSTEM="x86_64-darwin"  ;;
+    Linux-x86_64)  SYSTEM="x86_64-linux"   ;;
+    Linux-aarch64) SYSTEM="aarch64-linux"   ;;
+    *) echo "ERROR: Unsupported platform, please pass system explicitly"; exit 1 ;;
+  esac
+fi
+
+# Map system string to easy-hosts directory convention
+case "$SYSTEM" in
+  aarch64-darwin) DIR_PREFIX="aarch64-darwin"; TEMPLATE="darwin" ;;
+  x86_64-darwin)  DIR_PREFIX="x86_64-darwin";  TEMPLATE="darwin" ;;
+  x86_64-linux)   DIR_PREFIX="x86_64-nixos";   TEMPLATE="nixos"  ;;
+  aarch64-linux)  DIR_PREFIX="aarch64-nixos";   TEMPLATE="nixos"  ;;
+  *) echo "ERROR: Unknown system '$SYSTEM'"; exit 1 ;;
+esac
+
+HOST_DIR="hosts/${DIR_PREFIX}/${HOSTNAME}"
+echo "==> Adding $HOSTNAME ($SYSTEM) -> $HOST_DIR"
+
+# Create host directory from appropriate template
+if [ -d "$HOST_DIR" ]; then
+  echo "WARNING: $HOST_DIR already exists, skipping directory creation."
+else
+  echo "==> Creating $HOST_DIR from templates/$TEMPLATE..."
+  mkdir -p "$HOST_DIR"
+  cp -r "templates/$TEMPLATE"/* "$HOST_DIR"/
+fi
+
+git add -A
+git commit -m "chore: add host $HOSTNAME ($SYSTEM)" 2>/dev/null || true
+
+echo ""
+echo "Done! '$HOSTNAME' registered as a $TEMPLATE host."
+echo "   Directory: $HOST_DIR"
+if [ "$TEMPLATE" = "darwin" ]; then
+  echo "   To bootstrap the machine, clone this repo on it and run:"
+  echo "   ./bootstrap.sh $HOSTNAME"
+else
+  echo "   Next steps on the target machine:"
+  echo "   1. sudo nixos-generate-config"
+  echo "   2. cp /etc/nixos/hardware-configuration.nix $HOST_DIR/"
+  echo "   3. git add -A && git commit -m 'add hardware config for $HOSTNAME'"
+  echo "   4. ./bootstrap.sh $HOSTNAME"
+fi
+"""
+
+# ---------------------------------------------------------------------------
+# Nix maintenance tasks
+# ---------------------------------------------------------------------------
+
+[tasks."nix:up"]
+description = "Update all flake inputs"
+run = "nix flake update"
+
+[tasks."nix:upp"]
+description = "Update a single flake input"
+usage = 'arg "<input>" help="Flake input to update (e.g. nixpkgs, home-manager, darwin)"'
+run = "nix flake update ${usage_input:?}"
+
+[tasks."nix:history"]
+description = "List all system profile generations"
+run = "nix profile history --profile /nix/var/nix/profiles/system"
+
+[tasks."nix:repl"]
+description = "Open a nix repl with nixpkgs"
+run = "nix repl -f flake:nixpkgs"
+
+[tasks."nix:clean"]
+description = "Remove all profile generations older than 7 days"
+run = "sudo nix profile wipe-history --profile /nix/var/nix/profiles/system --older-than 7d"
+
+[tasks."nix:gc"]
+description = "Garbage-collect all unused nix store entries (system + user)"
+run = [
+  "sudo nix-collect-garbage --delete-older-than 7d",
+  "nix-collect-garbage --delete-older-than 7d",
+]
+
+[tasks."nix:fmt"]
+description = "Format all .nix files in this repo"
+run = "nix fmt"
+
+[tasks."nix:gcroot"]
+description = "Show auto GC roots in the nix store"
+run = "ls -al /nix/var/nix/gcroots/auto/"
+
+[tasks."nix:uninstall"]
+description = "Completely uninstall Nix from this machine"
+confirm = "This will completely remove Nix, the /nix store, and all managed packages. Continue?"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ -e /nix/nix-installer ]; then
+  echo "==> Uninstalling Nix via nix-installer..."
+  /nix/nix-installer uninstall
+else
+  echo "ERROR: /nix/nix-installer not found."
+  echo "       Nix may not have been installed via the official nix-installer."
+  echo "       Refer to your installer's documentation for removal."
+  exit 1
+fi
+
+echo ""
+echo "Done! Open a new shell to pick up the changes."
+"""
