@@ -95,7 +95,12 @@
         ) {} linuxArchDirs;
     in
       inputs.flake-parts.lib.mkFlake { inherit inputs; } {
-        imports = [ inputs.easy-hosts.flakeModule ];
+        imports = [
+          inputs.easy-hosts.flakeModule
+          inputs.flake-parts.flakeModules.easyOverlay
+        ];
+
+        flake.systemConfigs = linuxHosts;
 
         systems = [
           "aarch64-darwin"
@@ -134,7 +139,5 @@
               else [];
           };
         };
-
-        systemConfigs = linuxHosts;
       };
 }
