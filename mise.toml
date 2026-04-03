@@ -243,6 +243,28 @@ run = [
 description = "Format all .nix files in this repo"
 run = "nix fmt"
 
+[tasks."nix:iterm-export"]
+description = "Re-export iTerm2 preferences plist into the repo"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+SRC="$HOME/Library/Preferences/com.googlecode.iterm2.plist"
+DST="config/iterm2/com.googlecode.iterm2.plist"
+
+if [ ! -e "$SRC" ]; then
+  echo "ERROR: iTerm2 preferences not found at $SRC"
+  exit 1
+fi
+
+echo "==> Copying iTerm2 plist into repo..."
+cp "$SRC" "$DST"
+echo "    Exported to $DST"
+echo ""
+echo "Review with: git diff --stat"
+echo "Then commit: git add -A && git commit -m 'chore: update iTerm2 preferences'"
+"""
+
 [tasks."nix:gcroot"]
 description = "Show auto GC roots in the nix store"
 run = "ls -al /nix/var/nix/gcroots/auto/"
