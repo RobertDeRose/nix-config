@@ -98,7 +98,7 @@ run = """
 set -euo pipefail
 HOST="$(hostname -s)"
 if [ "$(uname -s)" = "Darwin" ]; then
-  darwin-rebuild switch --flake ".#$HOST"
+  sudo darwin-rebuild switch --flake ".#$HOST"
 else
   sudo nixos-rebuild switch --flake ".#$HOST"
 fi
@@ -111,7 +111,7 @@ run = """
 set -euo pipefail
 HOST="$(hostname -s)"
 if [ "$(uname -s)" = "Darwin" ]; then
-  darwin-rebuild switch --flake ".#$HOST" --show-trace --verbose
+  sudo darwin-rebuild switch --flake ".#$HOST" --show-trace --verbose
 else
   sudo nixos-rebuild switch --flake ".#$HOST" --show-trace --verbose
 fi
