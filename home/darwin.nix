@@ -5,7 +5,6 @@
   imports = [
     ./common
     ./common/ghostty.nix
-    ./common/ssh.nix
   ];
 
   home.homeDirectory = "/Users/${username}";

@@ -3,9 +3,10 @@
 { username, ... }: {
   imports = [
     ./core.nix
-    ./shell.nix
-    ./git.nix
     ./direnv.nix
+    ./git.nix
+    ./shell.nix
+    ./ssh.nix
   ];
 
   home = {

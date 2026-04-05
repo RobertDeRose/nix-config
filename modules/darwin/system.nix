@@ -42,7 +42,7 @@
         autohide                  = true;
         expose-group-apps         = true;
         minimize-to-application   = true;
-        show-recents              = true;
+        show-recents              = false;
         showDesktopGestureEnabled = true;
         # Hot Corners
         wvous-bl-corner = 4;   # Desktop
