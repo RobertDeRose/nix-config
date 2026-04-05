@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-HOSTNAME="$1"
+HOSTNAME="${1:-$(hostname -s)}"
 REPO="RobertDeRose/nix-config"
 REPO_URL="https://github.com/${REPO}.git"
 REPO_DIR="$(basename "$REPO")"

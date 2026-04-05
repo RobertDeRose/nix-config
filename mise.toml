@@ -1,6 +1,10 @@
 [settings]
 env_shell_expand = true
 
+[env]
+HK_MISE = 1
+HK_PKL_BACKEND = "pklr"
+
 # ---------------------------------------------------------------------------
 # Bootstrap & host management
 # ---------------------------------------------------------------------------
@@ -265,3 +269,6 @@ fi
 
 echo -e "\nDone! Open a new shell or restart your computer to fully clear changes."
 '''
+
+[tools]
+pkl = "latest"

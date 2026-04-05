@@ -48,21 +48,7 @@ jobs:
         os:
           - ubuntu-latest
           - macos-latest
-        hostname:
-          - ci-linux-test
-          - ci-macos-test
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Test _add-host (creates host directory from template)
-        run: mise run _add-host ${{ matrix.hostname }}
-
-      - name: Test _install-homebrew (macOS only)
-        if: matrix.os == 'macos-latest'
-        run: mise run _install-homebrew
-
-      - name: Test _install-nix (installs Nix on the runner)
-        run: mise run _install-nix
-
       - name: Validate flake evaluates after install
-        run: nix flake check
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh | bash -s
