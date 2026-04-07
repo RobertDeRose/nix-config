@@ -2,6 +2,7 @@
 result
 result-*
 .hm-result
+.hk.local.pkl
 
 # Don't ignore flake.lock — it's what makes the config reproducible!
 # flake.lock
