@@ -111,23 +111,28 @@ Or if you've already cloned the repo:
 mise tasks
 
 # Apply config on the current machine (auto-detects hostname + platform)
-mise run switch
+mise switch
 
 # Debug a failing build
-mise run debug
+mise debug
+
+# Install and use hk hooks
+mise hk:install
+mise hk:check
+mise hk:fix
 
 # Update all flake inputs
-mise run up
+mise up
 
 # Update a single input
-mise run upp nixpkgs
+mise upp nixpkgs
 
 # Garbage-collect old generations
-mise run gc
-mise run clean
+mise gc
+mise clean
 
 # Format all .nix files
-mise run fmt
+mise fmt
 ```
 
 ---
@@ -140,7 +145,7 @@ and system-manager auto-discovers Linux hosts from `hosts/*-linux/`.
 ### Quick way (from any machine with mise)
 
 ```bash
-mise run add-host <hostname> [os] [arch]
+mise add-host <hostname> [os] [arch]
 ```
 
 This creates `hosts/<arch>-<class>/<hostname>/` from the appropriate template. `os` accepts `darwin|linux` and `arch`
@@ -165,7 +170,7 @@ accepts `aarch64|x86_64`; both default to the current machine when omitted.
 
 ## Notes
 
-- **`flake.lock` is committed** — this pins all inputs for reproducible builds. Run `mise run up` to update.
+- **`flake.lock` is committed** — this pins all inputs for reproducible builds. Run `mise up` to update.
 - **Homebrew** is macOS-only. The `init` task installs it automatically on a fresh machine.
 - **Linux system config** is managed via [system-manager](https://github.com/numtide/system-manager) — packages, services, users, etc.
 - **Linux user config** (dotfiles, shell) is managed via home-manager in `home/linux.nix`.
@@ -173,6 +178,14 @@ accepts `aarch64|x86_64`; both default to the current machine when omitted.
 - Optional per-host Linux home-manager overrides can be added at `hosts/<arch>-linux/<hostname>/home.nix`.
 - Cross-platform CLI tools live in `home/common/core.nix` — available on both platforms.
 - macOS-specific shell aliases and PATH entries in `home/common/shell.nix` are guarded with `pkgs.stdenv.isDarwin`.
+
+### Git Hooks (hk)
+
+- This repo uses [`hk`](https://hk.jdx.dev/) for pre-commit and pre-push checks.
+- `mise.toml` is the source of truth for hk tooling and environment (`HK_MISE=1`).
+- Hooks auto-install via mise postinstall (`hk install --mise`).
+- You can also install manually once per clone: `mise hk:install`.
+- `hk` configuration lives in `hk.pkl` and uses builtins for formatting, shell/yaml/workflow checks, and security checks.
 
 ---
 

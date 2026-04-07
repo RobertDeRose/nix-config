@@ -1,12 +1,20 @@
 # schema
 [settings]
+experimental = true
 env_shell_expand = true
-jobs = 1
+
+[tools]
+hk = "latest"
+pkl = "latest"
+shellcheck = "latest"
+shfmt = "latest"
+tombi = "latest"
 
 [env]
 HK_MISE = 1
-HK_PKL_BACKEND = "pklr"
 
+[hooks]
+postinstall = "hk install --mise"
 
 # ---------------------------------------------------------------------------
 # Bootstrap & host management
