@@ -9,12 +9,9 @@
 #
 # If you switch to the .dmg install, change agentSocket to:
 #   "/Users/${username}/.bitwarden-ssh-agent.sock"
-{ username, ... }:
-let
-  agentSocket =
-    "/Users/${username}/Library/Containers/com.bitwarden.desktop/Data/.bitwarden-ssh-agent.sock";
-in
-{
+{username, ...}: let
+  agentSocket = "/Users/${username}/Library/Containers/com.bitwarden.desktop/Data/.bitwarden-ssh-agent.sock";
+in {
   programs.ssh = {
     enable = true;
 

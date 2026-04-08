@@ -9,15 +9,17 @@
   ...
 }: {
   home-manager.users."${username}".imports =
-    if builtins.pathExists ./home.nix then [ ./home.nix ] else [ ];
+    if builtins.pathExists ./home.nix
+    then [./home.nix]
+    else [];
 
-  networking.computerName          = config.networking.hostName;
-  system.defaults.smb.NetBIOSName  = config.networking.hostName;
+  networking.computerName = config.networking.hostName;
+  system.defaults.smb.NetBIOSName = config.networking.hostName;
 
   users.users."${username}" = {
-    home        = "/Users/${username}";
+    home = "/Users/${username}";
     description = fullname;
-    createHome  = true;
+    createHome = true;
   };
 
   system.primaryUser = username;

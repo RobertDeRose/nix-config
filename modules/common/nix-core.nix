@@ -18,13 +18,13 @@
         "nix-command"
         "flakes"
       ];
-      trusted-users = [ username ];
+      trusted-users = [username];
     };
 
     # Garbage-collect weekly to keep disk usage low
     gc = {
       automatic = true;
-      options   = "--delete-older-than 7d";
+      options = "--delete-older-than 7d";
     };
   };
 }

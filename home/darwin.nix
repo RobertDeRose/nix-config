@@ -1,7 +1,11 @@
 # home/darwin.nix
 # macOS home-manager entry point.
 # Imports shared config + macOS-specific modules.
-{ username, pkgs, ... }: {
+{
+  username,
+  pkgs,
+  ...
+}: {
   imports = [
     ./common
     ./common/ghostty.nix

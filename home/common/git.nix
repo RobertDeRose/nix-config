@@ -17,37 +17,36 @@
 
   # Allowed signers file for SSH commit signature verification.
   # Maps your email to your public key so `git log --show-signature` works.
-  home.file.".config/git/allowed_signers".text =
-    "${useremail} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA";
+  home.file.".config/git/allowed_signers".text = "${useremail} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA";
 
   programs.difftastic.git.enable = true;
 
   programs.git = {
-    enable  = true;
-    ignores = [ ".DS_Store" ".jj" ];
+    enable = true;
+    ignores = [".DS_Store" ".jj"];
     settings = {
       core = {
-        autocrlf     = "input";
-        editor       = "nvim";
-        whitespace   = "trailing-space,space-before-tab";
+        autocrlf = "input";
+        editor = "hx";
+        whitespace = "trailing-space,space-before-tab";
         excludesfile = "~/.config/git/global_gitignore";
       };
-      commit.gpgsign             = pkgs.stdenv.isDarwin;
-      credential.helper          = "cache --timeout=3600";
-      grep.lineNumber            = true;
+      commit.gpgsign = pkgs.stdenv.isDarwin;
+      credential.helper = "cache --timeout=3600";
+      grep.lineNumber = true;
       gpg.ssh.allowedSignersFile = "~/.config/git/allowed_signers";
-      init.defaultBranch  = "main";
+      init.defaultBranch = "main";
       merge.conflictstyle = "zdiff3";
       pull = {
         rebase = true;
-        ff     = "only";
+        ff = "only";
       };
       push = {
-        default         = "current";
+        default = "current";
         autoSetupRemote = true;
       };
       user = {
-        name  = fullname;
+        name = fullname;
         email = useremail;
       };
       url."git@github.com:".insteadOf = "https://github.com/";
@@ -55,18 +54,18 @@
     };
     includes = [
       {
-        path      = "~/workspace/personal/.gitconfig";
+        path = "~/workspace/personal/.gitconfig";
         condition = "gitdir:~/workspace/personal/";
       }
     ];
     signing = {
       format = "ssh";
-      key    = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA";
+      key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA";
     };
   };
 
   programs.gh = {
-    enable                     = true;
+    enable = true;
     gitCredentialHelper.enable = true;
   };
 
