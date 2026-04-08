@@ -3,7 +3,14 @@ import "package://github.com/jdx/hk/releases/download/v1.41.0/hk@1.41.0#/Builtin
 
 local linters = new Mapping<String, Step> {
   ["actionlint"] = Builtins.actionlint
-  ["alejandra"] = Builtins.alejandra
+  ["alejandra"] = (Builtins.alejandra) {
+    check = new Script {
+      linux = "alejandra --check {{ files }}"
+    }
+    fix = new Script {
+      linux = "alejandra {{ files }}"
+    }
+  }
   ["check_byte_order_marker"] = Builtins.check_byte_order_marker
   ["check_case_conflict"] = Builtins.check_case_conflict
   ["check_executables_have_shebangs"] = Builtins.check_executables_have_shebangs
@@ -23,6 +30,9 @@ local linters = new Mapping<String, Step> {
   ["tombi"] = Builtins.tombi
   ["trailing-whitespace"] = Builtins.trailing_whitespace
 }
+
+default_branch = "main"
+fail_fast = false
 
 hooks {
   ["pre-commit"] {
