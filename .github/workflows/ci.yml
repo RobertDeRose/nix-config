@@ -1,4 +1,4 @@
-name: Test Nix Config
+name: Validate
 
 on:
   push:
