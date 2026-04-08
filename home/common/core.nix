@@ -1,6 +1,10 @@
 # home/common/core.nix
 # Cross-platform CLI tools and programs — works on macOS and Linux.
-{ pkgs, ... }: {
+{
+  pkgs,
+  lib,
+  ...
+}: {
   home.packages = with pkgs; [
     # archives
     zip
@@ -9,13 +13,13 @@
 
     # utils
     btop
-    jq            # lightweight and flexible command-line JSON processor
-    ripgrep       # recursively searches directories for a regex pattern
+    jq # lightweight and flexible command-line JSON processor
+    ripgrep # recursively searches directories for a regex pattern
     tmux
-    yq-go         # yaml processor https://github.com/mikefarah/yq
+    yq-go # yaml processor https://github.com/mikefarah/yq
 
-    socat         # replacement of openbsd-netcat
-    nmap          # utility for network discovery and security auditing
+    socat # replacement of openbsd-netcat
+    nmap # utility for network discovery and security auditing
 
     # misc
     gnused
@@ -28,42 +32,41 @@
     nixd
 
     # productivity
-    glow          # markdown previewer in terminal
+    glow # markdown previewer in terminal
   ];
 
   programs = {
     # command-line fuzzy finder
     fzf = {
-      enable               = true;
+      enable = true;
       enableZshIntegration = true;
-    };
-
-    # modern vim
-    neovim = {
-      enable        = true;
-      defaultEditor = true;
-      vimAlias      = true;
     };
 
     # modern replacement for 'ls'
     eza = {
-      enable               = true;
-      git                  = true;
-      icons                = "auto";
+      enable = true;
+      git = true;
+      icons = "auto";
       enableZshIntegration = true;
     };
 
     # terminal file manager
     yazi = {
-      enable               = true;
+      enable = true;
       enableZshIntegration = true;
       settings = {
         manager = {
-          show_hidden    = true;
+          show_hidden = true;
           sort_dir_first = true;
         };
       };
     };
+  };
 
+  home.sessionVariables = {
+    VISUAL = "hx";
+    EDITOR = "hx";
+    GIT_EDITOR = "hx";
+    GIT_SEQUENCE_EDITOR = "hx";
   };
 }

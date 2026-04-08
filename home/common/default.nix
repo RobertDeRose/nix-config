@@ -1,12 +1,15 @@
 # home/common/default.nix
 # Shared home-manager config — imported by both home/darwin.nix and home/linux.nix.
-{ username, ... }: {
+{username, ...}: {
   imports = [
     ./core.nix
     ./direnv.nix
     ./git.nix
+    ./helix.nix
     ./shell.nix
     ./ssh.nix
+    ./zed.nix
+    ./zellij.nix
   ];
 
   home = {
@@ -16,5 +19,5 @@
   };
 
   programs.home-manager.enable = true;
-  fonts.fontconfig.enable      = true;
+  fonts.fontconfig.enable = true;
 }

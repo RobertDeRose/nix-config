@@ -2,8 +2,7 @@
 # macOS-only: system-wide nix packages + Homebrew casks/formulae.
 # GUI apps and anything macOS-specific live here.
 # Cross-platform CLI tools belong in home/common/core.nix instead.
-{ pkgs, ... }: {
-
+{pkgs, ...}: {
   # System-wide packages available to all users.
   # Prefer home-manager's home.packages for user-level tools.
   environment.systemPackages = with pkgs; [
@@ -12,10 +11,10 @@
     eza
     git
     mise
-    neovim
+    fastfetch
   ];
 
-  environment.variables.EDITOR = "nvim";
+  environment.variables.EDITOR = "zed --wait";
 
   # NOTE: Homebrew must be installed manually first: https://brew.sh
   # The init mise task handles this automatically on a fresh machine.
@@ -24,8 +23,8 @@
 
     onActivation = {
       autoUpdate = true;
-      upgrade    = true;
-      cleanup    = "zap"; # remove anything not listed below
+      upgrade = true;
+      cleanup = "zap"; # remove anything not listed below
     };
 
     taps = [
@@ -41,16 +40,16 @@
       "google-chrome"
       "maccy"
 
-      "anki"       # Memory training
-      "iina"       # Video player
-      "raycast"    # Launcher (alt/option + space)
-      "stats"      # System monitor
+      "anki" # Memory training
+      "iina" # Video player
+      "raycast" # Launcher (alt/option + space)
+      "stats" # System monitor
 
       # Development
       "atuin-desktop"
       "balenaetcher"
       "imageoptim"
-      "insomnia"   # REST client
+      "insomnia" # REST client
       "ghostty"
       "iterm2"
       "macos-fuse-t/cask/fuse-t"
@@ -58,7 +57,6 @@
       "obsidian"
       "pearcleaner"
       "rectangle"
-      "visual-studio-code"
       "zed"
     ];
 

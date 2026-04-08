@@ -25,9 +25,9 @@
   environment.systemPackages = with pkgs; [
     bat
     eza
+    fastfetch
     git
     mise
-    neovim
     curl
     wget
   ];
@@ -49,6 +49,6 @@
     home = "/home/${username}";
     shell = pkgs.zsh;
     ignoreShellProgramCheck = true;
-    extraGroups = [ "wheel" "docker" ];
+    extraGroups = ["wheel" "docker"];
   };
 }
