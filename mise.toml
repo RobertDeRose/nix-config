@@ -136,15 +136,15 @@ else
 fi
 
 echo "==> $( [ "${CI:-false}" = "true" ] && echo "Validating" || echo "Deploying" ) configuration for '${HOSTNAME}'..."
-[[ "${CI:-false}" = "true" ]] && TARGET=("--debug" "${TARGET[@]}")
-# This verifies the flake evaluates and builds without activating
-nix build "${TARGET[@]}"
-
-# Check if we should skip the "active" part
 if [[ "${CI:-false}" = "true" ]]; then
-  echo "CI detected: Build successful. Skipping activation step."
+  # CI validation-only path: evaluate the derivation without building/activating.
+  test "$(nix eval --raw "${TARGET[0]}.type")" = "derivation"
+  echo "CI detected: Evaluation successful. Skipping build and activation steps."
   exit 0
 fi
+
+# Local/non-CI path: verify build, then activate.
+nix build "${TARGET[@]}"
 
 echo "==> Activating configuration..."
 "${ACTIVATE_CMD[@]}"
