@@ -7,11 +7,10 @@
   fullname,
   username,
   ...
-}: {
+}:
+{
   home-manager.users."${username}".imports =
-    if builtins.pathExists ./home.nix
-    then [./home.nix]
-    else [];
+    if builtins.pathExists ./home.nix then [ ./home.nix ] else [ ];
 
   networking.computerName = config.networking.hostName;
   system.defaults.smb.NetBIOSName = config.networking.hostName;

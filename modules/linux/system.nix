@@ -7,7 +7,8 @@
   githubUsername,
   hostname,
   ...
-}: {
+}:
+{
   # Allow running on non-NixOS distros
   system-manager.allowAnyDistro = true;
 
@@ -65,6 +66,9 @@
     home = "/home/${username}";
     shell = pkgs.zsh;
     ignoreShellProgramCheck = true;
-    extraGroups = ["wheel" "docker"];
+    extraGroups = [
+      "wheel"
+      "docker"
+    ];
   };
 }

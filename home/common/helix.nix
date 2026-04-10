@@ -1,4 +1,5 @@
-{pkgs, ...}: {
+{ pkgs, ... }:
+{
   programs.helix = {
     enable = true;
 
@@ -15,7 +16,10 @@
         auto-save = false;
         auto-format = true;
         bufferline = "multiple";
-        rulers = [100 120];
+        rulers = [
+          100
+          120
+        ];
         soft-wrap.enable = false;
       };
 
@@ -25,8 +29,17 @@
           C-p = "file_picker";
           C-b = "file_explorer";
           C-slash = "toggle_comments";
-          A-up = ["extend_to_line_bounds" "delete_selection" "move_line_up" "paste_before"];
-          A-down = ["extend_to_line_bounds" "delete_selection" "paste_after"];
+          A-up = [
+            "extend_to_line_bounds"
+            "delete_selection"
+            "move_line_up"
+            "paste_before"
+          ];
+          A-down = [
+            "extend_to_line_bounds"
+            "delete_selection"
+            "paste_after"
+          ];
         };
       };
     };
@@ -34,18 +47,22 @@
     languages = {
       language-server.harper-ls = {
         command = "harper-ls";
-        args = ["--stdio"];
+        args = [ "--stdio" ];
       };
 
       language-server.rumdl = {
         command = "rumdl";
-        args = ["server"];
+        args = [ "server" ];
       };
 
       language = [
         {
           name = "markdown";
-          language-servers = ["marksman" "harper-ls" "markdown-oxide"];
+          language-servers = [
+            "marksman"
+            "harper-ls"
+            "markdown-oxide"
+          ];
         }
       ];
     };

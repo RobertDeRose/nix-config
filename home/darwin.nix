@@ -5,7 +5,8 @@
   username,
   pkgs,
   ...
-}: {
+}:
+{
   imports = [
     ./common
     ./common/ghostty.nix

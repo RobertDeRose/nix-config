@@ -1,4 +1,5 @@
-{lib, ...}: {
+{ lib, ... }:
+{
   programs.zed-editor = {
     enable = true;
 
@@ -55,7 +56,10 @@
       {
         context = "Terminal";
         bindings = {
-          "ctrl-n" = ["terminal::SendKeystroke" "ctrl-n"];
+          "ctrl-n" = [
+            "terminal::SendKeystroke"
+            "ctrl-n"
+          ];
         };
       }
     ];

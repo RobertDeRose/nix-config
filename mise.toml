@@ -5,7 +5,7 @@ env_shell_expand = true
 
 [tools]
 actionlint = "latest"
-"aqua:kamadorueda/alejandra" = { version = "latest", os = ["linux"] }
+"github:RobertDeRose/nixfmt" = "latest"
 hk = "1.41"
 pkl = "latest"
 shellcheck = "latest"

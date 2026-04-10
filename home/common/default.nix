@@ -1,6 +1,7 @@
 # home/common/default.nix
 # Shared home-manager config — imported by both home/darwin.nix and home/linux.nix.
-{username, ...}: {
+{ username, ... }:
+{
   imports = [
     ./core.nix
     ./direnv.nix

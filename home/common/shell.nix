@@ -8,7 +8,8 @@
   pkgs,
   lib,
   ...
-}: let
+}:
+let
   # Helper: decode a JSON-escaped Unicode string into a Nix string.
   nf = s: builtins.fromJSON ''"${s}"'';
 
@@ -67,11 +68,12 @@
   osWindows = nf ''\uE70F'';
 
   # Powerline glyphs used in makePill
-  plRight = nf ''\uE0B6''; #
-  plLeft = nf ''\uE0B4''; #
+  plRight = nf ''\uE0B6'';
+  plLeft = nf ''\uE0B4'';
 
   # ── makePill: generates a starship "pill" segment ───────────────────
-  makePill = symbol: info: color:
+  makePill =
+    symbol: info: color:
     lib.concatStrings [
       "[─](fg:current_line)"
       "[${plRight}](fg:${color})"
@@ -80,7 +82,8 @@
       "[ ${info}](fg:foreground bg:box)"
       "[${plLeft}](fg:box)"
     ];
-in {
+in
+{
   programs.zsh = {
     enable = true;
     enableCompletion = true;
@@ -118,29 +121,28 @@ in {
     "/opt/homebrew/sbin"
   ];
 
-  home.shellAliases =
-    {
-      # zsh
-      zshconfig = "\${VISUAL:-\$EDITOR} ~/.zshrc";
-      # work dirs
-      work = "cd ~/workspace/checkpoint";
-      personal = "cd ~/workspace/personal";
-      neo = "cd ~/workspace/checkpoint/neo";
-      apollo = "cd ~/workspace/checkpoint/apollo";
-      rps = "cd ~/workspace/checkpoint/rps";
-      mpos = "cd ~/workspace/checkpoint/mpos";
-      # app aliases
-      sftp = "rlwrap sftp";
-      less = "bat";
-      cat = "bat";
-      compose = "docker compose";
-    }
-    // lib.optionalAttrs pkgs.stdenv.isDarwin {
-      # macOS-only aliases
-      docker = "container";
-      focal = "limactl shell focal";
-      jammy = "limactl shell jammy";
-    };
+  home.shellAliases = {
+    # zsh
+    zshconfig = "\${VISUAL:-\$EDITOR} ~/.zshrc";
+    # work dirs
+    work = "cd ~/workspace/checkpoint";
+    personal = "cd ~/workspace/personal";
+    neo = "cd ~/workspace/checkpoint/neo";
+    apollo = "cd ~/workspace/checkpoint/apollo";
+    rps = "cd ~/workspace/checkpoint/rps";
+    mpos = "cd ~/workspace/checkpoint/mpos";
+    # app aliases
+    sftp = "rlwrap sftp";
+    less = "bat";
+    cat = "bat";
+    compose = "docker compose";
+  }
+  // lib.optionalAttrs pkgs.stdenv.isDarwin {
+    # macOS-only aliases
+    docker = "container";
+    focal = "limactl shell focal";
+    jammy = "limactl shell jammy";
+  };
 
   programs.starship = {
     enable = true;

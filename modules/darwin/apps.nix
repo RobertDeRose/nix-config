@@ -2,7 +2,8 @@
 # macOS-only: system-wide nix packages + Homebrew casks/formulae.
 # GUI apps and anything macOS-specific live here.
 # Cross-platform CLI tools belong in home/common/core.nix instead.
-{pkgs, ...}: {
+{ pkgs, ... }:
+{
   # System-wide packages available to all users.
   # Prefer home-manager's home.packages for user-level tools.
   environment.systemPackages = with pkgs; [

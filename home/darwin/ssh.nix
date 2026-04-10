@@ -1,6 +1,8 @@
-{username, ...}: let
+{ username, ... }:
+let
   agentSocket = "/Users/${username}/Library/Containers/com.bitwarden.desktop/Data/.bitwarden-ssh-agent.sock";
-in {
+in
+{
   programs.ssh = {
     enable = true;
     extraConfig = ''

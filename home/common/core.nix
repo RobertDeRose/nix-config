@@ -4,7 +4,8 @@
   pkgs,
   lib,
   ...
-}: {
+}:
+{
   home.packages = with pkgs; [
     # archives
     zip

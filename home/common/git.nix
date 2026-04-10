@@ -7,23 +7,28 @@
   useremail,
   fullname,
   ...
-}: {
+}:
+{
   # `programs.git` will generate the config file: ~/.config/git/config
   # to make git use this config file, `~/.gitconfig` should not exist!
   #    https://git-scm.com/docs/git-config#Documentation/git-config.txt---global
-  home.activation.removeExistingGitconfig = lib.hm.dag.entryBefore ["checkLinkTargets"] ''
+  home.activation.removeExistingGitconfig = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
     [ -e ~/.gitconfig ] && mv -f ~/.gitconfig ~/.gitconfig.before_nix || true
   '';
 
   # Allowed signers file for SSH commit signature verification.
   # Maps your email to your public key so `git log --show-signature` works.
-  home.file.".config/git/allowed_signers".text = "${useremail} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA";
+  home.file.".config/git/allowed_signers".text =
+    "${useremail} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA";
 
   programs.difftastic.git.enable = true;
 
   programs.git = {
     enable = true;
-    ignores = [".DS_Store" ".jj"];
+    ignores = [
+      ".DS_Store"
+      ".jj"
+    ];
     settings = {
       core = {
         autocrlf = "input";

@@ -1,4 +1,5 @@
-{pkgs, ...}: {
+{ pkgs, ... }:
+{
   programs.zellij = {
     enable = true;
 
@@ -28,14 +29,15 @@
   };
 
   home.packages =
-    if pkgs.stdenv.isLinux
-    then [
-      (pkgs.writeShellScriptBin "pbcopy" ''
-        #!/usr/bin/env bash
-        set -euo pipefail
-        data="$(cat | base64 | tr -d '\n')"
-        printf '\033]52;c;%s\a' "$data"
-      '')
-    ]
-    else [];
+    if pkgs.stdenv.isLinux then
+      [
+        (pkgs.writeShellScriptBin "pbcopy" ''
+          #!/usr/bin/env bash
+          set -euo pipefail
+          data="$(cat | base64 | tr -d '\n')"
+          printf '\033]52;c;%s\a' "$data"
+        '')
+      ]
+    else
+      [ ];
 }

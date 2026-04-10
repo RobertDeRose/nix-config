@@ -1,8 +1,9 @@
 # modules/darwin/system.nix
 # macOS-only system configuration (Dock, Finder, trackpad, fonts, etc.)
 # All options: https://daiderd.com/nix-darwin/manual/index.html#sec-options
-{pkgs, ...}: {
-  imports = [../common/fonts.nix];
+{ pkgs, ... }:
+{
+  imports = [ ../common/fonts.nix ];
 
   documentation = {
     enable = false;
@@ -11,7 +12,7 @@
     man.enable = true;
   };
 
-  environment.shells = [pkgs.zsh];
+  environment.shells = [ pkgs.zsh ];
 
   # Required for nix-darwin's default shell
   programs.zsh.enable = true;

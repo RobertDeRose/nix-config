@@ -5,7 +5,8 @@
   lib,
   username,
   ...
-}: {
+}:
+{
   nixpkgs.config.allowUnfree = true;
 
   nix = {
@@ -18,7 +19,7 @@
         "nix-command"
         "flakes"
       ];
-      trusted-users = [username];
+      trusted-users = [ username ];
     };
 
     # Garbage-collect weekly to keep disk usage low
