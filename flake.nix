@@ -184,7 +184,11 @@
                   home-manager.useGlobalPkgs = true;
                   home-manager.useUserPackages = true;
                   home-manager.verbose = true;
-                  home-manager.backupFileExtension = "bak";
+                  home-manager.backupCommand = ''
+                    target="$HOME/.hm_bkup/$(realpath --relative-to="$HOME" "$1")"
+                    mkdir -p "$(dirname "$target")"
+                    mv "$1" "$target"
+                  '';
                   home-manager.extraSpecialArgs = defaultUser;
                   home-manager.users.${defaultUser.username} = import ./home/darwin.nix;
                 }

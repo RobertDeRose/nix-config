@@ -16,9 +16,18 @@
   # Locale / Time / Hostname
   # ------------------------------------------------------------------ #
   environment.etc = {
-    "hostname".text = "${hostname}\n";
-    "timezone".text = "America/New_York\n";
-    "default/locale".text = "LANG=en_US.UTF-8\n";
+    "hostname" = {
+      text = "${hostname}\n";
+      replaceExisting = true;
+    };
+    "timezone" = {
+      text = "America/New_York\n";
+      replaceExisting = true;
+    };
+    "default/locale" = {
+      text = "LANG=en_US.UTF-8\n";
+      replaceExisting = true;
+    };
   };
 
   # ------------------------------------------------------------------ #

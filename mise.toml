@@ -42,13 +42,19 @@ curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | 
 description = "Install Nix via nix-installer if missing"
 hide = true
 quiet = true
-outputs = "/nix/receipt.json"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Skip if Nix is already installed
+if [ -e /nix/receipt.json ]; then
+  echo "Nix is already installed, skipping."
+  exit 0
+fi
+
 export NIX_INSTALLER_NO_CONFIRM="true"
 export NIX_INSTALLER_ENABLE_FLAKES="true"
+export NIX_INSTALLER_EXTRA_CONF="trusted-users = root @wheel"
 [ $(uname -s) = 'Darwin' ] && export NIX_INSTALLER_SSL_CERT_FILE='/etc/ssl/cert.pem'
 
 echo "==> Installing Nix..."
@@ -155,7 +161,7 @@ echo "==> Activating configuration..."
 if [ "$(uname -s)" != "Darwin" ]; then
   echo "==> Activating home-manager configuration..."
   nix build "${HOME_TARGET[@]}" --out-link .hm-result
-  ./.hm-result/activate
+  HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
 fi
 """
 
@@ -209,7 +215,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
 else
   nix "${VERBOSE_ARGS[@]}" run 'github:numtide/system-manager' -- switch --flake ".#$HOST" --sudo
   nix build ".#homeConfigurations.$HOST.activationPackage" --out-link .hm-result
-  ./.hm-result/activate
+  HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
 fi
 '''
 
