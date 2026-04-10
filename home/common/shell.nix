@@ -173,9 +173,9 @@ in
         background = "#1F2430";
         black = "#191E2A";
         blue = "#73D0FF";
-        box = "#242936";
+        box = "#44475A";
         brightblue = "#59C2FF";
-        current_line = "#2A2F3A";
+        current_line = "#44475A";
         cyan = "#95E6CB";
         foreground = "#CBCCC6";
         green = "#AAD94C";
