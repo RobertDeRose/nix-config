@@ -7,13 +7,12 @@
 # The Mac App Store version uses a sandboxed container socket path:
 #   ~/Library/Containers/com.bitwarden.desktop/Data/.bitwarden-ssh-agent.sock
 #
-# If you switch to the .dmg install, override agentSocket to:
+# If you switch to the .dmg install, change agentSocket below to:
 #   "/Users/${username}/.bitwarden-ssh-agent.sock"
-{
-  username,
-  agentSocket ? "/Users/${username}/Library/Containers/com.bitwarden.desktop/Data/.bitwarden-ssh-agent.sock",
-  ...
-}:
+{ username, ... }:
+let
+  agentSocket = "/Users/${username}/Library/Containers/com.bitwarden.desktop/Data/.bitwarden-ssh-agent.sock";
+in
 {
   programs.ssh = {
     enable = true;
