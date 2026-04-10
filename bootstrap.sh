@@ -39,7 +39,7 @@ fi
 if [[ "$(uname -s)" == "Linux" ]] && ! command -v git &>/dev/null; then
 	echo "==> Installing git..."
 	command=("apt-get")
-	[[ $(id -u) -eq 0 ]] && command=("sudo" "${command[@]}")
+	[[ $(id -u) -ne 0 ]] && command=("sudo" "${command[@]}")
 	"${command[@]}" update -qq && "${command[@]}" install -yqq git
 fi
 

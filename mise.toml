@@ -6,7 +6,7 @@ env_shell_expand = true
 [tools]
 actionlint = "latest"
 "aqua:kamadorueda/alejandra" = { version = "latest", os = ["linux"] }
-hk = "latest"
+hk = "1.41"
 pkl = "latest"
 shellcheck = "latest"
 shfmt = "latest"
@@ -32,7 +32,7 @@ run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
-[ "$(uname -s)" != "Darwin" ] && exit 0
+[[ "$(uname -s)" != "Darwin" || -x /opt/homebrew/bin/brew || -x /usr/local/bin/brew ]] && exit 0
 
 echo "==> Installing Homebrew..."
 curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash
