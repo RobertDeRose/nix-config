@@ -1,10 +1,6 @@
 # home/common/core.nix
 # Cross-platform CLI tools and programs — works on macOS and Linux.
-{
-  pkgs,
-  lib,
-  ...
-}:
+{ pkgs, ... }:
 {
   home.packages = with pkgs; [
     # archives

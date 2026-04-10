@@ -43,7 +43,6 @@
       PasswordAuthentication = false;
       PermitRootLogin = "no";
       AuthorizedKeysCommand = "${pkgs.writeShellScript "github-authorized-keys" ''
-        #!/usr/bin/env bash
         set -euo pipefail
 
         requested_user="''${1:-}"
@@ -51,16 +50,24 @@
           exit 0
         fi
 
-        exec ${pkgs.curl}/bin/curl -fsSL "https://github.com/${githubUsername}.keys"
+        exec ${pkgs.curl}/bin/curl --connect-timeout 5 --max-time 10 -fsSL "https://github.com/${githubUsername}.keys"
       ''} %u";
-      AuthorizedKeysCommandUser = "root";
-      AuthorizedKeysFile = "none";
+      AuthorizedKeysCommandUser = "_sshkeys";
     };
   };
 
   # ------------------------------------------------------------------ #
-  # User
+  # Users
   # ------------------------------------------------------------------ #
+
+  # Unprivileged user for AuthorizedKeysCommand (least-privilege)
+  users.users."_sshkeys" = {
+    isSystemUser = true;
+    group = "nogroup";
+    home = "/nonexistent";
+    shell = "/usr/sbin/nologin";
+  };
+
   users.users."${username}" = {
     isNormalUser = true;
     home = "/home/${username}";

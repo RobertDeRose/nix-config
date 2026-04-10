@@ -15,8 +15,6 @@
     fastfetch
   ];
 
-  environment.variables.EDITOR = "zed --wait";
-
   # NOTE: Homebrew must be installed manually first: https://brew.sh
   # The init mise task handles this automatically on a fresh machine.
   homebrew = {

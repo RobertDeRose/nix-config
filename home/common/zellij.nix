@@ -1,4 +1,12 @@
 { pkgs, ... }:
+let
+  # OSC 52 clipboard shim for Linux (terminal-based copy via escape sequences)
+  osc52-copy = pkgs.writeShellScriptBin "osc52-copy" ''
+    set -euo pipefail
+    data="$(${pkgs.coreutils}/bin/cat | ${pkgs.coreutils}/bin/base64 | ${pkgs.coreutils}/bin/tr -d '\n')"
+    ${pkgs.coreutils}/bin/printf '\033]52;c;%s\a' "$data"
+  '';
+in
 {
   programs.zellij = {
     enable = true;
@@ -9,7 +17,7 @@
       pane_frames = true;
       show_startup_tips = false;
       mouse_mode = true;
-      copy_command = "pbcopy";
+      copy_command = if pkgs.stdenv.isDarwin then "pbcopy" else "${osc52-copy}/bin/osc52-copy";
 
       theme = "ayu_mirage";
       themes.ayu_mirage = {
@@ -27,17 +35,4 @@
       };
     };
   };
-
-  home.packages =
-    if pkgs.stdenv.isLinux then
-      [
-        (pkgs.writeShellScriptBin "pbcopy" ''
-          #!/usr/bin/env bash
-          set -euo pipefail
-          data="$(cat | base64 | tr -d '\n')"
-          printf '\033]52;c;%s\a' "$data"
-        '')
-      ]
-    else
-      [ ];
 }
