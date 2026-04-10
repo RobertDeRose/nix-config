@@ -123,7 +123,7 @@ in
 
   home.shellAliases = {
     # zsh
-    zshconfig = "\${VISUAL:-\$EDITOR} ~/.zshrc";
+    zshconfig = "\${VISUAL:-$EDITOR} ~/.zshrc";
     # work dirs
     work = "cd ~/workspace/checkpoint";
     personal = "cd ~/workspace/personal";
