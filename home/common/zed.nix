@@ -5,7 +5,6 @@
 
     userSettings = {
       base_keymap = "VSCode";
-      vim_mode = true;
       helix_mode = true;
 
       line_indicator_format = "long";

@@ -139,6 +139,9 @@ echo "==> $( [ "${CI:-false}" = "true" ] && echo "Validating" || echo "Deploying
 if [[ "${CI:-false}" = "true" ]]; then
   # CI validation-only path: evaluate the derivation without building/activating.
   test "$(nix eval --raw "${TARGET[0]}.type")" = "derivation"
+  if [ -n "${HOME_TARGET:-}" ]; then
+    test "$(nix eval --raw "${HOME_TARGET[0]}.type")" = "derivation"
+  fi
   echo "CI detected: Evaluation successful. Skipping build and activation steps."
   exit 0
 fi
