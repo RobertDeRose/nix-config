@@ -53,6 +53,7 @@
       fullname = "Robert DeRose";
       username = "rderose";
       useremail = "rderose@checkpt.com";
+      githubUsername = "RobertDeRose";
     };
 
     # Collect all Linux hosts from hosts/*-linux/<hostname>/

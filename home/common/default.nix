@@ -7,7 +7,6 @@
     ./git.nix
     ./helix.nix
     ./shell.nix
-    ./ssh.nix
     ./zed.nix
     ./zellij.nix
   ];

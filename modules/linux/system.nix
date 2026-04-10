@@ -4,6 +4,7 @@
 {
   pkgs,
   username,
+  githubUsername,
   hostname,
   ...
 }: {
@@ -37,8 +38,23 @@
   # ------------------------------------------------------------------ #
   services.openssh = {
     enable = true;
-    settings.PasswordAuthentication = false;
-    settings.PermitRootLogin = "no";
+    settings = {
+      PasswordAuthentication = false;
+      PermitRootLogin = "no";
+      AuthorizedKeysCommand = "${pkgs.writeShellScript "github-authorized-keys" ''
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        requested_user="''${1:-}"
+        if [ "$requested_user" != "${username}" ]; then
+          exit 0
+        fi
+
+        exec ${pkgs.curl}/bin/curl -fsSL "https://github.com/${githubUsername}.keys"
+      ''} %u";
+      AuthorizedKeysCommandUser = "root";
+      AuthorizedKeysFile = "none";
+    };
   };
 
   # ------------------------------------------------------------------ #

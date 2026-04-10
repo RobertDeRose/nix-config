@@ -9,6 +9,7 @@
   imports = [
     ./common
     ./common/ghostty.nix
+    ./darwin/ssh.nix
   ];
 
   home.homeDirectory = "/Users/${username}";
