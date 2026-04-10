@@ -130,7 +130,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
   TARGET=(".#darwinConfigurations.${HOSTNAME}.system")
   ACTIVATE_CMD=(sudo ./result/sw/bin/darwin-rebuild switch --flake .#${HOSTNAME})
 else
-  TARGET=(".#systemConfigs.${HOSTNAME}.system")
+  TARGET=(".#systemConfigs.${HOSTNAME}")
   ACTIVATE_CMD=(nix run 'github:numtide/system-manager' -- switch --flake .#${HOSTNAME} --sudo)
   HOME_TARGET=(".#homeConfigurations.${HOSTNAME}.activationPackage")
 fi

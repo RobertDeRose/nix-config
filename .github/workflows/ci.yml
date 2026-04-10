@@ -45,7 +45,7 @@ jobs:
         run: |
           for host in $(nix eval --json '.#systemConfigs' 2>/dev/null | jq -r 'keys[]' 2>/dev/null); do
             echo "==> Building systemConfigs.$host"
-            nix build ".#systemConfigs.$host.system" --no-link
+            nix build ".#systemConfigs.$host" --no-link
           done
 
       - name: Build Linux home-manager configurations (Linux only)
