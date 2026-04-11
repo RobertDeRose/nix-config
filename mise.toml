@@ -54,6 +54,7 @@ fi
 
 export NIX_INSTALLER_NO_CONFIRM="true"
 export NIX_INSTALLER_ENABLE_FLAKES="true"
+export NIX_INSTALLER_EXTRA_CONF="trusted-users = root $(whoami)"
 [ $(uname -s) = 'Darwin' ] && export NIX_INSTALLER_SSL_CERT_FILE='/etc/ssl/cert.pem'
 
 echo "==> Installing Nix..."
@@ -62,6 +63,13 @@ if [ "$(uname -sm)" = "Darwin x86_64" ]; then
   curl -sSfL https://artifacts.nixos.org/nix-installer | bash -s -- install
 else
   curl -sSfL https://install.lix.systems/lix | bash -s -- install
+fi
+
+. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+
+if ! grep -q "$(whoami)" <<< "$(nix config show | grep trusted-users)"; then
+  echo "==> Failed: user $(whoami) was not added to trusted-users during Nix installation"
+  exit 1
 fi
 '''
 
