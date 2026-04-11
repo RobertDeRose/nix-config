@@ -149,14 +149,18 @@
 
       systems = [
         "aarch64-darwin"
+        "aarch64-linux"
         "x86_64-darwin"
         "x86_64-linux"
       ];
 
       perSystem =
-        { pkgs, ... }:
+        { pkgs, system, ... }:
         {
           formatter = pkgs.nixfmt;
+        }
+        // lib.optionalAttrs (inputs.system-manager.packages ? ${system}) {
+          packages.system-manager = inputs.system-manager.packages.${system}.default;
         };
 
       easy-hosts = {

@@ -64,13 +64,6 @@ if [ "$(uname -sm)" = "Darwin x86_64" ]; then
 else
   curl -sSfL https://install.lix.systems/lix | bash -s -- install
 fi
-
-. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-
-if ! grep -q "$(whoami)" <<< "$(nix config show | grep trusted-users)"; then
-  echo "==> Failed: user $(whoami) was not added to trusted-users during Nix installation"
-  exit 1
-fi
 '''
 
 [tasks.add-host]
@@ -151,7 +144,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
   ACTIVATE_CMD=(sudo ./result/sw/bin/darwin-rebuild switch --flake .#${HOSTNAME})
 else
   TARGET=(".#systemConfigs.${HOSTNAME}")
-  ACTIVATE_CMD=(nix run "${NIX_FLAGS[@]}" 'github:numtide/system-manager' -- switch --flake .#${HOSTNAME} --sudo)
+  ACTIVATE_CMD=(sudo ./.sm-result/bin/system-manager switch --flake .#${HOSTNAME})
   HOME_TARGET=(".#homeConfigurations.${HOSTNAME}.activationPackage")
 fi
 
@@ -168,11 +161,11 @@ fi
 
 # Local/non-CI path: verify build, then activate.
 nix build "${NIX_FLAGS[@]}" "${TARGET[@]}"
-if [ -n "${SM_TARGET:-}" ]; then
-  nix build "${NIX_FLAGS[@]}" "${SM_TARGET[@]}" --out-link .sm-result
-fi
 
 echo "==> Activating configuration..."
+if [ "$(uname -s)" != "Darwin" ]; then
+  nix build "${NIX_FLAGS[@]}" ".#system-manager" --out-link .sm-result
+fi
 "${ACTIVATE_CMD[@]}"
 
 if [ "$(uname -s)" != "Darwin" ]; then
