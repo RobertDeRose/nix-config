@@ -136,36 +136,40 @@ set +u
 source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 set -u
 
+NIX_FLAGS=(--accept-flake-config)
 HOSTNAME="${usage_hostname:-$(hostname -s)}"
 if [ "$(uname -s)" = "Darwin" ]; then
   TARGET=(".#darwinConfigurations.${HOSTNAME}.system")
   ACTIVATE_CMD=(sudo ./result/sw/bin/darwin-rebuild switch --flake .#${HOSTNAME})
 else
   TARGET=(".#systemConfigs.${HOSTNAME}")
-  ACTIVATE_CMD=(nix run 'github:numtide/system-manager' -- switch --flake .#${HOSTNAME} --sudo)
+  ACTIVATE_CMD=(nix run "${NIX_FLAGS[@]}" 'github:numtide/system-manager' -- switch --flake .#${HOSTNAME} --sudo)
   HOME_TARGET=(".#homeConfigurations.${HOSTNAME}.activationPackage")
 fi
 
 echo "==> $( [ "${CI:-false}" = "true" ] && echo "Validating" || echo "Deploying" ) configuration for '${HOSTNAME}'..."
 if [[ "${CI:-false}" = "true" ]]; then
   # CI validation-only path: evaluate the derivation without building/activating.
-  test "$(nix eval --raw "${TARGET[0]}.type")" = "derivation"
+  test "$(nix eval "${NIX_FLAGS[@]}" --raw "${TARGET[0]}.type")" = "derivation"
   if [ -n "${HOME_TARGET:-}" ]; then
-    test "$(nix eval --raw "${HOME_TARGET[0]}.type")" = "derivation"
+    test "$(nix eval "${NIX_FLAGS[@]}" --raw "${HOME_TARGET[0]}.type")" = "derivation"
   fi
   echo "CI detected: Evaluation successful. Skipping build and activation steps."
   exit 0
 fi
 
 # Local/non-CI path: verify build, then activate.
-nix build "${TARGET[@]}"
+nix build "${NIX_FLAGS[@]}" "${TARGET[@]}"
+if [ -n "${SM_TARGET:-}" ]; then
+  nix build "${NIX_FLAGS[@]}" "${SM_TARGET[@]}" --out-link .sm-result
+fi
 
 echo "==> Activating configuration..."
 "${ACTIVATE_CMD[@]}"
 
 if [ "$(uname -s)" != "Darwin" ]; then
   echo "==> Activating home-manager configuration..."
-  nix build "${HOME_TARGET[@]}" --out-link .hm-result
+  nix build "${NIX_FLAGS[@]}" "${HOME_TARGET[@]}" --out-link .hm-result
   HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
 fi
 """
@@ -209,17 +213,19 @@ if [ -n "${GITHUB_TOKEN:-}" ]; then
 fi
 
 # Use an array for optional flags
-VERBOSE_ARGS=()
+NIX_FLAGS=(--accept-flake-config)
 if [[ "${usage_debug:-}" == "true" ]]; then
-  VERBOSE_ARGS=("--show-trace" "--verbose")
+  NIX_FLAGS+=("--show-trace" "--verbose")
 fi
 
 echo ""
 if [ "$(uname -s)" = "Darwin" ]; then
-  sudo darwin-rebuild switch --flake ".#$HOST" "${VERBOSE_ARGS[@]}"
+  sudo darwin-rebuild switch --flake ".#$HOST" "${NIX_FLAGS[@]}"
 else
-  nix "${VERBOSE_ARGS[@]}" run 'github:numtide/system-manager' -- switch --flake ".#$HOST" --sudo
-  nix build ".#homeConfigurations.$HOST.activationPackage" --out-link .hm-result
+  nix build "${NIX_FLAGS[@]}" ".#systemConfigs.$HOST"
+  nix build "${NIX_FLAGS[@]}" ".#system-manager" --out-link .sm-result
+  sudo ./.sm-result/bin/system-manager switch --flake ".#$HOST"
+  nix build "${NIX_FLAGS[@]}" ".#homeConfigurations.$HOST.activationPackage" --out-link .hm-result
   HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
 fi
 '''
