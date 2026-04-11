@@ -5,6 +5,7 @@ env_shell_expand = true
 
 [tools]
 actionlint = "latest"
+gh = "latest"
 "github:RobertDeRose/nixfmt" = "latest"
 hk = "1.41"
 pkl = "latest"
@@ -16,7 +17,7 @@ tombi = "latest"
 HK_MISE = 1
 
 [hooks]
-postinstall = "hk install --mise"
+postinstall = "command -v hk >/dev/null && hk install --mise || true"
 
 # ---------------------------------------------------------------------------
 # Bootstrap & host management
@@ -64,6 +65,28 @@ if [ "$(uname -sm)" = "Darwin x86_64" ]; then
 else
   curl -sSfL https://install.lix.systems/lix | bash -s -- install
 fi
+'''
+
+[tasks.github-auth]
+description = "Ensure gh CLI is installed and authenticated"
+hide = true
+quiet = true
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Install gh if not yet available
+mise install gh
+
+# Check if already authenticated
+if mise x gh -- gh auth status &>/dev/null; then
+  echo "GitHub CLI is already authenticated."
+  exit 0
+fi
+
+echo "==> GitHub CLI is not authenticated."
+echo "    Running 'gh auth login' — follow the prompts to authenticate."
+mise x gh -- gh auth login
 '''
 
 [tasks.add-host]
@@ -129,6 +152,13 @@ run = """
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Prefer explicit GITHUB_TOKEN, fall back to gh CLI auth if available
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+  if gh_token="$(mise x gh -- gh auth token 2>/dev/null)"; then
+    export GITHUB_TOKEN="$gh_token"
+  fi
+fi
+
 if [ -n "${GITHUB_TOKEN:-}" ]; then
   export NIX_CONFIG="${NIX_CONFIG:-}"$'\n'"access-tokens = github.com=${GITHUB_TOKEN}"
 fi
@@ -144,7 +174,6 @@ if [ "$(uname -s)" = "Darwin" ]; then
   ACTIVATE_CMD=(sudo ./result/sw/bin/darwin-rebuild switch --flake .#${HOSTNAME})
 else
   TARGET=(".#systemConfigs.${HOSTNAME}")
-  ACTIVATE_CMD=(sudo ./.sm-result/bin/system-manager switch --flake .#${HOSTNAME})
   HOME_TARGET=(".#homeConfigurations.${HOSTNAME}.activationPackage")
 fi
 
@@ -159,16 +188,15 @@ if [[ "${CI:-false}" = "true" ]]; then
   exit 0
 fi
 
-# Local/non-CI path: verify build, then activate.
-nix build "${NIX_FLAGS[@]}" "${TARGET[@]}"
+if [ "$(uname -s)" = "Darwin" ]; then
+  nix build "${NIX_FLAGS[@]}" "${TARGET[@]}"
+  echo "==> Activating configuration..."
+  "${ACTIVATE_CMD[@]}"
+else
+  echo "==> Activating system configuration..."
+  nix build "${NIX_FLAGS[@]}" ".#system-manager"
+  sudo ./result/bin/system-manager switch --flake ".#${HOSTNAME}"
 
-echo "==> Activating configuration..."
-if [ "$(uname -s)" != "Darwin" ]; then
-  nix build "${NIX_FLAGS[@]}" ".#system-manager" --out-link .sm-result
-fi
-"${ACTIVATE_CMD[@]}"
-
-if [ "$(uname -s)" != "Darwin" ]; then
   echo "==> Activating home-manager configuration..."
   nix build "${NIX_FLAGS[@]}" "${HOME_TARGET[@]}" --out-link .hm-result
   HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
@@ -209,6 +237,13 @@ run = '''
 set -euo pipefail
 HOST="$(hostname -s)"
 
+# Prefer explicit GITHUB_TOKEN, fall back to gh CLI auth if available
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+  if gh_token="$(mise x gh -- gh auth token 2>/dev/null)"; then
+    export GITHUB_TOKEN="$gh_token"
+  fi
+fi
+
 if [ -n "${GITHUB_TOKEN:-}" ]; then
   export NIX_CONFIG="${NIX_CONFIG:-}"$'\n'"access-tokens = github.com=${GITHUB_TOKEN}"
 fi
@@ -223,9 +258,8 @@ echo ""
 if [ "$(uname -s)" = "Darwin" ]; then
   sudo darwin-rebuild switch --flake ".#$HOST" "${NIX_FLAGS[@]}"
 else
-  nix build "${NIX_FLAGS[@]}" ".#systemConfigs.$HOST"
-  nix build "${NIX_FLAGS[@]}" ".#system-manager" --out-link .sm-result
-  sudo ./.sm-result/bin/system-manager switch --flake ".#$HOST"
+  nix build "${NIX_FLAGS[@]}" ".#system-manager"
+  sudo ./result/bin/system-manager switch --flake ".#$HOST"
   nix build "${NIX_FLAGS[@]}" ".#homeConfigurations.$HOST.activationPackage" --out-link .hm-result
   HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
 fi
@@ -337,4 +371,115 @@ else
 fi
 
 echo -e "\nDone! Open a new shell or restart your computer to fully clear changes."
+'''
+
+# ---------------------------------------------------------------------------
+# Lima VM management (macOS only — for testing Linux configs)
+# ---------------------------------------------------------------------------
+
+[tasks."vm:create"]
+description = "Create and start a fresh Lima VM for testing"
+usage = '''
+arg "[name]" help="VM name" default="nix-test"
+arg "[template]" help="Lima template" default="template:ubuntu"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+VM="${usage_name}"
+TEMPLATE="${usage_template}"
+
+if limactl list --json | jq -e --arg vm "$VM" '.[] | select(.name == $vm)' &>/dev/null; then
+  echo "ERROR: VM '$VM' already exists. Use 'mise run vm:recreate' to replace it."
+  exit 1
+fi
+
+echo "==> Creating Lima VM '$VM' from $TEMPLATE..."
+limactl create --yes \
+  --name="$VM" \
+  --containerd=none \
+  --mount-writable \
+  --set '.user.name = "rderose"' \
+  --set '.user.home = "/home/rderose"' \
+  "$TEMPLATE"
+
+echo "==> Starting VM '$VM'..."
+limactl start "$VM"
+
+echo ""
+echo "VM '$VM' is ready. Run 'mise run vm:shell' to connect."
+'''
+
+[tasks."vm:remove"]
+description = "Stop and remove a Lima VM"
+usage = 'arg "[name]" help="VM name" default="nix-test"'
+confirm = "This will destroy the VM '{{usage.name}}' and all its data. Continue?"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+VM="${usage_name}"
+
+if ! limactl list --json | jq -e --arg vm "$VM" 'select(.name == $vm)' &>/dev/null; then
+  echo "VM '$VM' does not exist."
+  exit 0
+fi
+
+echo "==> Stopping VM '$VM'..."
+limactl stop "$VM" 2>/dev/null || true
+
+echo "==> Removing VM '$VM'..."
+limactl delete "$VM"
+echo "VM '$VM' removed."
+'''
+
+[tasks."vm:recreate"]
+description = "Destroy and recreate a fresh Lima VM"
+usage = '''
+arg "[name]" help="VM name" default="nix-test"
+arg "[template]" help="Lima template" default="template:ubuntu"
+'''
+confirm = "This will destroy VM '{{usage.name}}' and recreate it from scratch. Continue?"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+VM="${usage_name}"
+TEMPLATE="${usage_template}"
+
+# Remove existing VM if present
+if limactl list --json | jq -e --arg vm "$VM" 'select(.name == $vm)' &>/dev/null; then
+  echo "==> Stopping VM '$VM'..."
+  limactl stop "$VM" 2>/dev/null || true
+  echo "==> Removing VM '$VM'..."
+  limactl delete "$VM"
+fi
+
+echo "==> Creating Lima VM '$VM' from $TEMPLATE..."
+limactl create --yes \
+  --name="$VM" \
+  --containerd=none \
+  --mount-writable \
+  --set '.user.name = "rderose"' \
+  --set '.user.home = "/home/rderose"' \
+  "$TEMPLATE"
+
+echo "==> Starting VM '$VM'..."
+limactl start "$VM"
+
+echo ""
+echo "VM '$VM' is ready. Run 'mise run vm:shell' to connect."
+'''
+
+[tasks."vm:shell"]
+description = "Open a shell in the Lima VM"
+usage = 'arg "[name]" help="VM name" default="nix-test"'
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+VM="${usage_name}"
+echo "==> Connecting to VM '$VM'..."
+exec limactl shell "$VM"
 '''
