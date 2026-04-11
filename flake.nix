@@ -192,7 +192,7 @@
                   home-manager.useUserPackages = true;
                   home-manager.verbose = true;
                   home-manager.backupCommand = ''
-                    target="$HOME/.hm_bkup/$(realpath --relative-to="$HOME" "$1")"
+                    target="$HOME/.hm_bkup/''${1#"$HOME"/}"
                     mkdir -p "$(dirname "$target")"
                     mv "$1" "$target"
                   '';

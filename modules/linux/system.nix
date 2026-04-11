@@ -60,7 +60,8 @@
 
         cache_dir="/var/cache/ssh-authorized-keys"
         cache_file="$cache_dir/${username}.keys"
-        tmp_file="$cache_file.tmp"
+        tmp_file="$(${pkgs.coreutils}/bin/mktemp "$cache_dir/.keys.XXXXXX")"
+        trap '${pkgs.coreutils}/bin/rm -f "$tmp_file"' EXIT
         cache_ttl_seconds=3600
         now="$(${pkgs.coreutils}/bin/date +%s)"
 
@@ -80,8 +81,6 @@
           ${pkgs.coreutils}/bin/mv "$tmp_file" "$cache_file"
           exec ${pkgs.coreutils}/bin/cat "$cache_file"
         fi
-
-        ${pkgs.coreutils}/bin/rm -f "$tmp_file"
 
         # Fall back to stale cache if fetch failed
         if [ -s "$cache_file" ]; then
