@@ -122,26 +122,31 @@ in
   ];
 
   home.shellAliases = {
-    # zsh
-    zshconfig = "\${VISUAL:-$EDITOR} ~/.zshrc";
-    # work dirs
+    # ── Directory shortcuts ──────────────────────────────────────────
     work = "cd ~/workspace/checkpoint";
     personal = "cd ~/workspace/personal";
-    neo = "cd ~/workspace/checkpoint/neo";
     apollo = "cd ~/workspace/checkpoint/apollo";
-    rps = "cd ~/workspace/checkpoint/rps";
-    mpos = "cd ~/workspace/checkpoint/mpos";
-    # app aliases
-    sftp = "rlwrap sftp";
+
+    # ── Tool aliases ─────────────────────────────────────────────────
+    ls = "lsd";
     less = "bat";
     cat = "bat";
-    compose = "docker compose";
+    oc = "opencode";
+    cgb = "clean_git_branches";
+
+    # ── Git (portable subset of oh-my-zsh git plugin) ───────────────
+    gst = "git status";
+    gd = "git diff";
+    ga = "git add";
+    gc = "git commit --verbose";
+    "gc!" = "git commit --verbose --amend";
+    gco = "git checkout";
+    gdca = "git diff --cached";
+    gbD = "git branch --delete --force";
   }
   // lib.optionalAttrs pkgs.stdenv.isDarwin {
     # macOS-only aliases
     docker = "container";
-    focal = "limactl shell focal";
-    jammy = "limactl shell jammy";
   };
 
   programs.starship = {
