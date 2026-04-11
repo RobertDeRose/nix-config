@@ -36,7 +36,7 @@
   environment.systemPackages = with pkgs; [
     bat
     eza
-    git
+    gitMinimal
     mise
     curl
     wget

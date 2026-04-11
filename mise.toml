@@ -55,7 +55,9 @@ fi
 
 export NIX_INSTALLER_NO_CONFIRM="true"
 export NIX_INSTALLER_ENABLE_FLAKES="true"
-export NIX_INSTALLER_EXTRA_CONF="trusted-users = root $(whoami)"
+export NIX_INSTALLER_EXTRA_CONF="trusted-users = root $(whoami)
+extra-substituters = https://nix-community.cachix.org https://cache.numtide.com
+extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
 [ $(uname -s) = 'Darwin' ] && export NIX_INSTALLER_SSL_CERT_FILE='/etc/ssl/cert.pem'
 
 echo "==> Installing Nix..."
@@ -167,6 +169,12 @@ set +u
 source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 set -u
 
+# Restart the daemon so it picks up trusted-users from nix.conf
+# (the installer may have spawned it before the config was finalized)
+if [ "$(uname -s)" = "Linux" ]; then
+  sudo systemctl restart nix-daemon
+fi
+
 NIX_FLAGS=(--accept-flake-config)
 HOSTNAME="${usage_hostname:-$(hostname -s)}"
 if [ "$(uname -s)" = "Darwin" ]; then
@@ -195,7 +203,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
 else
   echo "==> Activating system configuration..."
   nix build "${NIX_FLAGS[@]}" ".#system-manager"
-  sudo ./result/bin/system-manager switch --flake ".#${HOSTNAME}"
+  ./result/bin/system-manager switch --flake ".#${HOSTNAME}" --sudo
 
   echo "==> Activating home-manager configuration..."
   nix build "${NIX_FLAGS[@]}" "${HOME_TARGET[@]}" --out-link .hm-result
@@ -259,7 +267,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
   sudo darwin-rebuild switch --flake ".#$HOST" "${NIX_FLAGS[@]}"
 else
   nix build "${NIX_FLAGS[@]}" ".#system-manager"
-  sudo ./result/bin/system-manager switch --flake ".#$HOST"
+  ./result/bin/system-manager switch --flake ".#$HOST" --sudo
   nix build "${NIX_FLAGS[@]}" ".#homeConfigurations.$HOST.activationPackage" --out-link .hm-result
   HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
 fi
@@ -268,6 +276,42 @@ fi
 [tasks.debug]
 description = "Apply config with debug traces"
 run = "mise run switch --debug"
+
+[tasks.deploy]
+description = "Build locally and deploy system config to a remote Linux host via SSH"
+usage = '''
+arg "<host>" help="SSH target (e.g. rderose@192.168.1.10 or an SSH config alias)"
+arg "[name]" help="System config name (defaults to remote hostname)"
+flag "-d --debug" help="Show verbose output and nix traces for debugging"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+TARGET_HOST="${usage_host}"
+CONFIG_NAME="${usage_name:-}"
+
+# If no config name given, resolve it from the remote hostname
+if [ -z "$CONFIG_NAME" ]; then
+  CONFIG_NAME="$(ssh "$TARGET_HOST" hostname -s)"
+  echo "==> Detected remote hostname: $CONFIG_NAME"
+fi
+
+NIX_FLAGS=(--accept-flake-config)
+if [[ "${usage_debug:-}" == "true" ]]; then
+  NIX_FLAGS+=("--show-trace" "--verbose")
+fi
+
+echo "==> Building system-manager from flake..."
+nix build "${NIX_FLAGS[@]}" ".#system-manager"
+
+echo "==> Deploying system config '$CONFIG_NAME' to $TARGET_HOST..."
+./result/bin/system-manager \
+  --target-host "$TARGET_HOST" \
+  switch \
+  --flake ".#$CONFIG_NAME" \
+  --sudo
+'''
 
 # ---------------------------------------------------------------------------
 # Nix maintenance tasks

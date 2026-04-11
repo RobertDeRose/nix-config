@@ -128,7 +128,7 @@ in
     apollo = "cd ~/workspace/checkpoint/apollo";
 
     # ── Tool aliases ─────────────────────────────────────────────────
-    ls = "lsd";
+    ls = "eza";
     less = "bat";
     cat = "bat";
     oc = "opencode";
