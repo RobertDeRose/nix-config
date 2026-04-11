@@ -8,7 +8,6 @@
     ./git.nix
     ./helix.nix
     ./shell.nix
-    ./zed.nix
     ./zellij.nix
   ];
 
@@ -19,5 +18,4 @@
   };
 
   programs.home-manager.enable = true;
-  fonts.fontconfig.enable = true;
 }

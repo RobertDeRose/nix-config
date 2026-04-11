@@ -36,7 +36,6 @@
   environment.systemPackages = with pkgs; [
     bat
     eza
-    fastfetch
     git
     mise
     curl

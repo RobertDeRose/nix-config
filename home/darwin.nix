@@ -10,10 +10,13 @@
   imports = [
     ./common
     ./common/ghostty.nix
+    ./common/zed.nix
     ./darwin/ssh.nix
   ];
 
   home.homeDirectory = "/Users/${username}";
+
+  fonts.fontconfig.enable = true;
 
   home.packages = [
     pkgs.bitwarden-cli # Bitwarden vault CLI (bw)
