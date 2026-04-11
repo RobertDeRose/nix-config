@@ -67,4 +67,5 @@ fi
 
 echo "==> Handing off to mise..."
 export MISE_CEILING_PATHS
+export MISE_AUTO_INSTALL=false
 mise run init "$HOSTNAME"
