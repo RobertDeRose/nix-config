@@ -54,7 +54,9 @@ fi
 
 export NIX_INSTALLER_NO_CONFIRM="true"
 export NIX_INSTALLER_ENABLE_FLAKES="true"
-export NIX_INSTALLER_EXTRA_CONF="trusted-users = root @wheel"
+NIX_INSTALLER_EXTRA_CONF="trusted-users = root @wheel
+accept-flake-config = true"
+export NIX_INSTALLER_EXTRA_CONF
 [ $(uname -s) = 'Darwin' ] && export NIX_INSTALLER_SSL_CERT_FILE='/etc/ssl/cert.pem'
 
 echo "==> Installing Nix..."
@@ -100,8 +102,14 @@ if [ ! -d "${HOST_DIR}" ]; then
   echo "==> Creating ${HOST_DIR} from templates/${OS}..."
   mkdir -p "${HOST_DIR}"
   cp -vr "templates/${OS}"/* "${HOST_DIR}/"
+fi
+
+# Ensure host files are always tracked — nix flakes only see git-tracked files.
+git add "${HOST_DIR}"
+
+# Create a feature branch for this host (skip if it already exists or we're in CI).
+if [[ "${CI:-false}" != "true" ]] && ! git rev-parse --verify "host/${HOSTNAME}" &>/dev/null; then
   git checkout -b "host/${HOSTNAME}"
-  git add -A
 fi
 
 [ "${MISE_TASK:-}" != "add_host" ] && exit 0
