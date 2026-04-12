@@ -20,7 +20,7 @@
     enable = true;
 
     onActivation = {
-      autoUpdate = true;
+      autoUpdate = false;
       upgrade = false; # only install missing packages, don't upgrade existing ones
       cleanup = "zap"; # remove anything not listed below
     };
@@ -66,10 +66,11 @@
     ];
 
     # App Store apps via mas — install manually first so Apple has a purchase record.
+    # NOTE: iOS-on-Mac apps (e.g. Kasa Smart) are invisible to `mas list` and
+    # would reinstall every switch — manage those manually outside nix.
     masApps = {
       Amphetamine = 937984704;
       Bitwarden = 1352778147;
-      "Kasa Smart" = 1034035493;
       "Keynote: Design Presentations" = 361285480;
       "Numbers: Make Spreadsheets" = 361304891;
       "Pages: Create Documents" = 361309726;

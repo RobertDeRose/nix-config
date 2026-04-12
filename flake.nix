@@ -16,7 +16,7 @@
 
   inputs = {
     # Core Packages - pinned to 25.11 stable
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
 
     # Flake framework
     flake-parts = {

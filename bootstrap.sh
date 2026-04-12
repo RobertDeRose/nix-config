@@ -69,4 +69,4 @@ echo "==> Handing off to mise..."
 export MISE_CEILING_PATHS
 export MISE_AUTO_INSTALL=false
 export MISE_TRUSTED_CONFIG_PATHS="${PWD}"
-mise run init "$HOSTNAME"
+mise run nix:init "$HOSTNAME"

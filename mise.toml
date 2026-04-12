@@ -23,7 +23,7 @@ postinstall = "command -v hk >/dev/null && hk install --mise || true"
 # Bootstrap & host management
 # ---------------------------------------------------------------------------
 
-# Hidden tasks — building blocks for init, individually testable in CI
+# Hidden tasks — building blocks for nix:init, individually testable in CI
 [tasks.install-homebrew]
 description = "Install Homebrew if missing (macOS only)"
 hide = true
@@ -294,10 +294,13 @@ if [[ "${CI:-false}" != "true" ]]; then
 fi
 """
 
-# Public init task — orchestrates the hidden tasks
-[tasks.init]
+# ---------------------------------------------------------------------------
+# Public nix tasks
+# ---------------------------------------------------------------------------
+
+[tasks."nix:init"]
 description = "Full init for a new machine: install Nix (+ Homebrew on Mac), then apply config"
-depends = ["install-homebrew", "install-nix", "trust"]
+depends = ["install-homebrew", "install-nix", "nix:trust"]
 usage = '''
 arg "<hostname>" help="Hostname to assign" long_help="The hostname used as the nix config identifier. Delegates to add-host to create the host directory, then installs prerequisites (Nix, Homebrew) and builds/activates the configuration."
 '''
@@ -312,7 +315,7 @@ echo ""
 echo "Done! Open a new shell to pick up all changes."
 '''
 
-[tasks.switch]
+[tasks."nix:switch"]
 description = "Apply the nix config for the current host (auto-detects Darwin or Linux)"
 usage = '''
 flag "-d --debug" help="Show verbose output and nix traces for debugging"
@@ -352,11 +355,11 @@ else
 fi
 '''
 
-[tasks.debug]
+[tasks."nix:debug"]
 description = "Apply config with debug traces"
-run = "mise run switch --debug"
+run = "mise run nix:switch --debug"
 
-[tasks.deploy]
+[tasks."nix:deploy"]
 description = "Build locally and deploy system config to a remote Linux host via SSH"
 usage = '''
 arg "<host>" help="SSH target (e.g. rderose@192.168.1.10 or an SSH config alias)"
@@ -396,7 +399,7 @@ echo "==> Deploying system config '$CONFIG_NAME' to $TARGET_HOST..."
 # Nix maintenance tasks
 # ---------------------------------------------------------------------------
 
-[tasks.trust]
+[tasks."nix:trust"]
 description = "Add the current user to nix trusted-users and restart the daemon"
 run = '''
 #!/usr/bin/env bash
@@ -441,35 +444,40 @@ fi
 echo "Done. '$USER' is now a trusted nix user."
 '''
 
-[tasks.up]
-description = "Update all flake inputs"
-run = "nix flake update"
+[tasks."nix:up"]
+description = "Update a single flake input, or all inputs if none specified"
+usage = 'arg "[input]" help="Flake input to update (e.g. nixpkgs, home-manager, darwin). Omit to update all."'
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
 
-[tasks.upp]
-description = "Update a single flake input"
-usage = 'arg "<input>" help="Flake input to update (e.g. nixpkgs, home-manager, darwin)"'
-run = "nix flake update ${usage_input:?}"
+if [ -n "${usage_input:-}" ]; then
+  nix flake update "${usage_input}"
+else
+  nix flake update
+fi
+'''
 
-[tasks.history]
+[tasks."nix:history"]
 description = "List all system profile generations"
 run = "nix profile history --profile /nix/var/nix/profiles/system"
 
-[tasks.repl]
+[tasks."nix:repl"]
 description = "Open a nix repl with nixpkgs"
 run = "nix repl --expr 'import (builtins.getFlake \"nixpkgs\") {}'"
 
-[tasks.clean]
+[tasks."nix:clean"]
 description = "Remove all profile generations older than 7 days"
 run = "sudo nix profile wipe-history --profile /nix/var/nix/profiles/system --older-than 7d"
 
-[tasks.gc]
+[tasks."nix:gc"]
 description = "Garbage-collect all unused nix store entries (system + user)"
 run = [
   "sudo nix-collect-garbage --delete-older-than 7d",
   "nix-collect-garbage --delete-older-than 7d",
 ]
 
-[tasks.fmt]
+[tasks."nix:fmt"]
 description = "Format all .nix files in this repo"
 run = "nix fmt"
 
@@ -495,11 +503,11 @@ echo "Review with: git diff --stat"
 echo "Then commit: git add -A && git commit -m 'chore: update iTerm2 preferences'"
 """
 
-[tasks.gcroot]
+[tasks."nix:gcroot"]
 description = "Show auto GC roots in the nix store"
 run = "ls -al /nix/var/nix/gcroots/auto/"
 
-[tasks.uninstall]
+[tasks."nix:uninstall"]
 description = "Completely uninstall Nix from this machine"
 confirm = "This will completely remove Nix, the /nix store, and all managed packages. Continue?"
 run = '''
