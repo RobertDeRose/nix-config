@@ -21,6 +21,5 @@
   home.packages = [
     pkgs.bitwarden-cli # Bitwarden vault CLI (bw)
     pkgs.lima # Linux VMs on macOS
-    pkgs.opencode # AI coding agent for the terminal
   ];
 }

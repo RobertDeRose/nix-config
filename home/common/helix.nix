@@ -28,7 +28,7 @@
           C-s = ":w";
           C-p = "file_picker";
           C-b = "file_explorer";
-          C-slash = "toggle_comments";
+          "C-/" = "toggle_comments";
           A-up = [
             "extend_to_line_bounds"
             "delete_selection"

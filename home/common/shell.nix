@@ -90,6 +90,18 @@ in
     initContent = ''
       export PATH="$PATH:$HOME/.local/bin"
 
+      # Navigate up N directories: `up 3` = cd ../../..
+      # Dot aliases use this for convenience.
+      up() {
+        local path=""
+        for ((i = 0; i < ''${1:-1}; i++)); do path+="../"; done
+        cd "$path" || return
+      }
+      alias ..='up 1'
+      alias ...='up 2'
+      alias ....='up 3'
+      alias .....='up 4'
+
       # Default to Helix everywhere, but prefer Zed when inside Zed's terminal.
       if [[ -n "''${ZED_TERM:-}" || -n "''${ZED_WORKTREE_ROOT:-}" ]]; then
         export EDITOR="zed --wait"
