@@ -17,6 +17,7 @@
 
     settings = {
       builders-use-substitutes = true;
+      download-buffer-size = 128 * 1024 * 1024; # 128 MiB (default is 64 MiB)
       experimental-features = [
         "nix-command"
         "flakes"

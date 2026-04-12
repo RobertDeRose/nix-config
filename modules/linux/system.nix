@@ -59,12 +59,13 @@
 
         cache_dir="/var/cache/ssh-authorized-keys"
         cache_file="$cache_dir/${username}.keys"
+
+        ${pkgs.coreutils}/bin/mkdir -p "$cache_dir"
+
         tmp_file="$(${pkgs.coreutils}/bin/mktemp "$cache_dir/.keys.XXXXXX")"
         trap '${pkgs.coreutils}/bin/rm -f "$tmp_file"' EXIT
         cache_ttl_seconds=3600
         now="$(${pkgs.coreutils}/bin/date +%s)"
-
-        ${pkgs.coreutils}/bin/mkdir -p "$cache_dir"
 
         # Serve from cache if fresh
         if [ -s "$cache_file" ]; then

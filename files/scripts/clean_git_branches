@@ -29,8 +29,8 @@ while getopts "d" options; do
       :) echo "Error: -${OPTARG} requires an argument"; exit 1 ;;
       *) echo "Unknown arg"; exit 2 ;;
     esac
-    shift
 done
+shift "$((OPTIND - 1))"
 
 DEFAULT="${1:-main}"
 PROTECT="dev"
@@ -38,7 +38,7 @@ CURRENT="$(git branch | grep '\*' | cut -d' ' -f2)"
 
 if ! git checkout -q "${DEFAULT}"; then
   echo "Unable to switch to ${DEFAULT}"
-  return 1
+  exit 1
 fi
 
 git fetch -q --prune --prune-tags origin || git pull -q
