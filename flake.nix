@@ -67,7 +67,7 @@
       linuxHostMeta =
         let
           hostsDir = ./systems;
-          allEntries = builtins.readDir hostsDir;
+          allEntries = if builtins.pathExists hostsDir then builtins.readDir hostsDir else { };
           linuxArchDirs = lib.filterAttrs (
             name: type: lib.hasSuffix "-linux" name && type == "directory"
           ) allEntries;
