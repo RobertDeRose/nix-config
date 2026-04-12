@@ -1,9 +1,22 @@
 # modules/darwin/system.nix
 # macOS-only system configuration (Dock, Finder, trackpad, fonts, etc.)
 # All options: https://daiderd.com/nix-darwin/manual/index.html#sec-options
-{ pkgs, ... }:
+{
+  pkgs,
+  username,
+  fullname,
+  ...
+}:
 {
   imports = [ ../common/fonts.nix ];
+
+  # Declare the primary user — nix-darwin needs this for system features,
+  # and home-manager reads users.users.<name>.home for homeDirectory.
+  system.primaryUser = username;
+  users.users.${username} = {
+    home = "/Users/${username}";
+    description = fullname;
+  };
 
   documentation = {
     enable = false;
