@@ -65,9 +65,13 @@
       "zed"
     ];
 
-    # App Store apps via mas — install manually first so Apple has a purchase record.
-    # NOTE: iOS-on-Mac apps (e.g. Kasa Smart) are invisible to `mas list` and
-    # would reinstall every switch — manage those manually outside nix.
+    # App Store apps via mas.
+    # KNOWN ISSUE: mas 6.0.1 `mas get` (used by brew bundle) bypasses the real
+    # App Store flow and doesn't write com.apple.appstore.metadata xattrs, so
+    # Spotlight never indexes the ADAM ID. Apps first-installed via `mas get`
+    # will harmlessly re-download on every switch. Apps installed manually
+    # through the App Store first (e.g. Amphetamine, Windows App) are fine.
+    # iOS-on-Mac apps (e.g. Kasa Smart) are also invisible — manage manually.
     masApps = {
       Amphetamine = 937984704;
       Bitwarden = 1352778147;

@@ -200,6 +200,7 @@ To bootstrap the machine, clone this repo on it and run:
 description = "Build and activate the nix config for a host"
 depends = ["install-nix"]
 hide = true
+quiet = true
 usage = 'arg "[hostname]" help="Hostname to activate"'
 run = """
 #!/usr/bin/env bash
@@ -301,6 +302,7 @@ fi
 [tasks."nix:init"]
 description = "Full init for a new machine: install Nix (+ Homebrew on Mac), then apply config"
 depends = ["install-homebrew", "install-nix", "nix:trust"]
+quiet = true
 usage = '''
 arg "<hostname>" help="Hostname to assign" long_help="The hostname used as the nix config identifier. Delegates to add-host to create the host directory, then installs prerequisites (Nix, Homebrew) and builds/activates the configuration."
 '''
@@ -317,6 +319,7 @@ echo "Done! Open a new shell to pick up all changes."
 
 [tasks."nix:switch"]
 description = "Apply the nix config for the current host (auto-detects Darwin or Linux)"
+quiet = true
 usage = '''
 flag "-d --debug" help="Show verbose output and nix traces for debugging"
 '''
@@ -357,10 +360,12 @@ fi
 
 [tasks."nix:debug"]
 description = "Apply config with debug traces"
+quiet = true
 run = "mise run nix:switch --debug"
 
 [tasks."nix:deploy"]
 description = "Build locally and deploy system config to a remote Linux host via SSH"
+quiet = true
 usage = '''
 arg "<host>" help="SSH target (e.g. rderose@192.168.1.10 or an SSH config alias)"
 arg "[name]" help="System config name (defaults to remote hostname)"
@@ -401,6 +406,7 @@ echo "==> Deploying system config '$CONFIG_NAME' to $TARGET_HOST..."
 
 [tasks."nix:trust"]
 description = "Add the current user to nix trusted-users and restart the daemon"
+quiet = true
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -446,6 +452,7 @@ echo "Done. '$USER' is now a trusted nix user."
 
 [tasks."nix:up"]
 description = "Update a single flake input, or all inputs if none specified"
+quiet = true
 usage = 'arg "[input]" help="Flake input to update (e.g. nixpkgs, home-manager, darwin). Omit to update all."'
 run = '''
 #!/usr/bin/env bash
@@ -460,18 +467,22 @@ fi
 
 [tasks."nix:history"]
 description = "List all system profile generations"
+quiet = true
 run = "nix profile history --profile /nix/var/nix/profiles/system"
 
 [tasks."nix:repl"]
 description = "Open a nix repl with nixpkgs"
+quiet = true
 run = "nix repl --expr 'import (builtins.getFlake \"nixpkgs\") {}'"
 
 [tasks."nix:clean"]
 description = "Remove all profile generations older than 7 days"
+quiet = true
 run = "sudo nix profile wipe-history --profile /nix/var/nix/profiles/system --older-than 7d"
 
 [tasks."nix:gc"]
 description = "Garbage-collect all unused nix store entries (system + user)"
+quiet = true
 run = [
   "sudo nix-collect-garbage --delete-older-than 7d",
   "nix-collect-garbage --delete-older-than 7d",
@@ -479,10 +490,12 @@ run = [
 
 [tasks."nix:fmt"]
 description = "Format all .nix files in this repo"
+quiet = true
 run = "nix fmt"
 
 [tasks."iterm:export"]
 description = "Re-export iTerm2 preferences plist into the repo"
+quiet = true
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
@@ -505,10 +518,12 @@ echo "Then commit: git add -A && git commit -m 'chore: update iTerm2 preferences
 
 [tasks."nix:gcroot"]
 description = "Show auto GC roots in the nix store"
+quiet = true
 run = "ls -al /nix/var/nix/gcroots/auto/"
 
 [tasks."nix:uninstall"]
 description = "Completely uninstall Nix from this machine"
+quiet = true
 confirm = "This will completely remove Nix, the /nix store, and all managed packages. Continue?"
 run = '''
 #!/usr/bin/env bash
@@ -555,6 +570,7 @@ echo -e "\nDone! Open a new shell or restart your computer to fully clear change
 
 [tasks."vm:create"]
 description = "Create and start a fresh Lima VM for testing"
+quiet = true
 usage = '''
 arg "[name]" help="VM name" default="nix-test"
 arg "[template]" help="Lima template" default="template:ubuntu"
@@ -589,6 +605,7 @@ echo "VM '$VM' is ready. Run 'mise run vm:shell' to connect."
 
 [tasks."vm:remove"]
 description = "Stop and remove a Lima VM"
+quiet = true
 usage = 'arg "[name]" help="VM name" default="nix-test"'
 confirm = "This will destroy the VM and all its data. Continue?"
 run = '''
@@ -612,6 +629,7 @@ echo "VM '$VM' removed."
 
 [tasks."vm:recreate"]
 description = "Destroy and recreate a fresh Lima VM"
+quiet = true
 usage = '''
 arg "[name]" help="VM name" default="nix-test"
 arg "[template]" help="Lima template" default="template:ubuntu"
@@ -650,6 +668,7 @@ echo "VM '$VM' is ready. Run 'mise run vm:shell' to connect."
 
 [tasks."vm:shell"]
 description = "Open a shell in the Lima VM"
+quiet = true
 usage = 'arg "[name]" help="VM name" default="nix-test"'
 run = '''
 #!/usr/bin/env bash
