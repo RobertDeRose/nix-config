@@ -200,18 +200,22 @@
 
                 inputs.nix-homebrew.darwinModules.nix-homebrew
                 inputs.home-manager.darwinModules.home-manager
-                {
-                  home-manager.useGlobalPkgs = true;
-                  home-manager.useUserPackages = true;
-                  home-manager.verbose = true;
-                  home-manager.backupCommand = ''
-                    target="$HOME/.hm_bkup/''${1#"$HOME"/}"
-                    mkdir -p "$(dirname "$target")"
-                    mv "$1" "$target"
-                  '';
-                  # extraSpecialArgs and users are set per-host in each
-                  # host's default.nix via user.nix import.
-                }
+                (
+                  { pkgs, ... }:
+                  {
+                    home-manager.useGlobalPkgs = true;
+                    home-manager.useUserPackages = true;
+                    home-manager.verbose = true;
+                    home-manager.backupCommand = "${pkgs.writeShellScript "hm-backup" ''
+                      set -euo pipefail
+                      target="$HOME/.hm_bkup/''${1#"$HOME"/}"
+                      mkdir -p "$(dirname "$target")"
+                      mv "$1" "$target"
+                    ''}";
+                    # extraSpecialArgs and users are set per-host in each
+                    # host's default.nix via user.nix import.
+                  }
+                )
               ]
             else
               [ ];
