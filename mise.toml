@@ -28,7 +28,6 @@ postinstall = "command -v hk >/dev/null && hk install --mise || true"
 description = "Install Homebrew if missing (macOS only)"
 hide = true
 quiet = true
-outputs = "/opt/homebrew/bin/brew"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
