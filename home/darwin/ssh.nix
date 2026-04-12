@@ -16,9 +16,12 @@ in
 {
   programs.ssh = {
     enable = true;
-    extraConfig = ''
-      IdentityAgent "${agentSocket}"
-    '';
+    enableDefaultConfig = false;
+    matchBlocks."*" = {
+      extraOptions = {
+        IdentityAgent = ''"${agentSocket}"'';
+      };
+    };
   };
 
   home.sessionVariables.SSH_AUTH_SOCK = agentSocket;

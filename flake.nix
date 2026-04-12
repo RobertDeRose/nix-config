@@ -99,12 +99,16 @@
 
       linuxHosts = lib.mapAttrs (
         _: host:
+        let
+          userNix = host.hostDir + "/user.nix";
+          hostUser = if builtins.pathExists userNix then import userNix else defaultUser;
+        in
         inputs.system-manager.lib.makeSystemConfig {
           modules = [
             { nixpkgs.hostPlatform = host.system; }
             ./modules/linux/system.nix
             {
-              _module.args = defaultUser // {
+              _module.args = hostUser // {
                 inherit (host) hostname;
               };
             }
@@ -120,13 +124,17 @@
 
       linuxHomeConfigs = lib.mapAttrs (
         hostname: host:
+        let
+          userNix = host.hostDir + "/user.nix";
+          hostUser = if builtins.pathExists userNix then import userNix else defaultUser;
+        in
         inputs.home-manager.lib.homeManagerConfiguration {
           pkgs = import inputs.nixpkgs {
             system = host.system;
             config.allowUnfree = true;
           };
 
-          extraSpecialArgs = defaultUser // {
+          extraSpecialArgs = hostUser // {
             inherit hostname;
           };
 
@@ -174,7 +182,9 @@
         # Linux hosts live under systems/ and are built with system-manager,
         # so easy-hosts only manages Darwin hosts from hosts/.
 
-        shared.specialArgs = defaultUser;
+        shared.specialArgs = {
+          hmDarwinModule = ./home/darwin.nix;
+        };
 
         perClass = class: {
           modules =
@@ -195,8 +205,8 @@
                     mkdir -p "$(dirname "$target")"
                     mv "$1" "$target"
                   '';
-                  home-manager.extraSpecialArgs = defaultUser;
-                  home-manager.users.${defaultUser.username} = import ./home/darwin.nix;
+                  # extraSpecialArgs and users are set per-host in each
+                  # host's default.nix via user.nix import.
                 }
               ]
             else

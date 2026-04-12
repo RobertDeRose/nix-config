@@ -64,8 +64,27 @@ if [ "$(uname -sm)" = "Darwin x86_64" ]; then
   echo "Detected macOS on x86_64. Using nix instead of lix"
   curl -sSfL https://artifacts.nixos.org/nix-installer | bash -s -- install
 else
-  curl -sSfL https://install.lix.systems/lix | bash -s -- install
+  # Lix installer self-test may warn about daemon socket not being ready yet;
+  # this is a known race condition — verify nix works after a short wait.
+  curl -sSfL https://install.lix.systems/lix | bash -s -- install || true
 fi
+
+# Wait for the daemon socket to come up before continuing
+for i in $(seq 1 30); do
+  [ -S /nix/var/nix/daemon-socket/socket ] && break
+  sleep 1
+done
+
+# Source nix and verify it works
+set +u
+source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+set -u
+
+if ! nix --version &>/dev/null; then
+  echo "ERROR: Nix installed but not functional."
+  exit 1
+fi
+echo "Nix $(nix --version) is ready."
 '''
 
 [tasks.github-auth]
@@ -103,6 +122,10 @@ arg "[os]" help="OS class (default: current machine)" {
 arg "[arch]" help="Architecture for the new machine (default: current machine)" long_help="Used to determine the host directory path. Inferred from the current machine if omitted." {
   choices "aarch64" "x86_64"
 }
+flag "--user" help="Username for the host (default: current user)"
+flag "--fullname" help="Full name (default: git config user.name)"
+flag "--email" help="Email (default: git config user.email)"
+flag "--github" help="GitHub username (default: derived from git remote)"
 '''
 run = '''
 #!/usr/bin/env bash
@@ -132,6 +155,22 @@ if [ ! -d "${HOST_DIR}" ]; then
   mkdir -p "${HOST_DIR}"
   cp -vr "templates/${OS}"/* "${HOST_DIR}/"
 fi
+
+# Generate user.nix for this host
+USERNAME="${usage_user:-$(whoami)}"
+FULLNAME="${usage_fullname:-$(git config user.name 2>/dev/null || echo "$USERNAME")}"
+EMAIL="${usage_email:-$(git config user.email 2>/dev/null || echo "")}"
+GITHUB="${usage_github:-$(git remote get-url origin 2>/dev/null | sed -n 's|.*github.com[:/]\([^/]*\)/.*|\1|p' || echo "")}"
+
+cat > "${HOST_DIR}/user.nix" << EOF
+{
+  username = "${USERNAME}";
+  fullname = "${FULLNAME}";
+  useremail = "${EMAIL}";
+  githubUsername = "${GITHUB}";
+}
+EOF
+echo "    Generated ${HOST_DIR}/user.nix for user '${USERNAME}'"
 
 # Ensure host files are always tracked — nix flakes only see git-tracked files.
 git add "${HOST_DIR}"
@@ -223,6 +262,7 @@ description = "Full init for a new machine: install Nix (+ Homebrew on Mac), the
 depends = [
   "install-homebrew",
   "install-nix",
+  "trust",
   { task = "add-host", args = [
     "{{usage.hostname}}",
   ] },
@@ -322,6 +362,46 @@ echo "==> Deploying system config '$CONFIG_NAME' to $TARGET_HOST..."
 # ---------------------------------------------------------------------------
 # Nix maintenance tasks
 # ---------------------------------------------------------------------------
+
+[tasks.trust]
+description = "Add the current user to nix trusted-users and restart the daemon"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+USER="$(whoami)"
+CONF="/etc/nix/nix.custom.conf"
+
+# Ensure the file exists (nix.conf already includes it via !include)
+if [ ! -f "$CONF" ]; then
+  echo "==> Creating $CONF..."
+  echo "# Custom nix settings — not managed by nix-darwin or system-manager" | sudo tee "$CONF" > /dev/null
+fi
+
+# Check if the user is already trusted
+if grep -qE "^extra-trusted-users\b.*\b${USER}\b" "$CONF" 2>/dev/null; then
+  echo "'$USER' is already a trusted user in $CONF."
+  exit 0
+fi
+
+# Append to existing extra-trusted-users line, or create one
+if grep -qE "^extra-trusted-users\b" "$CONF" 2>/dev/null; then
+  echo "==> Adding '$USER' to existing extra-trusted-users..."
+  sudo sed -i.bak "s/^\(extra-trusted-users.*\)/\1 ${USER}/" "$CONF"
+else
+  echo "==> Adding extra-trusted-users line for '$USER'..."
+  echo "extra-trusted-users = ${USER}" | sudo tee -a "$CONF" > /dev/null
+fi
+
+echo "==> Restarting nix daemon..."
+if [ "$(uname -s)" = "Darwin" ]; then
+  sudo launchctl kickstart -k system/org.nixos.nix-daemon
+else
+  sudo systemctl restart nix-daemon
+fi
+
+echo "Done. '$USER' is now a trusted nix user."
+'''
 
 [tasks.up]
 description = "Update all flake inputs"
