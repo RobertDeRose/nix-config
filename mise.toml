@@ -175,6 +175,11 @@ echo "    Generated ${HOST_DIR}/user.nix for user '${USERNAME}'"
 # Ensure host files are always tracked — nix flakes only see git-tracked files.
 git add "${HOST_DIR}"
 
+# Commit the new host files so the flake doesn't see a dirty tree.
+if ! git diff --cached --quiet; then
+  git commit -m "feat: add host ${HOSTNAME} (${SYSTEM})"
+fi
+
 # Create a feature branch for this host (skip if it already exists or we're in CI).
 if [[ "${CI:-false}" != "true" ]] && ! git rev-parse --verify "host/${HOSTNAME}" &>/dev/null; then
   git checkout -b "host/${HOSTNAME}"
@@ -220,11 +225,10 @@ if [ "$(uname -s)" = "Linux" ]; then
   sudo systemctl restart nix-daemon
 fi
 
-NIX_FLAGS=(--accept-flake-config)
+NIX_FLAGS=(--accept-flake-config --extra-experimental-features "nix-command flakes")
 HOSTNAME="${usage_hostname:-$(hostname -s)}"
 if [ "$(uname -s)" = "Darwin" ]; then
   TARGET=(".#darwinConfigurations.${HOSTNAME}.system")
-  ACTIVATE_CMD=(sudo ./result/sw/bin/darwin-rebuild switch --flake .#${HOSTNAME})
 else
   TARGET=(".#systemConfigs.${HOSTNAME}")
   HOME_TARGET=(".#homeConfigurations.${HOSTNAME}.activationPackage")
@@ -242,9 +246,32 @@ if [[ "${CI:-false}" = "true" ]]; then
 fi
 
 if [ "$(uname -s)" = "Darwin" ]; then
+  # Ensure nix.conf exists so the daemon knows who is trusted and which
+  # substituters to use.  A previous activate run (or manual intervention)
+  # may have moved it aside.  Restore it temporarily for the build step;
+  # we'll move everything aside again before darwin-rebuild takes ownership.
+  if [ ! -f /etc/nix/nix.conf ] && [ -f /etc/nix/nix.conf.before-nix-darwin ]; then
+    echo "==> Restoring /etc/nix/nix.conf for build step..."
+    sudo cp /etc/nix/nix.conf.before-nix-darwin /etc/nix/nix.conf
+    sudo launchctl kickstart -k system/org.nixos.nix-daemon
+    sleep 2
+  fi
+
   nix build "${NIX_FLAGS[@]}" "${TARGET[@]}"
+
+  # nix-darwin refuses to activate if /etc/nix/ contains config files it didn't
+  # write.  On first run (or after a Lix/Nix re-install), move them aside so
+  # nix-darwin can take ownership.  The settings from these files will be
+  # managed by nix-darwin's nix.settings going forward.
+  for f in /etc/nix/nix.conf /etc/nix/nix.custom.conf; do
+    if [ -f "$f" ] && ! grep -qF 'nix-darwin' "$f" 2>/dev/null; then
+      echo "==> Moving $f aside for nix-darwin first-run..."
+      sudo mv "$f" "$f.before-nix-darwin"
+    fi
+  done
+
   echo "==> Activating configuration..."
-  "${ACTIVATE_CMD[@]}"
+  sudo ./result/sw/bin/darwin-rebuild switch --flake ".#${HOSTNAME}"
 else
   echo "==> Activating system configuration..."
   nix build "${NIX_FLAGS[@]}" ".#system-manager"
@@ -253,6 +280,16 @@ else
   echo "==> Activating home-manager configuration..."
   nix build "${NIX_FLAGS[@]}" "${HOME_TARGET[@]}" --out-link .hm-result
   HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
+fi
+
+# Suggest pushing the host branch to origin after a successful activation.
+if [[ "${CI:-false}" != "true" ]]; then
+  BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+  if [[ "$BRANCH" == host/* ]] && ! git rev-parse --verify "origin/${BRANCH}" &>/dev/null; then
+    echo ""
+    echo "==> Activation successful! To push this host branch to origin, run:"
+    echo "    git push -u origin ${BRANCH}"
+  fi
 fi
 """
 
@@ -303,7 +340,7 @@ if [ -n "${GITHUB_TOKEN:-}" ]; then
 fi
 
 # Use an array for optional flags
-NIX_FLAGS=(--accept-flake-config)
+NIX_FLAGS=(--accept-flake-config --extra-experimental-features "nix-command flakes")
 if [[ "${usage_debug:-}" == "true" ]]; then
   NIX_FLAGS+=("--show-trace" "--verbose")
 fi
@@ -343,7 +380,7 @@ if [ -z "$CONFIG_NAME" ]; then
   echo "==> Detected remote hostname: $CONFIG_NAME"
 fi
 
-NIX_FLAGS=(--accept-flake-config)
+NIX_FLAGS=(--accept-flake-config --extra-experimental-features "nix-command flakes")
 if [[ "${usage_debug:-}" == "true" ]]; then
   NIX_FLAGS+=("--show-trace" "--verbose")
 fi
@@ -369,6 +406,9 @@ run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
+# CI runners are already trusted; skip to avoid sudo prompts.
+[[ "${CI:-false}" == "true" ]] && exit 0
+
 USER="$(whoami)"
 CONF="/etc/nix/nix.custom.conf"
 
@@ -378,11 +418,13 @@ if [ ! -f "$CONF" ]; then
   echo "# Custom nix settings — not managed by nix-darwin or system-manager" | sudo tee "$CONF" > /dev/null
 fi
 
-# Check if the user is already trusted
-if grep -qE "^extra-trusted-users\b.*\b${USER}\b" "$CONF" 2>/dev/null; then
-  echo "'$USER' is already a trusted user in $CONF."
-  exit 0
-fi
+# Check if the user is already trusted in any nix config file
+for f in /etc/nix/nix.conf "$CONF"; do
+  if [ -f "$f" ] && grep -qE "^(extra-)?trusted-users\b.*\b${USER}\b" "$f" 2>/dev/null; then
+    echo "'$USER' is already a trusted user."
+    exit 0
+  fi
+done
 
 # Append to existing extra-trusted-users line, or create one
 if grep -qE "^extra-trusted-users\b" "$CONF" 2>/dev/null; then
@@ -520,7 +562,7 @@ set -euo pipefail
 VM="${usage_name}"
 TEMPLATE="${usage_template}"
 
-if limactl list --json | jq -e --arg vm "$VM" '.[] | select(.name == $vm)' &>/dev/null; then
+if limactl list --json | jq -e --arg vm "$VM" 'select(.name == $vm)' &>/dev/null; then
   echo "ERROR: VM '$VM' already exists. Use 'mise run vm:recreate' to replace it."
   exit 1
 fi
