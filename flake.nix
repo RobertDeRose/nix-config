@@ -15,7 +15,7 @@
   };
 
   inputs = {
-    # Core Packages - pinned to 25.11 stable
+    # Core Packages — nixpkgs-unstable for latest packages
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
 
     # Flake framework
@@ -27,15 +27,15 @@
     # Host management (macOS only)
     easy-hosts.url = "github:tgirlcloud/easy-hosts";
 
-    # Darwin System Config
+    # Darwin System Config — master branch tracks nixpkgs-unstable
     darwin = {
-      url = "github:nix-darwin/nix-darwin/nix-darwin-25.11";
+      url = "github:nix-darwin/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # User Configuration
+    # User Configuration — master branch tracks nixpkgs-unstable
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
+      url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
