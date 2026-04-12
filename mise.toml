@@ -176,7 +176,7 @@ echo "    Generated ${HOST_DIR}/user.nix for user '${USERNAME}'"
 git add "${HOST_DIR}"
 
 # Commit the new host files so the flake doesn't see a dirty tree.
-if ! git diff --cached --quiet; then
+if [[ "${CI:-false}" != "true" ]] && ! git diff --cached --quiet; then
   git commit -m "feat: add host ${HOSTNAME} (${SYSTEM})"
 fi
 

@@ -9,14 +9,22 @@
     unzip
 
     # utils
+    bash # bash 5.x (macOS ships ancient 3.2)
     btop
+    htop
     jq # lightweight and flexible command-line JSON processor
+    pv # monitor data progress through a pipeline
     ripgrep # recursively searches directories for a regex pattern
+    rlwrap # readline wrapper for CLI programs lacking line editing
     tmux
     yq-go # yaml processor https://github.com/mikefarah/yq
 
     socat # replacement of openbsd-netcat
     nmap # utility for network discovery and security auditing
+
+    # git tools
+    git-absorb # automatic git commit --fixup
+    git-filter-repo # fast git history rewriting
 
     # misc
     gnused

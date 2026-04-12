@@ -29,8 +29,11 @@
       "macos-fuse-t/cask"
     ];
 
-    # brew install ...
-    # brews = [];
+    # brew install — CLI tools that aren't in nixpkgs
+    brews = [
+      "container" # Apple's native macOS container runtime
+      "container-compose" # Docker Compose-like tool for Apple containers
+    ];
 
     # brew install --cask ...
     casks = [
@@ -46,6 +49,9 @@
       # Development
       "atuin-desktop"
       "balenaetcher"
+      "chatgpt"
+      "claude"
+      "cmux" # Ghostty-based terminal for AI coding agents
       "imageoptim"
       "insomnia" # REST client
       "ghostty"
@@ -62,6 +68,11 @@
     masApps = {
       Amphetamine = 937984704;
       Bitwarden = 1352778147;
+      "Kasa Smart" = 1034035493;
+      "Keynote: Design Presentations" = 361285480;
+      "Numbers: Make Spreadsheets" = 361304891;
+      "Pages: Create Documents" = 361309726;
+      "Windows App" = 1295203466;
     };
   };
 }
