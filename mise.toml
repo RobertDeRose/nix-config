@@ -175,14 +175,15 @@ echo "    Generated ${HOST_DIR}/user.nix for user '${USERNAME}'"
 # Ensure host files are always tracked — nix flakes only see git-tracked files.
 git add "${HOST_DIR}"
 
+# Create a feature branch for this host (skip if it already exists or we're in CI).
+# Do this before committing so the commit lands on the feature branch, not the current branch.
+if [[ "${CI:-false}" != "true" ]] && ! git rev-parse --verify "host/${HOSTNAME}" &>/dev/null; then
+  git checkout -b "host/${HOSTNAME}"
+fi
+
 # Commit the new host files so the flake doesn't see a dirty tree.
 if [[ "${CI:-false}" != "true" ]] && ! git diff --cached --quiet; then
   git commit -m "feat: add host ${HOSTNAME} (${SYSTEM})"
-fi
-
-# Create a feature branch for this host (skip if it already exists or we're in CI).
-if [[ "${CI:-false}" != "true" ]] && ! git rev-parse --verify "host/${HOSTNAME}" &>/dev/null; then
-  git checkout -b "host/${HOSTNAME}"
 fi
 
 [ "${MISE_TASK:-}" != "add_host" ] && exit 0
