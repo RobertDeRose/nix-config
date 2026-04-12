@@ -11,7 +11,6 @@
     devenv
     eza
     git
-    mise
     fastfetch
   ];
 
@@ -22,7 +21,7 @@
 
     onActivation = {
       autoUpdate = true;
-      upgrade = true;
+      upgrade = false; # only install missing packages, don't upgrade existing ones
       cleanup = "zap"; # remove anything not listed below
     };
 

@@ -102,6 +102,14 @@ in
         export GIT_EDITOR="hx"
         export GIT_SEQUENCE_EDITOR="hx"
       fi
+
+      # Ghostty shell integration — manual source to handle cmux's non-standard
+      # GHOSTTY_RESOURCES_DIR layout.  Revert to enableZshIntegration = true in
+      # ghostty.nix once cmux fixes upstream: https://github.com/manaflow-ai/cmux/issues/1309
+      if [[ -n "''${GHOSTTY_RESOURCES_DIR:-}" ]]; then
+        source "''${GHOSTTY_RESOURCES_DIR}/shell-integration/zsh/ghostty-integration" 2>/dev/null || \
+          source "''${GHOSTTY_RESOURCES_DIR%/ghostty}/shell-integration/ghostty-integration.zsh" 2>/dev/null
+      fi
     '';
     plugins = [
       {

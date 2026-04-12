@@ -296,23 +296,16 @@ fi
 # Public init task — orchestrates the hidden tasks
 [tasks.init]
 description = "Full init for a new machine: install Nix (+ Homebrew on Mac), then apply config"
-depends = [
-  "install-homebrew",
-  "install-nix",
-  "trust",
-  { task = "add-host", args = [
-    "{{usage.hostname}}",
-  ] },
-  { task = "activate", args = [
-    "{{usage.hostname}}",
-  ] },
-]
+depends = ["install-homebrew", "install-nix", "trust"]
 usage = '''
 arg "<hostname>" help="Hostname to assign" long_help="The hostname used as the nix config identifier. Delegates to add-host to create the host directory, then installs prerequisites (Nix, Homebrew) and builds/activates the configuration."
 '''
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
+
+mise run add-host "${usage_hostname}"
+mise run activate "${usage_hostname}"
 
 echo ""
 echo "Done! Open a new shell to pick up all changes."
@@ -341,13 +334,15 @@ fi
 
 # Use an array for optional flags
 NIX_FLAGS=(--accept-flake-config --extra-experimental-features "nix-command flakes")
+REBUILD_FLAGS=()
 if [[ "${usage_debug:-}" == "true" ]]; then
   NIX_FLAGS+=("--show-trace" "--verbose")
+  REBUILD_FLAGS+=("--show-trace" "--verbose")
 fi
 
 echo ""
 if [ "$(uname -s)" = "Darwin" ]; then
-  sudo darwin-rebuild switch --flake ".#$HOST" "${NIX_FLAGS[@]}"
+  sudo darwin-rebuild switch --flake ".#$HOST" "${REBUILD_FLAGS[@]}"
 else
   nix build "${NIX_FLAGS[@]}" ".#system-manager"
   ./result/bin/system-manager switch --flake ".#$HOST" --sudo
@@ -586,7 +581,7 @@ echo "VM '$VM' is ready. Run 'mise run vm:shell' to connect."
 [tasks."vm:remove"]
 description = "Stop and remove a Lima VM"
 usage = 'arg "[name]" help="VM name" default="nix-test"'
-confirm = "This will destroy the VM '{{usage.name}}' and all its data. Continue?"
+confirm = "This will destroy the VM and all its data. Continue?"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -612,7 +607,7 @@ usage = '''
 arg "[name]" help="VM name" default="nix-test"
 arg "[template]" help="Lima template" default="template:ubuntu"
 '''
-confirm = "This will destroy VM '{{usage.name}}' and recreate it from scratch. Continue?"
+confirm = "This will destroy the VM and recreate it from scratch. Continue?"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail

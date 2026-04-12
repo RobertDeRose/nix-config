@@ -8,7 +8,10 @@
     enable = true;
     package = null; # installed via Homebrew cask, not nixpkgs
 
-    enableZshIntegration = true;
+    # Disabled: cmux sets GHOSTTY_RESOURCES_DIR to a non-standard path that
+    # breaks the generated source line.  A manual fallback is in shell.nix.
+    # Revert when upstream fixes: https://github.com/manaflow-ai/cmux/issues/1309
+    enableZshIntegration = false;
 
     settings = {
       theme = "Ayu Mirage";

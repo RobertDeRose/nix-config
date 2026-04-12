@@ -37,7 +37,6 @@
     bat
     eza
     gitMinimal
-    mise
     curl
     wget
   ];
