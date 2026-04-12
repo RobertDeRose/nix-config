@@ -119,7 +119,14 @@ if [ "${OS}" != "darwin" ] && [ "${OS}" != "linux" ]; then
 fi
 
 SYSTEM="${ARCH}-${OS}"
-HOST_DIR="hosts/${SYSTEM}/${HOSTNAME}"
+
+# Darwin hosts live under hosts/ (managed by easy-hosts);
+# Linux hosts live under systems/ (managed by system-manager).
+if [ "${OS}" = "darwin" ]; then
+  HOST_DIR="hosts/${SYSTEM}/${HOSTNAME}"
+else
+  HOST_DIR="systems/${SYSTEM}/${HOSTNAME}"
+fi
 
 if [ ! -d "${HOST_DIR}" ]; then
   echo "==> Creating ${HOST_DIR} from templates/${OS}..."

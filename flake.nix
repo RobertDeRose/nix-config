@@ -61,10 +61,12 @@
         githubUsername = "RobertDeRose";
       };
 
-      # Collect all Linux hosts from hosts/*-linux/<hostname>/
+      # Collect all Linux hosts from systems/*-linux/<hostname>/
+      # Linux hosts live under systems/ (not hosts/) to avoid easy-hosts
+      # auto-discovery, since easy-hosts assumes all *-linux dirs are NixOS.
       linuxHostMeta =
         let
-          hostsDir = ./hosts;
+          hostsDir = ./systems;
           allEntries = builtins.readDir hostsDir;
           linuxArchDirs = lib.filterAttrs (
             name: type: lib.hasSuffix "-linux" name && type == "directory"
@@ -84,7 +86,7 @@
               system = if lib.hasPrefix "x86_64" archName then "x86_64-linux" else "aarch64-linux";
             in
             if acc ? "${hostname}" then
-              throw "Duplicate Linux hostname '${hostname}' found in hosts/*-linux/. Hostnames must be unique across Linux architectures."
+              throw "Duplicate Linux hostname '${hostname}' found in systems/*-linux/. Hostnames must be unique across Linux architectures."
             else
               acc
               // {
@@ -169,11 +171,8 @@
         autoConstruct = true;
         path = ./hosts;
 
-        # Auto-discovered Linux hosts come through as class = "linux"
-        # from the <arch>-linux directory name, so map that alias to nixos.
-        additionalClasses = {
-          linux = "nixos";
-        };
+        # Linux hosts live under systems/ and are built with system-manager,
+        # so easy-hosts only manages Darwin hosts from hosts/.
 
         shared.specialArgs = defaultUser;
 
