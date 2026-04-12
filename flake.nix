@@ -39,6 +39,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Declarative Homebrew installation for nix-darwin
+    nix-homebrew.url = "github:zhaofengli/nix-homebrew";
+
     # Provide a default pin for system-manager so all evaluators
     # use lockfile revisions instead of GitHub HEAD lookups.
     system-manager = {
@@ -195,6 +198,7 @@
                 ./modules/darwin/apps.nix
                 ./modules/darwin/iterm2.nix
 
+                inputs.nix-homebrew.darwinModules.nix-homebrew
                 inputs.home-manager.darwinModules.home-manager
                 {
                   home-manager.useGlobalPkgs = true;

@@ -2,7 +2,7 @@
 # macOS-only: system-wide nix packages + Homebrew casks/formulae.
 # GUI apps and anything macOS-specific live here.
 # Cross-platform CLI tools belong in home/common/core.nix instead.
-{ pkgs, ... }:
+{ pkgs, username, ... }:
 {
   # System-wide packages available to all users.
   # Prefer home-manager's home.packages for user-level tools.
@@ -14,8 +14,14 @@
     fastfetch
   ];
 
-  # NOTE: Homebrew must be installed manually first: https://brew.sh
-  # The init mise task handles this automatically on a fresh machine.
+  # Homebrew installation managed declaratively via nix-homebrew.
+  # On a fresh machine, nix-darwin will install Homebrew automatically.
+  nix-homebrew = {
+    enable = true;
+    user = username;
+    autoMigrate = true; # migrate existing manual Homebrew installs
+  };
+
   homebrew = {
     enable = true;
 

@@ -24,20 +24,6 @@ postinstall = "command -v hk >/dev/null && hk install --mise || true"
 # ---------------------------------------------------------------------------
 
 # Hidden tasks — building blocks for nix:init, individually testable in CI
-[tasks.install-homebrew]
-description = "Install Homebrew if missing (macOS only)"
-hide = true
-quiet = true
-run = '''
-#!/usr/bin/env bash
-set -euo pipefail
-
-[[ "$(uname -s)" != "Darwin" || -x /opt/homebrew/bin/brew || -x /usr/local/bin/brew ]] && exit 0
-
-echo "==> Installing Homebrew..."
-curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash
-'''
-
 [tasks.install-nix]
 description = "Install Nix via nix-installer if missing"
 hide = true
@@ -300,8 +286,8 @@ fi
 # ---------------------------------------------------------------------------
 
 [tasks."nix:init"]
-description = "Full init for a new machine: install Nix (+ Homebrew on Mac), then apply config"
-depends = ["install-homebrew", "install-nix", "nix:trust"]
+description = "Full init for a new machine: install Nix, then apply config (Homebrew is managed by nix-darwin)"
+depends = ["install-nix", "nix:trust"]
 quiet = true
 usage = '''
 arg "<hostname>" help="Hostname to assign" long_help="The hostname used as the nix config identifier. Delegates to add-host to create the host directory, then installs prerequisites (Nix, Homebrew) and builds/activates the configuration."
