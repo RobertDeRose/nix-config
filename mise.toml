@@ -4,7 +4,10 @@ experimental = true
 env_shell_expand = true
 
 [tools]
-hk = "latest"
+actionlint = "latest"
+gh = "latest"
+"github:RobertDeRose/nixfmt" = "latest"
+hk = "1.41"
 pkl = "latest"
 shellcheck = "latest"
 shfmt = "latest"
@@ -14,23 +17,22 @@ tombi = "latest"
 HK_MISE = 1
 
 [hooks]
-postinstall = "hk install --mise"
+postinstall = "command -v hk >/dev/null && hk install --mise || true"
 
 # ---------------------------------------------------------------------------
 # Bootstrap & host management
 # ---------------------------------------------------------------------------
 
-# Hidden tasks — building blocks for init, individually testable in CI
+# Hidden tasks — building blocks for nix:init, individually testable in CI
 [tasks.install-homebrew]
 description = "Install Homebrew if missing (macOS only)"
 hide = true
 quiet = true
-outputs = "/opt/homebrew/bin/brew"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
-[ "$(uname -s)" != "Darwin" ] && exit 0
+[[ "$(uname -s)" != "Darwin" || -x /opt/homebrew/bin/brew || -x /usr/local/bin/brew ]] && exit 0
 
 echo "==> Installing Homebrew..."
 curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash
@@ -40,13 +42,21 @@ curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | 
 description = "Install Nix via nix-installer if missing"
 hide = true
 quiet = true
-outputs = "/nix/receipt.json"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Skip if Nix is already installed
+if [ -e /nix/receipt.json ]; then
+  echo "Nix is already installed, skipping."
+  exit 0
+fi
+
 export NIX_INSTALLER_NO_CONFIRM="true"
 export NIX_INSTALLER_ENABLE_FLAKES="true"
+export NIX_INSTALLER_EXTRA_CONF="trusted-users = root $(whoami)
+extra-substituters = https://nix-community.cachix.org https://cache.numtide.com
+extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
 [ $(uname -s) = 'Darwin' ] && export NIX_INSTALLER_SSL_CERT_FILE='/etc/ssl/cert.pem'
 
 echo "==> Installing Nix..."
@@ -54,23 +64,68 @@ if [ "$(uname -sm)" = "Darwin x86_64" ]; then
   echo "Detected macOS on x86_64. Using nix instead of lix"
   curl -sSfL https://artifacts.nixos.org/nix-installer | bash -s -- install
 else
-  curl -sSfL https://install.lix.systems/lix | bash -s -- install
+  # Lix installer self-test may warn about daemon socket not being ready yet;
+  # this is a known race condition — verify nix works after a short wait.
+  curl -sSfL https://install.lix.systems/lix | bash -s -- install || true
 fi
+
+# Wait for the daemon socket to come up before continuing
+for i in $(seq 1 30); do
+  [ -S /nix/var/nix/daemon-socket/socket ] && break
+  sleep 1
+done
+
+# Source nix and verify it works
+set +u
+source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+set -u
+
+if ! nix --version &>/dev/null; then
+  echo "ERROR: Nix installed but not functional."
+  exit 1
+fi
+echo "Nix $(nix --version) is ready."
+'''
+
+[tasks.github-auth]
+description = "Ensure gh CLI is installed and authenticated"
+hide = true
+quiet = true
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Install gh if not yet available
+mise install gh
+
+# Check if already authenticated
+if mise x gh -- gh auth status &>/dev/null; then
+  echo "GitHub CLI is already authenticated."
+  exit 0
+fi
+
+echo "==> GitHub CLI is not authenticated."
+echo "    Running 'gh auth login' — follow the prompts to authenticate."
+mise x gh -- gh auth login
 '''
 
 [tasks.add-host]
-description = "Register a new host by creating its hosts/ directory (no flake.nix editing needed)"
+description = "Register a new host by creating its directory (no flake.nix editing needed)"
 hide = true
 quiet = true
 usage = '''
 arg "[hostname]" help="Hostname for the new machine" \
-  long_help="Used as both the nix config identifier and the machine hostname. Creates a hosts/<arch>-<os>/<hostname>/ directory from the appropriate template. easy-hosts auto-discovers hosts from the directory structure."
+  long_help="Used as both the nix config identifier and the machine hostname. Creates a hosts/<arch>-darwin/<hostname>/ or systems/<arch>-linux/<hostname>/ directory from the appropriate template."
 arg "[os]" help="OS class (default: current machine)" {
   choices "darwin" "linux"
 }
-arg "[arch]" help="Architecture for the new machine (default: current machine)" long_help="Used to determine the host directory path: <arch>-darwin or <arch>-linux. Inferred from the current machine if omitted." {
+arg "[arch]" help="Architecture for the new machine (default: current machine)" long_help="Used to determine the host directory path. Inferred from the current machine if omitted." {
   choices "aarch64" "x86_64"
 }
+flag "--user" help="Username for the host (default: current user)"
+flag "--fullname" help="Full name (default: git config user.name)"
+flag "--email" help="Email (default: git config user.email)"
+flag "--github" help="GitHub username (default: derived from git remote)"
 '''
 run = '''
 #!/usr/bin/env bash
@@ -86,14 +141,49 @@ if [ "${OS}" != "darwin" ] && [ "${OS}" != "linux" ]; then
 fi
 
 SYSTEM="${ARCH}-${OS}"
-HOST_DIR="hosts/${SYSTEM}/${HOSTNAME}"
+
+# Darwin hosts live under hosts/ (managed by easy-hosts);
+# Linux hosts live under systems/ (managed by system-manager).
+if [ "${OS}" = "darwin" ]; then
+  HOST_DIR="hosts/${SYSTEM}/${HOSTNAME}"
+else
+  HOST_DIR="systems/${SYSTEM}/${HOSTNAME}"
+fi
 
 if [ ! -d "${HOST_DIR}" ]; then
   echo "==> Creating ${HOST_DIR} from templates/${OS}..."
   mkdir -p "${HOST_DIR}"
   cp -vr "templates/${OS}"/* "${HOST_DIR}/"
+fi
+
+# Generate user.nix for this host
+USERNAME="${usage_user:-$(whoami)}"
+FULLNAME="${usage_fullname:-$(git config user.name 2>/dev/null || echo "$USERNAME")}"
+EMAIL="${usage_email:-$(git config user.email 2>/dev/null || echo "")}"
+GITHUB="${usage_github:-$(git remote get-url origin 2>/dev/null | sed -n 's|.*github.com[:/]\([^/]*\)/.*|\1|p' || echo "")}"
+
+cat > "${HOST_DIR}/user.nix" << EOF
+{
+  username = "${USERNAME}";
+  fullname = "${FULLNAME}";
+  useremail = "${EMAIL}";
+  githubUsername = "${GITHUB}";
+}
+EOF
+echo "    Generated ${HOST_DIR}/user.nix for user '${USERNAME}'"
+
+# Ensure host files are always tracked — nix flakes only see git-tracked files.
+git add "${HOST_DIR}"
+
+# Create a feature branch for this host (skip if it already exists or we're in CI).
+# Do this before committing so the commit lands on the feature branch, not the current branch.
+if [[ "${CI:-false}" != "true" ]] && ! git rev-parse --verify "host/${HOSTNAME}" &>/dev/null; then
   git checkout -b "host/${HOSTNAME}"
-  git add -A
+fi
+
+# Commit the new host files so the flake doesn't see a dirty tree.
+if [[ "${CI:-false}" != "true" ]] && ! git diff --cached --quiet; then
+  git commit -m "feat: add host ${HOSTNAME} (${SYSTEM})"
 fi
 
 [ "${MISE_TASK:-}" != "add_host" ] && exit 0
@@ -110,10 +200,18 @@ To bootstrap the machine, clone this repo on it and run:
 description = "Build and activate the nix config for a host"
 depends = ["install-nix"]
 hide = true
+quiet = true
 usage = 'arg "[hostname]" help="Hostname to activate"'
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
+
+# Prefer explicit GITHUB_TOKEN, fall back to gh CLI auth if available
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+  if gh_token="$(mise x gh -- gh auth token 2>/dev/null)"; then
+    export GITHUB_TOKEN="$gh_token"
+  fi
+fi
 
 if [ -n "${GITHUB_TOKEN:-}" ]; then
   export NIX_CONFIG="${NIX_CONFIG:-}"$'\n'"access-tokens = github.com=${GITHUB_TOKEN}"
@@ -123,50 +221,88 @@ set +u
 source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 set -u
 
+# Restart the daemon so it picks up trusted-users from nix.conf
+# (the installer may have spawned it before the config was finalized)
+if [ "$(uname -s)" = "Linux" ]; then
+  sudo systemctl restart nix-daemon
+fi
+
+NIX_FLAGS=(--accept-flake-config --extra-experimental-features "nix-command flakes")
 HOSTNAME="${usage_hostname:-$(hostname -s)}"
 if [ "$(uname -s)" = "Darwin" ]; then
   TARGET=(".#darwinConfigurations.${HOSTNAME}.system")
-  ACTIVATE_CMD=(sudo ./result/sw/bin/darwin-rebuild switch --flake .#${HOSTNAME})
 else
   TARGET=(".#systemConfigs.${HOSTNAME}")
-  ACTIVATE_CMD=(nix run 'github:numtide/system-manager' -- switch --flake .#${HOSTNAME} --sudo)
   HOME_TARGET=(".#homeConfigurations.${HOSTNAME}.activationPackage")
 fi
 
 echo "==> $( [ "${CI:-false}" = "true" ] && echo "Validating" || echo "Deploying" ) configuration for '${HOSTNAME}'..."
-[[ "${CI:-false}" = "true" ]] && TARGET=("--debug" "${TARGET[@]}")
-# This verifies the flake evaluates and builds without activating
-nix build "${TARGET[@]}"
-
-# Check if we should skip the "active" part
 if [[ "${CI:-false}" = "true" ]]; then
-  echo "CI detected: Build successful. Skipping activation step."
+  # CI validation-only path: evaluate the derivation without building/activating.
+  test "$(nix eval "${NIX_FLAGS[@]}" --raw "${TARGET[0]}.type")" = "derivation"
+  if [ -n "${HOME_TARGET:-}" ]; then
+    test "$(nix eval "${NIX_FLAGS[@]}" --raw "${HOME_TARGET[0]}.type")" = "derivation"
+  fi
+  echo "CI detected: Evaluation successful. Skipping build and activation steps."
   exit 0
 fi
 
-echo "==> Activating configuration..."
-"${ACTIVATE_CMD[@]}"
+if [ "$(uname -s)" = "Darwin" ]; then
+  # Ensure nix.conf exists so the daemon knows who is trusted and which
+  # substituters to use.  A previous activate run (or manual intervention)
+  # may have moved it aside.  Restore it temporarily for the build step;
+  # we'll move everything aside again before darwin-rebuild takes ownership.
+  if [ ! -f /etc/nix/nix.conf ] && [ -f /etc/nix/nix.conf.before-nix-darwin ]; then
+    echo "==> Restoring /etc/nix/nix.conf for build step..."
+    sudo cp /etc/nix/nix.conf.before-nix-darwin /etc/nix/nix.conf
+    sudo launchctl kickstart -k system/org.nixos.nix-daemon
+    sleep 2
+  fi
 
-if [ "$(uname -s)" != "Darwin" ]; then
+  nix build "${NIX_FLAGS[@]}" "${TARGET[@]}"
+
+  # nix-darwin refuses to activate if /etc/nix/ contains config files it didn't
+  # write.  On first run (or after a Lix/Nix re-install), move them aside so
+  # nix-darwin can take ownership.  The settings from these files will be
+  # managed by nix-darwin's nix.settings going forward.
+  for f in /etc/nix/nix.conf /etc/nix/nix.custom.conf; do
+    if [ -f "$f" ] && ! grep -qF 'nix-darwin' "$f" 2>/dev/null; then
+      echo "==> Moving $f aside for nix-darwin first-run..."
+      sudo mv "$f" "$f.before-nix-darwin"
+    fi
+  done
+
+  echo "==> Activating configuration..."
+  sudo ./result/sw/bin/darwin-rebuild switch --flake ".#${HOSTNAME}"
+else
+  echo "==> Activating system configuration..."
+  nix build "${NIX_FLAGS[@]}" ".#system-manager"
+  ./result/bin/system-manager switch --flake ".#${HOSTNAME}" --sudo
+
   echo "==> Activating home-manager configuration..."
-  nix build "${HOME_TARGET[@]}" --out-link .hm-result
-  ./.hm-result/activate
+  nix build "${NIX_FLAGS[@]}" "${HOME_TARGET[@]}" --out-link .hm-result
+  HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
+fi
+
+# Suggest pushing the host branch to origin after a successful activation.
+if [[ "${CI:-false}" != "true" ]]; then
+  BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+  if [[ "$BRANCH" == host/* ]] && ! git rev-parse --verify "origin/${BRANCH}" &>/dev/null; then
+    echo ""
+    echo "==> Activation successful! To push this host branch to origin, run:"
+    echo "    git push -u origin ${BRANCH}"
+  fi
 fi
 """
 
-# Public init task — orchestrates the hidden tasks
-[tasks.init]
+# ---------------------------------------------------------------------------
+# Public nix tasks
+# ---------------------------------------------------------------------------
+
+[tasks."nix:init"]
 description = "Full init for a new machine: install Nix (+ Homebrew on Mac), then apply config"
-depends = [
-  "install-homebrew",
-  "install-nix",
-  { task = "add-host", args = [
-    "{{usage.hostname}}",
-  ] },
-  { task = "activate", args = [
-    "{{usage.hostname}}",
-  ] },
-]
+depends = ["install-homebrew", "install-nix", "nix:trust"]
+quiet = true
 usage = '''
 arg "<hostname>" help="Hostname to assign" long_help="The hostname used as the nix config identifier. Delegates to add-host to create the host directory, then installs prerequisites (Nix, Homebrew) and builds/activates the configuration."
 '''
@@ -174,12 +310,16 @@ run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
+mise run add-host "${usage_hostname}"
+mise run activate "${usage_hostname}"
+
 echo ""
 echo "Done! Open a new shell to pick up all changes."
 '''
 
-[tasks.switch]
+[tasks."nix:switch"]
 description = "Apply the nix config for the current host (auto-detects Darwin or Linux)"
+quiet = true
 usage = '''
 flag "-d --debug" help="Show verbose output and nix traces for debugging"
 '''
@@ -188,68 +328,174 @@ run = '''
 set -euo pipefail
 HOST="$(hostname -s)"
 
+# Prefer explicit GITHUB_TOKEN, fall back to gh CLI auth if available
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+  if gh_token="$(mise x gh -- gh auth token 2>/dev/null)"; then
+    export GITHUB_TOKEN="$gh_token"
+  fi
+fi
+
 if [ -n "${GITHUB_TOKEN:-}" ]; then
   export NIX_CONFIG="${NIX_CONFIG:-}"$'\n'"access-tokens = github.com=${GITHUB_TOKEN}"
 fi
 
 # Use an array for optional flags
-VERBOSE_ARGS=()
+NIX_FLAGS=(--accept-flake-config --extra-experimental-features "nix-command flakes")
+REBUILD_FLAGS=()
 if [[ "${usage_debug:-}" == "true" ]]; then
-  VERBOSE_ARGS=("--show-trace" "--verbose")
+  NIX_FLAGS+=("--show-trace" "--verbose")
+  REBUILD_FLAGS+=("--show-trace" "--verbose")
 fi
 
 echo ""
 if [ "$(uname -s)" = "Darwin" ]; then
-  sudo darwin-rebuild switch --flake ".#$HOST" "${VERBOSE_ARGS[@]}"
+  sudo darwin-rebuild switch --flake ".#$HOST" "${REBUILD_FLAGS[@]}"
 else
-  nix "${VERBOSE_ARGS[@]}" run 'github:numtide/system-manager' -- switch --flake ".#$HOST" --sudo
-  nix build ".#homeConfigurations.$HOST.activationPackage" --out-link .hm-result
-  ./.hm-result/activate
+  nix build "${NIX_FLAGS[@]}" ".#system-manager"
+  ./result/bin/system-manager switch --flake ".#$HOST" --sudo
+  nix build "${NIX_FLAGS[@]}" ".#homeConfigurations.$HOST.activationPackage" --out-link .hm-result
+  HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
 fi
 '''
 
-[tasks.debug]
+[tasks."nix:debug"]
 description = "Apply config with debug traces"
-run = "mise run switch --debug"
+quiet = true
+run = "mise run nix:switch --debug"
+
+[tasks."nix:deploy"]
+description = "Build locally and deploy system config to a remote Linux host via SSH"
+quiet = true
+usage = '''
+arg "<host>" help="SSH target (e.g. rderose@192.168.1.10 or an SSH config alias)"
+arg "[name]" help="System config name (defaults to remote hostname)"
+flag "-d --debug" help="Show verbose output and nix traces for debugging"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+TARGET_HOST="${usage_host}"
+CONFIG_NAME="${usage_name:-}"
+
+# If no config name given, resolve it from the remote hostname
+if [ -z "$CONFIG_NAME" ]; then
+  CONFIG_NAME="$(ssh "$TARGET_HOST" hostname -s)"
+  echo "==> Detected remote hostname: $CONFIG_NAME"
+fi
+
+NIX_FLAGS=(--accept-flake-config --extra-experimental-features "nix-command flakes")
+if [[ "${usage_debug:-}" == "true" ]]; then
+  NIX_FLAGS+=("--show-trace" "--verbose")
+fi
+
+echo "==> Building system-manager from flake..."
+nix build "${NIX_FLAGS[@]}" ".#system-manager"
+
+echo "==> Deploying system config '$CONFIG_NAME' to $TARGET_HOST..."
+./result/bin/system-manager \
+  --target-host "$TARGET_HOST" \
+  switch \
+  --flake ".#$CONFIG_NAME" \
+  --sudo
+'''
 
 # ---------------------------------------------------------------------------
 # Nix maintenance tasks
 # ---------------------------------------------------------------------------
 
-[tasks.up]
-description = "Update all flake inputs"
-run = "nix flake update"
+[tasks."nix:trust"]
+description = "Add the current user to nix trusted-users and restart the daemon"
+quiet = true
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
 
-[tasks.upp]
-description = "Update a single flake input"
-usage = 'arg "<input>" help="Flake input to update (e.g. nixpkgs, home-manager, darwin)"'
-run = "nix flake update ${usage_input:?}"
+# CI runners are already trusted; skip to avoid sudo prompts.
+[[ "${CI:-false}" == "true" ]] && exit 0
 
-[tasks.history]
+USER="$(whoami)"
+CONF="/etc/nix/nix.custom.conf"
+
+# Ensure the file exists (nix.conf already includes it via !include)
+if [ ! -f "$CONF" ]; then
+  echo "==> Creating $CONF..."
+  echo "# Custom nix settings — not managed by nix-darwin or system-manager" | sudo tee "$CONF" > /dev/null
+fi
+
+# Check if the user is already trusted in any nix config file
+for f in /etc/nix/nix.conf "$CONF"; do
+  if [ -f "$f" ] && grep -qE "^(extra-)?trusted-users\b.*\b${USER}\b" "$f" 2>/dev/null; then
+    echo "'$USER' is already a trusted user."
+    exit 0
+  fi
+done
+
+# Append to existing extra-trusted-users line, or create one
+if grep -qE "^extra-trusted-users\b" "$CONF" 2>/dev/null; then
+  echo "==> Adding '$USER' to existing extra-trusted-users..."
+  sudo sed -i.bak "s/^\(extra-trusted-users.*\)/\1 ${USER}/" "$CONF"
+else
+  echo "==> Adding extra-trusted-users line for '$USER'..."
+  echo "extra-trusted-users = ${USER}" | sudo tee -a "$CONF" > /dev/null
+fi
+
+echo "==> Restarting nix daemon..."
+if [ "$(uname -s)" = "Darwin" ]; then
+  sudo launchctl kickstart -k system/org.nixos.nix-daemon
+else
+  sudo systemctl restart nix-daemon
+fi
+
+echo "Done. '$USER' is now a trusted nix user."
+'''
+
+[tasks."nix:up"]
+description = "Update a single flake input, or all inputs if none specified"
+quiet = true
+usage = 'arg "[input]" help="Flake input to update (e.g. nixpkgs, home-manager, darwin). Omit to update all."'
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ -n "${usage_input:-}" ]; then
+  nix flake update "${usage_input}"
+else
+  nix flake update
+fi
+'''
+
+[tasks."nix:history"]
 description = "List all system profile generations"
+quiet = true
 run = "nix profile history --profile /nix/var/nix/profiles/system"
 
-[tasks.repl]
+[tasks."nix:repl"]
 description = "Open a nix repl with nixpkgs"
+quiet = true
 run = "nix repl --expr 'import (builtins.getFlake \"nixpkgs\") {}'"
 
-[tasks.clean]
+[tasks."nix:clean"]
 description = "Remove all profile generations older than 7 days"
+quiet = true
 run = "sudo nix profile wipe-history --profile /nix/var/nix/profiles/system --older-than 7d"
 
-[tasks.gc]
+[tasks."nix:gc"]
 description = "Garbage-collect all unused nix store entries (system + user)"
+quiet = true
 run = [
   "sudo nix-collect-garbage --delete-older-than 7d",
   "nix-collect-garbage --delete-older-than 7d",
 ]
 
-[tasks.fmt]
+[tasks."nix:fmt"]
 description = "Format all .nix files in this repo"
+quiet = true
 run = "nix fmt"
 
 [tasks."iterm:export"]
 description = "Re-export iTerm2 preferences plist into the repo"
+quiet = true
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
@@ -270,12 +516,14 @@ echo "Review with: git diff --stat"
 echo "Then commit: git add -A && git commit -m 'chore: update iTerm2 preferences'"
 """
 
-[tasks.gcroot]
+[tasks."nix:gcroot"]
 description = "Show auto GC roots in the nix store"
+quiet = true
 run = "ls -al /nix/var/nix/gcroots/auto/"
 
-[tasks.uninstall]
+[tasks."nix:uninstall"]
 description = "Completely uninstall Nix from this machine"
+quiet = true
 confirm = "This will completely remove Nix, the /nix store, and all managed packages. Continue?"
 run = '''
 #!/usr/bin/env bash
@@ -314,4 +562,119 @@ else
 fi
 
 echo -e "\nDone! Open a new shell or restart your computer to fully clear changes."
+'''
+
+# ---------------------------------------------------------------------------
+# Lima VM management (macOS only — for testing Linux configs)
+# ---------------------------------------------------------------------------
+
+[tasks."vm:create"]
+description = "Create and start a fresh Lima VM for testing"
+quiet = true
+usage = '''
+arg "[name]" help="VM name" default="nix-test"
+arg "[template]" help="Lima template" default="template:ubuntu"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+VM="${usage_name}"
+TEMPLATE="${usage_template}"
+
+if limactl list --json | jq -e --arg vm "$VM" 'select(.name == $vm)' &>/dev/null; then
+  echo "ERROR: VM '$VM' already exists. Use 'mise run vm:recreate' to replace it."
+  exit 1
+fi
+
+echo "==> Creating Lima VM '$VM' from $TEMPLATE..."
+limactl create --yes \
+  --name="$VM" \
+  --containerd=none \
+  --mount-writable \
+  --set '.user.name = "rderose"' \
+  --set '.user.home = "/home/rderose"' \
+  "$TEMPLATE"
+
+echo "==> Starting VM '$VM'..."
+limactl start "$VM"
+
+echo ""
+echo "VM '$VM' is ready. Run 'mise run vm:shell' to connect."
+'''
+
+[tasks."vm:remove"]
+description = "Stop and remove a Lima VM"
+quiet = true
+usage = 'arg "[name]" help="VM name" default="nix-test"'
+confirm = "This will destroy the VM and all its data. Continue?"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+VM="${usage_name}"
+
+if ! limactl list --json | jq -e --arg vm "$VM" 'select(.name == $vm)' &>/dev/null; then
+  echo "VM '$VM' does not exist."
+  exit 0
+fi
+
+echo "==> Stopping VM '$VM'..."
+limactl stop "$VM" 2>/dev/null || true
+
+echo "==> Removing VM '$VM'..."
+limactl delete "$VM"
+echo "VM '$VM' removed."
+'''
+
+[tasks."vm:recreate"]
+description = "Destroy and recreate a fresh Lima VM"
+quiet = true
+usage = '''
+arg "[name]" help="VM name" default="nix-test"
+arg "[template]" help="Lima template" default="template:ubuntu"
+'''
+confirm = "This will destroy the VM and recreate it from scratch. Continue?"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+VM="${usage_name}"
+TEMPLATE="${usage_template}"
+
+# Remove existing VM if present
+if limactl list --json | jq -e --arg vm "$VM" 'select(.name == $vm)' &>/dev/null; then
+  echo "==> Stopping VM '$VM'..."
+  limactl stop "$VM" 2>/dev/null || true
+  echo "==> Removing VM '$VM'..."
+  limactl delete "$VM"
+fi
+
+echo "==> Creating Lima VM '$VM' from $TEMPLATE..."
+limactl create --yes \
+  --name="$VM" \
+  --containerd=none \
+  --mount-writable \
+  --set '.user.name = "rderose"' \
+  --set '.user.home = "/home/rderose"' \
+  "$TEMPLATE"
+
+echo "==> Starting VM '$VM'..."
+limactl start "$VM"
+
+echo ""
+echo "VM '$VM' is ready. Run 'mise run vm:shell' to connect."
+'''
+
+[tasks."vm:shell"]
+description = "Open a shell in the Lima VM"
+quiet = true
+usage = 'arg "[name]" help="VM name" default="nix-test"'
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+VM="${usage_name}"
+echo "==> Connecting to VM '$VM'..."
+exec limactl shell "$VM"
 '''

@@ -2,18 +2,21 @@
   description = "Rob's Nix setup for macOS and Linux";
 
   nixConfig = {
-    substituters = [
-      "https://nix-community.cachix.org"
+    extra-substituters = [
       "https://cache.nixos.org"
+      "https://nix-community.cachix.org"
+      "https://cache.numtide.com"
     ];
-    trusted-public-keys = [
+    extra-trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
     ];
   };
 
   inputs = {
-    # Core Packages - pinned to 25.11 stable
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    # Core Packages — nixpkgs-unstable for latest packages
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
 
     # Flake framework
     flake-parts = {
@@ -24,15 +27,15 @@
     # Host management (macOS only)
     easy-hosts.url = "github:tgirlcloud/easy-hosts";
 
-    # Darwin System Config
+    # Darwin System Config — master branch tracks nixpkgs-unstable
     darwin = {
-      url = "github:nix-darwin/nix-darwin/nix-darwin-25.11";
+      url = "github:nix-darwin/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # User Configuration
+    # User Configuration — master branch tracks nixpkgs-unstable
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
+      url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -47,121 +50,146 @@
     # (Kept above intentionally so it is always represented in flake.lock.)
   };
 
-  outputs = inputs:
+  outputs =
+    inputs:
     let
       lib = inputs.nixpkgs.lib;
       defaultUser = {
-        fullname  = "Robert DeRose";
-        username  = "rderose";
+        fullname = "Robert DeRose";
+        username = "rderose";
         useremail = "rderose@checkpt.com";
+        githubUsername = "RobertDeRose";
       };
 
-      # Collect all Linux hosts from hosts/*-linux/<hostname>/
-      linuxHostMeta = let
-        hostsDir = ./hosts;
-        allEntries = builtins.readDir hostsDir;
-        linuxArchDirs = lib.filterAttrs (name: type:
-          lib.hasSuffix "-linux" name && type == "directory"
-        ) allEntries;
-      in
-        lib.foldlAttrs (acc: archName: _:
+      # Collect all Linux hosts from systems/*-linux/<hostname>/
+      # Linux hosts live under systems/ (not hosts/) to avoid easy-hosts
+      # auto-discovery, since easy-hosts assumes all *-linux dirs are NixOS.
+      linuxHostMeta =
+        let
+          hostsDir = ./systems;
+          allEntries = if builtins.pathExists hostsDir then builtins.readDir hostsDir else { };
+          linuxArchDirs = lib.filterAttrs (
+            name: type: lib.hasSuffix "-linux" name && type == "directory"
+          ) allEntries;
+        in
+        lib.foldlAttrs (
+          acc: archName: _:
           let
             archDir = hostsDir + "/${archName}";
             archEntries = builtins.readDir archDir;
             hostNames = lib.filterAttrs (_: type: type == "directory") archEntries;
           in
-            lib.foldlAttrs (acc: hostname: _:
-              let
-                hostDir = archDir + "/${hostname}";
-                system =
-                  if lib.hasPrefix "x86_64" archName
-                  then "x86_64-linux"
-                  else "aarch64-linux";
-              in
-                if acc ? "${hostname}" then
-                  throw "Duplicate Linux hostname '${hostname}' found in hosts/*-linux/. Hostnames must be unique across Linux architectures."
-                else
-                  acc // {
-                    "${hostname}" = {
-                      inherit hostname hostDir system;
-                    };
-                  }
-            ) acc hostNames
-        ) {} linuxArchDirs;
+          lib.foldlAttrs (
+            acc: hostname: _:
+            let
+              hostDir = archDir + "/${hostname}";
+              system = if lib.hasPrefix "x86_64" archName then "x86_64-linux" else "aarch64-linux";
+            in
+            if acc ? "${hostname}" then
+              throw "Duplicate Linux hostname '${hostname}' found in systems/*-linux/. Hostnames must be unique across Linux architectures."
+            else
+              acc
+              // {
+                "${hostname}" = {
+                  inherit hostname hostDir system;
+                };
+              }
+          ) acc hostNames
+        ) { } linuxArchDirs;
 
-      linuxHosts = lib.mapAttrs (_: host:
+      linuxHosts = lib.mapAttrs (
+        _: host:
+        let
+          userNix = host.hostDir + "/user.nix";
+          hostUser = if builtins.pathExists userNix then import userNix else defaultUser;
+        in
         inputs.system-manager.lib.makeSystemConfig {
           modules = [
             { nixpkgs.hostPlatform = host.system; }
             ./modules/linux/system.nix
             {
-              _module.args = defaultUser // { inherit (host) hostname; };
+              _module.args = hostUser // {
+                inherit (host) hostname;
+              };
             }
-          ] ++ (
-            let systemNix = host.hostDir + "/system.nix";
-            in if builtins.pathExists systemNix
-              then [ { imports = [ systemNix ]; } ]
-              else []
+          ]
+          ++ (
+            let
+              systemNix = host.hostDir + "/system.nix";
+            in
+            if builtins.pathExists systemNix then [ { imports = [ systemNix ]; } ] else [ ]
           );
         }
       ) linuxHostMeta;
 
-      linuxHomeConfigs = lib.mapAttrs (hostname: host:
+      linuxHomeConfigs = lib.mapAttrs (
+        hostname: host:
+        let
+          userNix = host.hostDir + "/user.nix";
+          hostUser = if builtins.pathExists userNix then import userNix else defaultUser;
+        in
         inputs.home-manager.lib.homeManagerConfiguration {
           pkgs = import inputs.nixpkgs {
             system = host.system;
             config.allowUnfree = true;
           };
 
-          extraSpecialArgs = defaultUser // {
+          extraSpecialArgs = hostUser // {
             inherit hostname;
           };
 
-          modules =
-            [ ./home/linux.nix ]
-            ++ (
-              let homeNix = host.hostDir + "/home.nix";
-              in if builtins.pathExists homeNix
-                then [ homeNix ]
-                else []
-            );
+          modules = [
+            ./home/linux.nix
+          ]
+          ++ (
+            let
+              homeNix = host.hostDir + "/home.nix";
+            in
+            if builtins.pathExists homeNix then [ homeNix ] else [ ]
+          );
         }
       ) linuxHostMeta;
     in
-      inputs.flake-parts.lib.mkFlake { inherit inputs; } {
-        imports = [
-          inputs.easy-hosts.flakeModule
-          inputs.flake-parts.flakeModules.easyOverlay
-        ];
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        inputs.easy-hosts.flakeModule
+        inputs.flake-parts.flakeModules.easyOverlay
+      ];
 
-        flake.systemConfigs = linuxHosts;
-        flake.homeConfigurations = linuxHomeConfigs;
+      flake.systemConfigs = linuxHosts;
+      flake.homeConfigurations = linuxHomeConfigs;
 
-        systems = [
-          "aarch64-darwin"
-          "x86_64-darwin"
-          "x86_64-linux"
-        ];
+      systems = [
+        "aarch64-darwin"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "x86_64-linux"
+      ];
 
-        perSystem = { pkgs, ... }: {
-          formatter = pkgs.alejandra;
+      perSystem =
+        { pkgs, system, ... }:
+        {
+          formatter = pkgs.nixfmt;
+        }
+        // lib.optionalAttrs (inputs.system-manager.packages ? ${system}) {
+          packages.system-manager = inputs.system-manager.packages.${system}.default;
         };
 
-        easy-hosts = {
-          autoConstruct = true;
-          path = ./hosts;
+      easy-hosts = {
+        autoConstruct = true;
+        path = ./hosts;
 
-          # Auto-discovered Linux hosts come through as class = "linux"
-          # from the <arch>-linux directory name, so map that alias to nixos.
-          additionalClasses = {
-            linux = "nixos";
-          };
+        # Linux hosts live under systems/ and are built with system-manager,
+        # so easy-hosts only manages Darwin hosts from hosts/.
 
-          shared.specialArgs = defaultUser;
+        shared.specialArgs = {
+          hmDarwinModule = ./home/darwin.nix;
+        };
 
-          perClass = class: {
-            modules =
-              if class == "darwin" then [
+        perClass = class: {
+          modules =
+            if class == "darwin" then
+              [
                 ./modules/common/nix-core.nix
                 ./modules/darwin/system.nix
                 ./modules/darwin/apps.nix
@@ -169,16 +197,21 @@
 
                 inputs.home-manager.darwinModules.home-manager
                 {
-                  home-manager.useGlobalPkgs       = true;
-                  home-manager.useUserPackages     = true;
-                  home-manager.verbose             = true;
-                  home-manager.backupFileExtension = "bak";
-                  home-manager.extraSpecialArgs    = defaultUser;
-                  home-manager.users.${defaultUser.username} = import ./home/darwin.nix;
+                  home-manager.useGlobalPkgs = true;
+                  home-manager.useUserPackages = true;
+                  home-manager.verbose = true;
+                  home-manager.backupCommand = ''
+                    target="$HOME/.hm_bkup/''${1#"$HOME"/}"
+                    mkdir -p "$(dirname "$target")"
+                    mv "$1" "$target"
+                  '';
+                  # extraSpecialArgs and users are set per-host in each
+                  # host's default.nix via user.nix import.
                 }
               ]
-              else [];
-          };
+            else
+              [ ];
         };
       };
+    };
 }

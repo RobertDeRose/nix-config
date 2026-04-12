@@ -7,11 +7,12 @@
   useremail,
   fullname,
   ...
-}: {
+}:
+{
   # `programs.git` will generate the config file: ~/.config/git/config
   # to make git use this config file, `~/.gitconfig` should not exist!
   #    https://git-scm.com/docs/git-config#Documentation/git-config.txt---global
-  home.activation.removeExistingGitconfig = lib.hm.dag.entryBefore ["checkLinkTargets"] ''
+  home.activation.removeExistingGitconfig = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
     [ -e ~/.gitconfig ] && mv -f ~/.gitconfig ~/.gitconfig.before_nix || true
   '';
 
@@ -23,31 +24,34 @@
   programs.difftastic.git.enable = true;
 
   programs.git = {
-    enable  = true;
-    ignores = [ ".DS_Store" ".jj" ];
+    enable = true;
+    ignores = [
+      ".DS_Store"
+      ".jj"
+    ];
     settings = {
       core = {
-        autocrlf     = "input";
-        editor       = "nvim";
-        whitespace   = "trailing-space,space-before-tab";
+        autocrlf = "input";
+        editor = "hx";
+        whitespace = "trailing-space,space-before-tab";
         excludesfile = "~/.config/git/global_gitignore";
       };
-      commit.gpgsign             = pkgs.stdenv.isDarwin;
-      credential.helper          = "cache --timeout=3600";
-      grep.lineNumber            = true;
+      commit.gpgsign = pkgs.stdenv.isDarwin;
+      credential.helper = "cache --timeout=3600";
+      grep.lineNumber = true;
       gpg.ssh.allowedSignersFile = "~/.config/git/allowed_signers";
-      init.defaultBranch  = "main";
+      init.defaultBranch = "main";
       merge.conflictstyle = "zdiff3";
       pull = {
         rebase = true;
-        ff     = "only";
+        ff = "only";
       };
       push = {
-        default         = "current";
+        default = "current";
         autoSetupRemote = true;
       };
       user = {
-        name  = fullname;
+        name = fullname;
         email = useremail;
       };
       url."git@github.com:".insteadOf = "https://github.com/";
@@ -55,18 +59,18 @@
     };
     includes = [
       {
-        path      = "~/workspace/personal/.gitconfig";
+        path = "~/workspace/personal/.gitconfig";
         condition = "gitdir:~/workspace/personal/";
       }
     ];
     signing = {
       format = "ssh";
-      key    = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA";
+      key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA";
     };
   };
 
   programs.gh = {
-    enable                     = true;
+    enable = true;
     gitCredentialHelper.enable = true;
   };
 
