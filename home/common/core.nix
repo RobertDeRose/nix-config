@@ -73,4 +73,16 @@
     GIT_EDITOR = "hx";
     GIT_SEQUENCE_EDITOR = "hx";
   };
+
+  # Personal scripts — symlinked to ~/.local/bin/
+  home.file = {
+    ".local/bin/rund" = {
+      source = ../../files/scripts/rund;
+      executable = true;
+    };
+    ".local/bin/clean_git_branches" = {
+      source = ../../files/scripts/clean_git_branches;
+      executable = true;
+    };
+  };
 }

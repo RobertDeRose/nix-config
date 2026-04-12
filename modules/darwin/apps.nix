@@ -29,10 +29,11 @@
       "macos-fuse-t/cask"
     ];
 
-    # brew install — CLI tools that aren't in nixpkgs
+    # brew install — CLI tools that aren't in nixpkgs (or are marked EOL there)
     brews = [
       "container" # Apple's native macOS container runtime
       "container-compose" # Docker Compose-like tool for Apple containers
+      "lima" # Linux VMs on macOS (nixpkgs version is EOL)
     ];
 
     # brew install --cask ...
