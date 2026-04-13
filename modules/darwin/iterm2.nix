@@ -6,16 +6,17 @@
 # (not symlinked — iTerm2 writes back to it) and the custom-folder pref is set.
 #
 # To re-export after changing settings in iTerm2:
-#   mise run iterm-export
+#   mise run iterm:export
 { username, ... }:
 let
   prefsDir = "/Users/${username}/Library/Application Support/iTerm2/nix-managed";
   plistSrc = ../../config/iterm2/com.googlecode.iterm2.plist;
-in {
+in
+{
   # Point iTerm2 at the nix-managed prefs folder
   system.defaults.CustomUserPreferences."com.googlecode.iterm2" = {
     LoadPrefsFromCustomFolder = true;
-    PrefsCustomFolder         = prefsDir;
+    PrefsCustomFolder = prefsDir;
     NoSyncNeverRemindPrefsChangesLostForFile_Selection = 2; # don't nag about prefs changes
   };
 

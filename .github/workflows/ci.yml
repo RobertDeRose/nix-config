@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ${{ matrix.os }}
@@ -23,7 +27,7 @@ jobs:
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
-      - uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
+      - uses: DeterminateSystems/magic-nix-cache-action@1828eb4e5414b8dfe36daae53ea3e4b8c3fdec7a #main
 
       - name: Check flake evaluates
         run: nix flake check --no-build
@@ -41,7 +45,7 @@ jobs:
         run: |
           for host in $(nix eval --json '.#systemConfigs' 2>/dev/null | jq -r 'keys[]' 2>/dev/null); do
             echo "==> Building systemConfigs.$host"
-            nix build ".#systemConfigs.$host.system" --no-link
+            nix build ".#systemConfigs.$host" --no-link
           done
 
       - name: Build Linux home-manager configurations (Linux only)

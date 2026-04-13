@@ -1,0 +1,52 @@
+#!/bin/bash
+
+DISTRO=jammy
+WKDIR="/$(basename "$(pwd)")"
+command="container run -it --rm -v $(pwd):"$WKDIR" -w "$WKDIR""
+#command="docker run -it --rm -v $(pwd):"$WKDIR" -w "$WKDIR""
+
+while getopts "d:e:ph" opt; do
+  case $opt in
+  p) command+=" --privileged" ;;
+  d) DISTRO="${OPTARG}" ;;
+  e) command+=" -e${OPTARG}" ;;
+  h)
+    echo "Usage: rund [options] [command]"
+    echo "Options:"
+    echo "  -d <Ubuntu Codename> Use focal distro (default: jammy)"
+    echo "  -e VAR=VALUE         Add an environment variable"
+    echo "  -h                   Show this help message"
+    exit 0
+    ;;
+  \?)
+    echo "Invalid option: -$OPTARG" >&2
+    exit 1
+    ;;
+  esac
+done
+
+command+=" buildpack-deps:${DISTRO}-curl /bin/bash .shell"
+#  command+=" myoung34/github-runner:ubuntu-${DISTRO} /bin/bash .shell"
+# command+=" github-runner:${DISTRO} /bin/bash .shell"
+
+if [ -e "${HOME}/.rund_history" ]; then
+  cp "${HOME}/.rund_history" .bash_history
+fi
+
+# "echo 'PATH=/pie/bin:/opt/python/bin:\$(pwd)/bin:\$PATH' >> ~/.bashrc" \
+printf '%s\n' \
+  "source /etc/os-release" \
+  "RED='\[\e[38;5;196;1m\]'" \
+  "ORANGE='\[\e[38;5;208;1m\]'" \
+  "BLUE='\[\e[38;5;45m\]'" \
+  "RESET='\[\e[0m\]'" \
+  "echo 'export HISTFILE=$WKDIR/.bash_history' >> ~/.bashrc" \
+  "echo \"PS1='╭─[\${RED}\u\${RESET}@\${ORANGE}\${VERSION_CODENAME}\${RESET}] \${BLUE}\w\a\n\${RESET}╰─\\$ '\" >> ~/.bashrc" \
+  "echo \"clear; echo -e 'Welcome to \${VERSION}!\n'\" >> ~/.bashrc" \
+  "echo '\"\e[A\": history-search-backward' >> /etc/inputrc" \
+  "echo '\"\e[B\": history-search-forward' >> /etc/inputrc" \
+  "/bin/bash" >.shell
+
+$command
+rm .shell
+mv .bash_history "${HOME}/.rund_history"

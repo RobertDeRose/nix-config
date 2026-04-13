@@ -1,0 +1,68 @@
+#!/bin/bash
+#vim: ts=4 sw=4 et
+
+set -eu
+
+function squash_merge_delete() {
+  local branch="${1}"
+
+  if mergeBase="$(git merge-base "${DEFAULT}" "${branch}")"; then
+    if [[ "$(git cherry "${DEFAULT}" "$(git commit-tree "$(git rev-parse "${branch}^{tree}")" -p "${mergeBase}" -m _)")" == "-"* ]]; then
+      if command -v gh && grep -q '\- deletion' < <(gh ruleset check "${branch}"); then
+        return
+      fi
+
+      if "${DRYRUN}"; then
+        echo "Would delete ${branch}"
+      else
+        git branch -D "${branch}"
+      fi
+    fi
+  fi
+}
+
+DRYRUN="false"
+
+while getopts "d" options; do
+    case "${options}" in
+      d) DRYRUN="true" ;;
+      :) echo "Error: -${OPTARG} requires an argument"; exit 1 ;;
+      *) echo "Unknown arg"; exit 2 ;;
+    esac
+done
+shift "$((OPTIND - 1))"
+
+DEFAULT="${1:-main}"
+PROTECT="dev"
+CURRENT="$(git branch | grep '\*' | cut -d' ' -f2)"
+
+if ! git checkout -q "${DEFAULT}"; then
+  echo "Unable to switch to ${DEFAULT}"
+  exit 1
+fi
+
+git fetch -q --prune --prune-tags origin || git pull -q
+
+git branch --merged | grep -Ev "${DEFAULT}|${PROTECT}" | while read -r branch; do
+  if "${DRYRUN}"; then
+    echo "Would delete ${branch}"
+  else
+    git branch -d "${branch}"
+  fi
+done
+
+git for-each-ref refs/heads/ "--format=%(refname:short)" | while read -r branch; do
+  if mergeBase="$(git merge-base "${DEFAULT}" "${branch}")"; then
+    if [[ "$(git cherry "${DEFAULT}" "$(git commit-tree "$(git rev-parse "${branch}^{tree}")" -p "${mergeBase}" -m _)")" == "-"* ]]; then
+      if "${DRYRUN}"; then
+        echo "Would delete ${branch}"
+      else
+        git branch -D "${branch}"
+      fi
+    fi
+  fi
+done
+
+if [[ "${CURRENT}" != "${DEFAULT}" ]]; then
+  git checkout -q "${CURRENT}"
+fi

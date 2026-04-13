@@ -1,6 +1,7 @@
 # modules/common/fonts.nix
 # Shared font packages — imported by both Darwin and NixOS system modules.
-{ pkgs, ... }: {
+{ pkgs, ... }:
+{
   fonts.packages = with pkgs; [
     material-design-icons
     font-awesome

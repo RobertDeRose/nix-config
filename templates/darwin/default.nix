@@ -4,21 +4,23 @@
 # easy-hosts sets networking.hostName automatically from the directory name.
 {
   config,
-  fullname,
-  username,
+  hmDarwinModule,
   ...
-}: {
-  home-manager.users."${username}".imports =
-    if builtins.pathExists ./home.nix then [ ./home.nix ] else [ ];
+}:
+let
+  hostUser = import ./user.nix;
+in
+{
+  _module.args = hostUser;
+  home-manager.extraSpecialArgs = hostUser;
 
-  networking.computerName          = config.networking.hostName;
-  system.defaults.smb.NetBIOSName  = config.networking.hostName;
-
-  users.users."${username}" = {
-    home        = "/Users/${username}";
-    description = fullname;
-    createHome  = true;
+  home-manager.users."${hostUser.username}" = {
+    imports = [
+      hmDarwinModule
+    ]
+    ++ (if builtins.pathExists ./home.nix then [ ./home.nix ] else [ ]);
   };
 
-  system.primaryUser = username;
+  networking.computerName = config.networking.hostName;
+  system.defaults.smb.NetBIOSName = config.networking.hostName;
 }
