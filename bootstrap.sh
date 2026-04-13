@@ -11,58 +11,62 @@ HOSTNAME="${1:-$(hostname -s)}"
 REPO="RobertDeRose/nix-config"
 REPO_URL="https://github.com/${REPO}.git"
 REPO_DIR="$(basename "$REPO")"
+MISE_CEILING_PATHS="$(realpath "$(pwd)/..")"
 
 # ------------------------------------------------------------------ #
 # macOS: install Xcode Command Line Tools if missing
 # ------------------------------------------------------------------ #
-if [[ "$(uname -s)" == "Darwin" ]] && ! xcode-select -p &>/dev/null; then
-	echo "==> Installing Xcode Command Line Tools..."
-	touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
+if [[ "$(uname -s)" == "Darwin" ]] && ! xcode-select -p &> /dev/null; then
+  echo "==> Installing Xcode Command Line Tools..."
+  touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
 
-	PROD=$(softwareupdate -l 2>/dev/null | grep "\*.*Command Line" | tail -n 1 | sed 's/^[^C]* //')
+  PROD=$(softwareupdate -l 2> /dev/null | grep "\*.*Command Line" | tail -n 1 | sed 's/^[^C]* //')
 
-	if [[ -n "$PROD" ]]; then
-		softwareupdate -i "$PROD" --verbose
-		rm -f /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
-		echo "    Xcode Command Line Tools installed."
-	else
-		rm -f /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
-		echo "ERROR: No Command Line Tools update found via softwareupdate."
-		echo "       Install manually: xcode-select --install"
-		exit 1
-	fi
+  if [[ -n $PROD ]]; then
+    softwareupdate -i "$PROD" --verbose
+    rm -f /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
+    echo "    Xcode Command Line Tools installed."
+  else
+    rm -f /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
+    echo "ERROR: No Command Line Tools update found via softwareupdate."
+    echo "       Install manually: xcode-select --install"
+    exit 1
+  fi
 fi
 
 # ------------------------------------------------------------------ #
 # Linux: install git if missing
 # ------------------------------------------------------------------ #
-if [[ "$(uname -s)" == "Linux" ]] && ! command -v git &>/dev/null; then
-	echo "==> Installing git..."
-	command=("apt-get")
-	[[ $(id -u) -eq 0 ]] && command=("sudo" "${command[@]}")
-	"${command[@]}" update -qq && "${command[@]}" install -yqq git
+if [[ "$(uname -s)" == "Linux" ]] && ! command -v git &> /dev/null; then
+  echo "==> Installing git..."
+  command=("apt-get")
+  [[ $(id -u) -ne 0 ]] && command=("sudo" "${command[@]}")
+  "${command[@]}" update -qq && "${command[@]}" install -yqq git
 fi
 
 # ------------------------------------------------------------------ #
 # Ensure we're inside the nix-config repo
 # ------------------------------------------------------------------ #
-if ! git rev-parse --is-inside-work-tree &>/dev/null; then
-	echo "==> Cloning nix-config into ./$REPO_DIR..."
-	git clone "$REPO_URL"
-	cd "$REPO_DIR"
+if ! git rev-parse --is-inside-work-tree &> /dev/null; then
+  echo "==> Cloning nix-config into ./$REPO_DIR..."
+  git clone "$REPO_URL"
+  cd "$REPO_DIR"
 fi
 
 # ------------------------------------------------------------------ #
 # Install mise if missing
 # ------------------------------------------------------------------ #
-if ! command -v mise &>/dev/null; then
-	if [[ ! -e "$HOME/.local/bin/mise" ]]; then
-		echo "==> Installing mise..."
-		curl https://mise.run | sh
-	fi
-	export PATH="$HOME/.local/bin:$PATH"
-	echo
+if ! command -v mise &> /dev/null; then
+  if [[ ! -e "$HOME/.local/bin/mise" ]]; then
+    echo "==> Installing mise..."
+    curl https://mise.run | sh
+  fi
+  export PATH="$HOME/.local/bin:$PATH"
+  echo
 fi
 
 echo "==> Handing off to mise..."
-mise run init "$HOSTNAME"
+export MISE_CEILING_PATHS
+export MISE_AUTO_INSTALL=false
+export MISE_TRUSTED_CONFIG_PATHS="${PWD}"
+mise run nix:init "$HOSTNAME"
