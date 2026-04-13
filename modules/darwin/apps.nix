@@ -32,6 +32,7 @@
     };
 
     taps = [
+      "manaflow-ai/cmux"
       "macos-fuse-t/cask"
     ];
 

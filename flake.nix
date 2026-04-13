@@ -207,7 +207,8 @@
                     home-manager.useUserPackages = true;
                     home-manager.verbose = true;
                     home-manager.backupCommand = "${pkgs.writeShellScript "hm-backup" ''
-                      set -euo pipefail
+                      set -eo pipefail
+                      [ $# -ge 1 ] || exit 0
                       target="$HOME/.hm_bkup/''${1#"$HOME"/}"
                       mkdir -p "$(dirname "$target")"
                       mv "$1" "$target"

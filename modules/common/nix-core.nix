@@ -6,18 +6,21 @@
   username,
   ...
 }:
+let
+  useCppNix = pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.hostPlatform.isx86_64;
+in
 {
   imports = [ ./overlays.nix ];
 
   nixpkgs.config.allowUnfree = true;
 
   nix = {
-    package = pkgs.nix;
+    # Lix on all platforms except x86_64-darwin (Lix dropped Intel Mac support)
+    package = if useCppNix then pkgs.nix else pkgs.lixPackageSets.latest.lix;
     optimise.automatic = true;
 
     settings = {
       builders-use-substitutes = true;
-      download-buffer-size = 128 * 1024 * 1024; # 128 MiB (default is 64 MiB)
       experimental-features = [
         "nix-command"
         "flakes"
@@ -36,6 +39,10 @@
         "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
         "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
       ];
+    }
+    // lib.optionalAttrs useCppNix {
+      # CppNix 2.24+ only — Lix doesn't recognise this setting
+      download-buffer-size = 128 * 1024 * 1024; # 128 MiB (default 64 MiB)
     };
 
     # Garbage-collect weekly to keep disk usage low
