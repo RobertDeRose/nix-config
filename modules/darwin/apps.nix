@@ -2,7 +2,15 @@
 # macOS-only: system-wide nix packages + Homebrew casks/formulae.
 # GUI apps and anything macOS-specific live here.
 # Cross-platform CLI tools belong in home/common/core.nix instead.
-{ pkgs, username, ... }:
+{
+  pkgs,
+  lib,
+  username,
+  ...
+}:
+let
+  isAarch64 = pkgs.stdenv.hostPlatform.isAarch64;
+in
 {
   # System-wide packages available to all users.
   # Prefer home-manager's home.packages for user-level tools.
@@ -38,9 +46,12 @@
 
     # brew install — CLI tools that aren't in nixpkgs (or are marked EOL there)
     brews = [
-      "container" # Apple's native macOS container runtime
-      "container-compose" # Docker Compose-like tool for Apple containers
+      "bitwarden-cli" # Bitwarden vault CLI (bw) — node-gyp fails in nix sandbox
       "lima" # Linux VMs on macOS (nixpkgs version is EOL)
+    ]
+    ++ lib.optionals isAarch64 [
+      "container" # Apple's native macOS container runtime (aarch64 only)
+      "container-compose" # Docker Compose-like tool for Apple containers (aarch64 only)
     ];
 
     # brew install --cask ...
@@ -57,7 +68,6 @@
       # Development
       "atuin-desktop"
       "balenaetcher"
-      "chatgpt"
       "claude"
       "cmux" # Ghostty-based terminal for AI coding agents
       "imageoptim"
@@ -70,6 +80,9 @@
       "pearcleaner"
       "rectangle"
       "zed"
+    ]
+    ++ lib.optionals isAarch64 [
+      "chatgpt" # aarch64 only
     ];
 
     # App Store apps via mas.

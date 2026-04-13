@@ -28,6 +28,7 @@ postinstall = "command -v hk >/dev/null && hk install --mise || true"
 description = "Install Nix via nix-installer if missing"
 hide = true
 quiet = true
+raw = true
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -99,6 +100,7 @@ mise x gh -- gh auth login
 description = "Register a new host by creating its directory (no flake.nix editing needed)"
 hide = true
 quiet = true
+raw = true
 usage = '''
 arg "[hostname]" help="Hostname for the new machine" \
   long_help="Used as both the nix config identifier and the machine hostname. Creates a hosts/<arch>-darwin/<hostname>/ or systems/<arch>-linux/<hostname>/ directory from the appropriate template."
@@ -144,9 +146,52 @@ fi
 
 # Generate user.nix for this host
 USERNAME="${usage_user:-$(whoami)}"
-FULLNAME="${usage_fullname:-$(git config user.name 2>/dev/null || echo "$USERNAME")}"
+FULLNAME="${usage_fullname:-$(git config user.name 2>/dev/null || echo "")}"
 EMAIL="${usage_email:-$(git config user.email 2>/dev/null || echo "")}"
 GITHUB="${usage_github:-$(git remote get-url origin 2>/dev/null | sed -n 's|.*github.com[:/]\([^/]*\)/.*|\1|p' || echo "")}"
+
+# Prompt for any missing required fields (git may not be configured on a fresh machine)
+ask() {
+  local prompt="$1" reply
+  while true; do
+    printf "%s" "$prompt" >&2
+    read -r reply < /dev/tty
+    if [ -n "$reply" ]; then
+      echo "$reply"
+      return
+    fi
+    echo "  This field is required. Please enter a value." >&2
+  done
+}
+if [ -z "$FULLNAME" ]; then
+  if [[ "${CI:-false}" == "true" ]]; then
+    FULLNAME="CI User"
+  else
+    FULLNAME="$(ask "Full name: ")"
+  fi
+fi
+if [ -z "$EMAIL" ]; then
+  if [[ "${CI:-false}" == "true" ]]; then
+    EMAIL="ci@localhost"
+  else
+    EMAIL="$(ask "Email: ")"
+  fi
+fi
+if [ -z "$GITHUB" ]; then
+  if [[ "${CI:-false}" == "true" ]]; then
+    GITHUB="ci"
+  else
+    GITHUB="$(ask "GitHub username: ")"
+  fi
+fi
+
+# Persist git identity so future commits (and nix:switch) just work
+if ! git config user.name &>/dev/null; then
+  git config user.name "$FULLNAME"
+fi
+if ! git config user.email &>/dev/null; then
+  git config user.email "$EMAIL"
+fi
 
 cat > "${HOST_DIR}/user.nix" << EOF
 {
@@ -251,12 +296,17 @@ if [ "$(uname -s)" = "Darwin" ]; then
   # write.  On first run (or after a Lix/Nix re-install), move them aside so
   # nix-darwin can take ownership.  The settings from these files will be
   # managed by nix-darwin's nix.settings going forward.
-  for f in /etc/nix/nix.conf /etc/nix/nix.custom.conf; do
+  for f in /etc/nix/nix.conf; do
     if [ -f "$f" ] && ! grep -qF 'nix-darwin' "$f" 2>/dev/null; then
       echo "==> Moving $f aside for nix-darwin first-run..."
       sudo mv "$f" "$f.before-nix-darwin"
     fi
   done
+  # nix.custom.conf is created by nix:trust and is never managed by nix-darwin
+  if [ -f /etc/nix/nix.custom.conf ]; then
+    echo "==> Moving /etc/nix/nix.custom.conf aside for nix-darwin first-run..."
+    sudo mv /etc/nix/nix.custom.conf /etc/nix/nix.custom.conf.before-nix-darwin
+  fi
 
   echo "==> Activating configuration..."
   sudo ./result/sw/bin/darwin-rebuild switch --flake ".#${HOSTNAME}"
@@ -287,8 +337,9 @@ fi
 
 [tasks."nix:init"]
 description = "Full init for a new machine: install Nix, then apply config (Homebrew is managed by nix-darwin)"
-depends = ["install-nix", "nix:trust"]
+depends = ["nix:trust"]
 quiet = true
+raw = true
 usage = '''
 arg "<hostname>" help="Hostname to assign" long_help="The hostname used as the nix config identifier. Delegates to add-host to create the host directory, then installs prerequisites (Nix, Homebrew) and builds/activates the configuration."
 '''
@@ -392,7 +443,9 @@ echo "==> Deploying system config '$CONFIG_NAME' to $TARGET_HOST..."
 
 [tasks."nix:trust"]
 description = "Add the current user to nix trusted-users and restart the daemon"
+depends = ["install-nix"]
 quiet = true
+raw = true
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -406,7 +459,7 @@ CONF="/etc/nix/nix.custom.conf"
 # Ensure the file exists (nix.conf already includes it via !include)
 if [ ! -f "$CONF" ]; then
   echo "==> Creating $CONF..."
-  echo "# Custom nix settings — not managed by nix-darwin or system-manager" | sudo tee "$CONF" > /dev/null
+  echo "# Custom nix settings" | sudo tee "$CONF" > /dev/null
 fi
 
 # Check if the user is already trusted in any nix config file
