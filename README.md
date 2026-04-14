@@ -19,7 +19,7 @@ everything else.
 Run this on a fresh machine — it handles everything (Xcode CLT, git clone, mise, Nix, Homebrew, config build):
 
 ```bash
-curl -sSfL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh | bash -s -- <hostname>
+sh -c 'curl -sSfL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh | bash -s -- <hostname>'
 ```
 
 Or if you've already cloned the repo:

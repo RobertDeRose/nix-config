@@ -18,10 +18,6 @@
 
   fonts.fontconfig.enable = true;
 
-  home.packages = [
-    pkgs.bitwarden-cli # Bitwarden vault CLI (bw)
-  ];
-
   # Finder Quick Actions — right-click a folder to open in a terminal
   home.file = {
     "Library/Services/Open in Ghostty.workflow" = {
