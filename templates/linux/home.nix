@@ -6,4 +6,7 @@
   #
   # Per-host user packages (merged with the global list in home/common/core.nix):
   #   home.packages = with pkgs; [ ... ];
+  #
+  # Per-host shell aliases (merged with the global list in home/common/shell.nix):
+  #   home.shellAliases = { myalias = "cd ~/my/dir"; };
 }
