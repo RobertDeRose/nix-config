@@ -15,7 +15,7 @@
       buffer_font_size = 15;
 
       terminal = {
-        font_family = "MesloLGS NF";
+        font_family = "MesloLGS Nerd Font";
         font_size = 14;
       };
 
