@@ -142,11 +142,6 @@ in
   ];
 
   home.shellAliases = {
-    # ── Directory shortcuts ──────────────────────────────────────────
-    work = "cd ~/workspace/checkpoint";
-    personal = "cd ~/workspace/personal";
-    apollo = "cd ~/workspace/checkpoint/apollo";
-
     # ── Tool aliases ─────────────────────────────────────────────────
     ls = "eza";
     less = "bat";
