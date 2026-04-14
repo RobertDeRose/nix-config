@@ -7,7 +7,7 @@ env_shell_expand = true
 actionlint = "latest"
 gh = "latest"
 "github:RobertDeRose/nixfmt" = "latest"
-hk = { version = "1.41", os = ["linux", "darwin/arm64"] }
+hk = { version = "1.41", arch = "aarch64" }
 pkl = "latest"
 shellcheck = "latest"
 shfmt = "latest"

@@ -69,7 +69,7 @@
         _FXShowPosixPathInTitle = true;
         _FXSortFoldersFirst = true;
         _FXSortFoldersFirstOnDesktop = true;
-        AppleShowAllFiles = true;
+        AppleShowAllFiles = false;
         FXDefaultSearchScope = "SCcf";
         FXEnableExtensionChangeWarning = false;
         FXPreferredViewStyle = "Nlsv";
