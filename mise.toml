@@ -749,7 +749,7 @@ echo "Open book/index.html in a browser to view."
 [tasks."docs:serve"]
 description = "Serve the documentation site locally with hot-reload"
 quiet = true
-usage = 'flag "-p --port" help="Port to serve on" default="3000"'
+usage = 'arg "[port]" help="Port to serve on" default="3000"'
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
