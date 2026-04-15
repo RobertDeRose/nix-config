@@ -35,10 +35,23 @@ in
     "mosquitto"
   ];
 
-  # ── Linux builder VM ────────────────────────────────────────────────────────
-  nix.linux-builder = {
+  # ── Linux builder VM (virby) ───────────────────────────────────────────────
+  # Uses vfkit (Apple Virtualization.framework) — ~9s boot vs ~65s with QEMU.
+  # On-demand: VM starts when nix needs a linux build, shuts down after idle.
+  #
+  # Manual control:
+  #   Start:  sudo launchctl kickstart system/org.nix.virby
+  #   Stop:   sudo launchctl kill SIGTERM system/org.nix.virby
+  #   Debug:  tail -f /tmp/virbyd.log  (requires debug = true)
+  #   SSH:    sudo ssh virby-vm         (or set allowUserSsh = true)
+  #   Test:   nix build --impure --expr '(with import <nixpkgs> { system = "aarch64-linux"; }; hello)'
+  services.virby = {
     enable = true;
-    maxJobs = 4;
-    config.virtualisation.cores = 4;
+    cores = 4;
+    memory = "6GiB";
+    onDemand = {
+      enable = true;
+      ttl = 5; # shut down after 5 minutes idle
+    };
   };
 }
