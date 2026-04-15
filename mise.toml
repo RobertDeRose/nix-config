@@ -8,6 +8,7 @@ actionlint = "latest"
 gh = "latest"
 "github:RobertDeRose/nixfmt" = "latest"
 hk = { version = "1.41", arch = "aarch64" }
+mdbook = "latest"
 pkl = "latest"
 shellcheck = "latest"
 shfmt = "latest"
@@ -716,4 +717,59 @@ set -euo pipefail
 VM="${usage_name}"
 echo "==> Connecting to VM '$VM'..."
 exec limactl shell "$VM"
+'''
+
+# ---------------------------------------------------------------------------
+# Documentation
+# ---------------------------------------------------------------------------
+
+[tasks."docs:build"]
+description = "Build the documentation site (mdBook)"
+quiet = true
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd docs
+
+if command -v mdbook &>/dev/null; then
+  mdbook build
+elif command -v nix &>/dev/null; then
+  nix develop --command mdbook build
+else
+  echo "Error: mdbook not found. Install via 'mise install' or 'cargo install mdbook'." >&2
+  exit 1
+fi
+
+echo ""
+echo "Documentation built to book/"
+echo "Open book/index.html in a browser to view."
+'''
+
+[tasks."docs:serve"]
+description = "Serve the documentation site locally with hot-reload"
+quiet = true
+usage = 'flag "-p --port" help="Port to serve on" default="3000"'
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+PORT="${usage_port:-3000}"
+
+cd docs
+
+if command -v mdbook &>/dev/null; then
+  echo "Serving documentation at http://localhost:${PORT}"
+  echo "Press Ctrl+C to stop."
+  echo ""
+  mdbook serve --port "$PORT"
+elif command -v nix &>/dev/null; then
+  echo "Serving documentation at http://localhost:${PORT}"
+  echo "Press Ctrl+C to stop."
+  echo ""
+  nix develop --command mdbook serve --port "$PORT"
+else
+  echo "Error: mdbook not found. Install via 'mise install' or 'cargo install mdbook'." >&2
+  exit 1
+fi
 '''
