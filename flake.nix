@@ -6,11 +6,13 @@
       "https://cache.nixos.org"
       "https://nix-community.cachix.org"
       "https://cache.numtide.com"
+      "https://virby-nix-darwin.cachix.org"
     ];
     extra-trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
+      "virby-nix-darwin.cachix.org-1:z9GiEZeBU5bEeoDQjyfHPMGPBaIQJOOvYOOjGMKIlLo="
     ];
   };
 
@@ -51,6 +53,12 @@
 
     # System Manager for non-NixOS Linux (Ubuntu)
     # (Kept above intentionally so it is always represented in flake.lock.)
+
+    # Lightweight vfkit-based Linux VM for nix remote builds on macOS
+    # NOTE: Do NOT add inputs.nixpkgs.follows = "nixpkgs" until after
+    # the first activation — the cached image won't match and nix will
+    # try to build the VM from source (which requires an existing builder).
+    virby.url = "github:quinneden/virby-nix-darwin";
   };
 
   outputs =
@@ -200,6 +208,7 @@
 
                 inputs.nix-homebrew.darwinModules.nix-homebrew
                 inputs.home-manager.darwinModules.home-manager
+                inputs.virby.darwinModules.default
                 (
                   { pkgs, ... }:
                   {
