@@ -1,77 +1,117 @@
 # Linux Builder VM
 
-The nix-darwin linux-builder provides an `aarch64-linux` build environment on
-macOS via a QEMU virtual machine. This is needed to build Linux derivations
-locally (e.g., for remote deployment or cross-platform testing).
+The linux builder provides an `aarch64-linux` build environment on macOS,
+needed to build Linux derivations locally (e.g., for remote deployment or
+cross-platform testing).
+
+We use **[virby](https://github.com/quinneden/virby-nix-darwin)**, which runs
+a lightweight NixOS VM via [vfkit](https://github.com/crc-org/vfkit) (Apple
+Virtualization.framework). It boots in ~9 seconds and has built-in on-demand
+activation with a configurable idle timeout.
 
 ## On-Demand Operation
 
-The builder is configured for **on-demand start** -- it doesn't run at boot.
-Instead, it starts automatically when Nix needs to build a Linux derivation
-and shuts itself down after 30 minutes of idle.
-
-### How It Works
-
-1. **Nix initiates an SSH connection** to the `linux-builder` remote builder
-2. **SSH ProxyCommand** detects the VM isn't running and calls
-   `launchctl kickstart` to start it
-3. **The proxy waits** for SSH on port 31022 to become available (up to 120s)
-4. **Connection is handed off** via `nc localhost 31022`
-5. **Guest idle timer** checks every 5 minutes for active SSH sessions; if none
-   are found after 30 minutes, the VM powers off
+The builder is configured for **on-demand start** — it doesn't run at boot.
+When Nix needs to build a Linux derivation, virby automatically boots the VM.
+After 30 minutes with no active builds, the VM shuts itself down.
 
 ### Components
 
 | Component | Location |
 |-----------|----------|
 | VM config | `hosts/<arch>-darwin/<hostname>/default.nix` |
-| SSH config | `/etc/ssh/ssh_config.d/100-linux-builder.conf` |
-| ProxyCommand | Nix store script (`linux-builder-proxy`) |
-| Launchd plist | `/Library/LaunchDaemons/org.nixos.linux-builder.plist` |
-| SSH key | `/etc/nix/builder_ed25519` |
-| VM disk | `/var/lib/linux-builder/nixos.qcow2` |
+| SSH host alias | `virby-vm` |
+| Launchd service | `system/org.nix.virby` |
+| VM disk | `/var/lib/virby/` |
+| Debug log | `/tmp/virbyd.log` (when `debug = true`) |
 
-### Guest Configuration
+### VM Resources
 
-The VM runs NixOS with:
-
-- **4 cores** and **3 GB RAM** (upstream defaults)
-- **systemd idle-shutdown timer** -- checks for active `sshd` processes
-- **Build features**: `kvm`, `benchmark`, `big-parallel`
+- **4 cores**, **8 GiB RAM**
+- On-demand with **30-minute idle TTL**
 
 ## Manual Control
 
 ```bash
 # Start the VM
-sudo launchctl kickstart system/org.nixos.linux-builder
+sudo launchctl kickstart system/org.nix.virby
 
 # Stop the VM
-sudo launchctl kill SIGTERM system/org.nixos.linux-builder
+sudo launchctl kill SIGTERM system/org.nix.virby
 
-# Check status
-sudo launchctl print system/org.nixos.linux-builder | grep state
+# SSH into the VM (requires allowUserSsh = true, or use sudo)
+sudo ssh virby-vm
 
 # Test a build
-nix build nixpkgs#legacyPackages.aarch64-linux.hello --no-link --max-jobs 0
+nix build --rebuild --impure --expr '(with import <nixpkgs> { system = "aarch64-linux"; }; hello)' --max-jobs 0
 ```
 
 > **Note**: `--max-jobs 0` forces delegation to the remote builder. Without it,
 > Nix may download pre-built packages from the binary cache instead of building
-> on the VM.
+> on the VM. `--rebuild` forces a build even if the output already exists.
 
 ## Configuration
 
 The builder is enabled per-host. Add this to your host's `default.nix`:
 
 ```nix
-nix.linux-builder = {
+services.virby = {
   enable = true;
-  maxJobs = 4;
-  config = { pkgs, ... }: {
-    virtualisation.cores = 4;
+  cores = 4;
+  memory = "8GiB";
+  onDemand = {
+    enable = true;
+    ttl = 30; # minutes of idle before shutdown
   };
 };
 ```
 
-The on-demand launchd overrides and SSH ProxyCommand are also set in the host
-config. See the USMBDEROSER host for a complete example.
+### Available Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable` | bool | `false` | Enable the virby service |
+| `cores` | int | `8` | CPU cores for the VM |
+| `memory` | int/string | `6144` | RAM (MiB or string like `"8GiB"`) |
+| `diskSize` | string | `"100GiB"` | VM disk size |
+| `port` | int | `31222` | SSH port |
+| `onDemand.enable` | bool | `false` | Start/stop VM automatically |
+| `onDemand.ttl` | int | `180` | Idle timeout in minutes |
+| `rosetta` | bool | `false` | Enable Rosetta for x86_64-linux builds |
+| `debug` | bool | `false` | Verbose logging to `/tmp/virbyd.log` |
+| `allowUserSsh` | bool | `false` | Allow non-root SSH access |
+
+See the USMBDEROSER host for a complete example.
+
+## First-Time Setup
+
+Virby requires a two-phase activation on first install:
+
+1. **Add the virby cachix** to `nix.settings` and `nixConfig` in `flake.nix`
+2. **Rebuild with `enable = false`** (or pass `--option` flags) so the cache
+   is configured and the VM image is downloaded
+3. **Set `enable = true`** and rebuild again
+
+This is because the VM image is a Linux derivation — without the binary cache,
+Nix would try to build it locally, which requires an existing Linux builder
+(chicken-and-egg problem).
+
+> **Important**: Do NOT add `inputs.nixpkgs.follows = "nixpkgs"` to the virby
+> input until after the first activation. The cached image hash must match the
+> one in the virby binary cache.
+
+## Troubleshooting
+
+```bash
+# Enable debug logging
+# Set services.virby.debug = true; and rebuild
+
+# View daemon logs
+tail -f /tmp/virbyd.log
+
+# Check if the service is registered
+sudo launchctl print system/org.nix.virby | grep state
+
+# Check if VM process is running
+ps aux | grep vfkit
+```
