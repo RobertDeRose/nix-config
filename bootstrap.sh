@@ -115,6 +115,14 @@ if ! command -v mise &> /dev/null; then
   echo
 fi
 
+# ------------------------------------------------------------------ #
+# Install mise-nix plugin if missing
+# ------------------------------------------------------------------ #
+if ! mise plugin ls 2> /dev/null | grep -q '^nix$'; then
+  echo "==> Installing mise-nix plugin..."
+  mise plugin install nix https://github.com/jbadeau/mise-nix.git
+fi
+
 echo "==> Handing off to mise..."
 export MISE_CEILING_PATHS
 export MISE_AUTO_INSTALL=false

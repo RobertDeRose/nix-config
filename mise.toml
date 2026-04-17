@@ -4,15 +4,15 @@ experimental = true
 env_shell_expand = true
 
 [tools]
-actionlint = "latest"
-gh = "latest"
-"github:RobertDeRose/nixfmt" = "latest"
+"nix:nixpkgs#actionlint" = "latest"
+"nix:nixpkgs#gh" = "latest"
+"nix:nixpkgs#nixfmt-rfc-style" = "latest"
 hk = { version = "1.41", arch = "aarch64" }
-mdbook = "latest"
-pkl = "latest"
-shellcheck = "latest"
-shfmt = "latest"
-tombi = "latest"
+"nix:nixpkgs#mdbook" = "latest"
+"nix:nixpkgs#pkl" = "latest"
+"nix:nixpkgs#shellcheck" = "latest"
+"nix:nixpkgs#shfmt" = "latest"
+"nix:nixpkgs#tombi" = "latest"
 
 [env]
 HK_MISE = 1
