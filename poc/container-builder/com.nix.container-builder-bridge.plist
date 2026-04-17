@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.nix.container-builder-bridge</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/etc/profiles/per-user/DeRoseR/bin/socat</string>
+        <string>TCP-LISTEN:2222,bind=127.0.0.1,reuseaddr,fork</string>
+        <string>EXEC:/tmp/container-builder/proxy.sh</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardErrorPath</key>
+    <string>/tmp/container-builder/socat-bridge.err.log</string>
+    <key>StandardOutPath</key>
+    <string>/tmp/container-builder/socat-bridge.out.log</string>
+</dict>
+</plist>

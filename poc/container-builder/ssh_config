@@ -1,0 +1,7 @@
+Host nix-builder
+  User builder
+  IdentityFile /tmp/container-builder/builder_ed25519
+  ProxyCommand /tmp/container-builder/proxy.sh
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+  LogLevel ERROR
