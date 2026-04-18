@@ -21,7 +21,7 @@ After 30 minutes with no active builds, the VM shuts itself down.
 |-----------|----------|
 | VM config | `hosts/<arch>-darwin/<hostname>/default.nix` |
 | SSH host alias | `virby-vm` |
-| Launchd service | `system/org.nix.virby` |
+| Launchd service | `system/org.nixos.virbyd` |
 | VM disk | `/var/lib/virby/` |
 | Debug log | `/tmp/virbyd.log` (when `debug = true`) |
 
@@ -34,10 +34,10 @@ After 30 minutes with no active builds, the VM shuts itself down.
 
 ```bash
 # Start the VM
-sudo launchctl kickstart system/org.nix.virby
+sudo launchctl kickstart system/org.nixos.virbyd
 
 # Stop the VM
-sudo launchctl kill SIGTERM system/org.nix.virby
+sudo launchctl kill SIGTERM system/org.nixos.virbyd
 
 # SSH into the VM (requires allowUserSsh = true, or use sudo)
 sudo ssh virby-vm
@@ -110,7 +110,7 @@ Nix would try to build it locally, which requires an existing Linux builder
 tail -f /tmp/virbyd.log
 
 # Check if the service is registered
-sudo launchctl print system/org.nix.virby | grep state
+sudo launchctl print system/org.nixos.virbyd | grep state
 
 # Check if VM process is running
 ps aux | grep vfkit
