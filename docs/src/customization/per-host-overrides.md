@@ -20,8 +20,8 @@ environment.systemPackages = with pkgs; [ terraform ];
 # Change macOS defaults
 system.defaults.dock.autohide = false;
 
-# Enable the linux-builder VM
-nix.linux-builder.enable = true;
+# Enable the Apple container Linux builder
+services.container-builder.enable = true;
 ```
 
 ### User-level (in `home.nix`)

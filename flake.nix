@@ -29,6 +29,12 @@
     # Declarative Homebrew installation for nix-darwin
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
 
+    apple-container-builder = {
+      url = "github:RobertDeRose/nix-apple-container-builder";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.darwin.follows = "darwin";
+    };
+
     # Provide a default pin for system-manager so all evaluators
     # use lockfile revisions instead of GitHub HEAD lookups.
     system-manager = {
@@ -39,11 +45,6 @@
     # System Manager for non-NixOS Linux (Ubuntu)
     # (Kept above intentionally so it is always represented in flake.lock.)
 
-    # Lightweight vfkit-based Linux VM for nix remote builds on macOS
-    # NOTE: Do NOT add inputs.nixpkgs.follows = "nixpkgs" until after
-    # the first activation — the cached image won't match and nix will
-    # try to build the VM from source (which requires an existing builder).
-    virby.url = "github:quinneden/virby-nix-darwin";
   };
 
   outputs =
@@ -191,9 +192,9 @@
                 ./modules/darwin/apps.nix
                 ./modules/darwin/iterm2.nix
 
+                inputs.apple-container-builder.darwinModules.default
                 inputs.nix-homebrew.darwinModules.nix-homebrew
                 inputs.home-manager.darwinModules.home-manager
-                inputs.virby.darwinModules.default
                 (
                   { pkgs, ... }:
                   {
