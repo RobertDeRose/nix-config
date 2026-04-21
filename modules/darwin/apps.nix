@@ -50,7 +50,6 @@ in
       "lima" # Linux VMs on macOS (nixpkgs version is EOL)
     ]
     ++ lib.optionals isAarch64 [
-      "container" # Apple's native macOS container runtime (aarch64 only)
       "container-compose" # Docker Compose-like tool for Apple containers (aarch64 only)
     ];
 

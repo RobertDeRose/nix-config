@@ -8,7 +8,7 @@ Linux hosts can be configured remotely from a macOS machine using the
 The deploy task:
 
 1. Builds the system-manager and home-manager configurations **locally** (or on
-   the linux-builder VM if cross-compiling)
+   the configured Linux builder if cross-compiling)
 2. Copies the built closures to the remote host via SSH
 3. Activates system-manager and home-manager on the remote host
 
@@ -26,7 +26,7 @@ config has the host defined).
 - The remote host must have Nix installed
 - SSH access with key-based authentication
 - The local machine must be able to build `aarch64-linux` or `x86_64-linux`
-  derivations (via the linux-builder VM or a remote builder)
+  derivations (via the configured Linux builder or another remote builder)
 
 ## SSH Key Setup
 

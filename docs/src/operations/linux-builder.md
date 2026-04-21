@@ -1,117 +1,132 @@
-# Linux Builder VM
+# Linux Builder
 
-The linux builder provides an `aarch64-linux` build environment on macOS,
-needed to build Linux derivations locally (e.g., for remote deployment or
-cross-platform testing).
+The macOS hosts in this repo use an Apple Container based `aarch64-linux`
+builder for Linux derivations. Nix delegates builds to `ssh-ng://container-builder`.
 
-We use **[virby](https://github.com/quinneden/virby-nix-darwin)**, which runs
-a lightweight NixOS VM via [vfkit](https://github.com/crc-org/vfkit) (Apple
-Virtualization.framework). It boots in ~9 seconds and has built-in on-demand
-activation with a configurable idle timeout.
+## Current Design
 
-## On-Demand Operation
+- Declarative entry point: `services.container-builder`
+- Host alias: `container-builder`
+- Current transport: localhost bridge for the root `nix-daemon`, plus `ProxyCommand` via `~/.local/state/nac/proxy.sh` for user-side helper access
+- Durable state directory: `/Users/<username>/.local/state/nac`
+- Runtime model: user launch agents start the container runtime and the host-side bridge
+- Status helper: `nac`
 
-The builder is configured for **on-demand start** — it doesn't run at boot.
-When Nix needs to build a Linux derivation, virby automatically boots the VM.
-After 30 minutes with no active builds, the VM shuts itself down.
+This is functional, but Apple `container` remains an external mutable runtime,
+so this should still be treated as an in-progress integration rather than a
+fully hardened subsystem.
 
-### Components
+## Components
 
 | Component | Location |
 |-----------|----------|
-| VM config | `hosts/<arch>-darwin/<hostname>/default.nix` |
-| SSH host alias | `virby-vm` |
-| Launchd service | `system/org.nixos.virbyd` |
-| VM disk | `/var/lib/virby/` |
-| Debug log | `/tmp/virbyd.log` (when `debug = true`) |
+| Module | `github:RobertDeRose/nix-apple-container-builder` |
+| Host config | `hosts/<arch>-darwin/<hostname>/default.nix` |
+| SSH alias | `container-builder` |
+| Durable state | `/Users/<username>/.local/state/nac` |
+| Root SSH config | `/etc/ssh/ssh_config.d/201-container-builder.conf` |
+| Launch agent | `container-builder-runtime` |
+| Launch agent | `container-builder-bridge` |
 
-### VM Resources
+## Host Configuration
 
-- **4 cores**, **8 GiB RAM**
-- On-demand with **30-minute idle TTL**
-
-## Manual Control
-
-```bash
-# Start the VM
-sudo launchctl kickstart system/org.nixos.virbyd
-
-# Stop the VM
-sudo launchctl kill SIGTERM system/org.nixos.virbyd
-
-# SSH into the VM (requires allowUserSsh = true, or use sudo)
-sudo ssh virby-vm
-
-# Test a build
-nix build --rebuild --impure --expr '(with import <nixpkgs> { system = "aarch64-linux"; }; hello)' --max-jobs 0
-```
-
-> **Note**: `--max-jobs 0` forces delegation to the remote builder. Without it,
-> Nix may download pre-built packages from the binary cache instead of building
-> on the VM. `--rebuild` forces a build even if the output already exists.
-
-## Configuration
-
-The builder is enabled per-host. Add this to your host's `default.nix`:
+Enable the builder per-host in `default.nix`:
 
 ```nix
-services.virby = {
+services.container-builder = {
   enable = true;
-  cores = 4;
-  memory = "8GiB";
-  onDemand = {
-    enable = true;
-    ttl = 30; # minutes of idle before shutdown
-  };
+  cpus = 4;
+  memory = "8G";
+  maxJobs = 4;
+  bridge.enable = true;
 };
 ```
 
-### Available Options
+## What Activation Sets Up
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enable` | bool | `false` | Enable the virby service |
-| `cores` | int | `8` | CPU cores for the VM |
-| `memory` | int/string | `6144` | RAM (MiB or string like `"8GiB"`) |
-| `diskSize` | string | `"100GiB"` | VM disk size |
-| `port` | int | `31222` | SSH port |
-| `onDemand.enable` | bool | `false` | Start/stop VM automatically |
-| `onDemand.ttl` | int | `180` | Idle timeout in minutes |
-| `rosetta` | bool | `false` | Enable Rosetta for x86_64-linux builds |
-| `debug` | bool | `false` | Verbose logging to `/tmp/virbyd.log` |
-| `allowUserSsh` | bool | `false` | Allow non-root SSH access |
+Activation installs helper files into the builder state directory:
 
-See the USMBDEROSER host for a complete example.
+- `bootstrap-keys.sh`
+- `init.sh`
+- `proxy.sh`
+- `start-container.sh`
+- `stop-container.sh`
+- `ssh-wrapper.sh`
+- `ssh_config`
+- `ssh_config_root`
+- `cache/` for the persistent NAR metadata cache
 
-## First-Time Setup
+It also installs the root SSH alias and configures `nix.buildMachines` so the
+daemon can delegate Linux builds to `container-builder`.
 
-Virby requires a two-phase activation on first install:
+The user SSH config uses `ProxyCommand ~/.local/state/nac/proxy.sh`. That proxy
+starts the Apple container system if needed, starts the builder on demand,
+waits for in-container `sshd`, resolves the current container IP, and then
+relays SSH directly to the guest.
 
-1. **Add the virby cachix** to `nix.settings` and `nixConfig` in `flake.nix`
-2. **Rebuild with `enable = false`** (or pass `--option` flags) so the cache
-   is configured and the VM image is downloaded
-3. **Set `enable = true`** and rebuild again
+The root daemon path still uses the localhost bridge on `127.0.0.1:2222`, which
+remains the compatible path for `nix.buildMachines` and real remote builds on
+the current host setup.
 
-This is because the VM image is a Linux derivation — without the binary cache,
-Nix would try to build it locally, which requires an existing Linux builder
-(chicken-and-egg problem).
+The builder container itself remains ephemeral, but `/nix` is now mounted as an
+overlay filesystem inside the guest. The image's built-in `/nix` stays as the
+lower layer while the stable Apple container volume `nix-builder-store` backs
+the upper layer so store writes can survive container recreation.
 
-> **Important**: Do NOT add `inputs.nixpkgs.follows = "nixpkgs"` to the virby
-> input until after the first activation. The cached image hash must match the
-> one in the virby binary cache.
+By default the module now expects a custom GHCR builder image with mount tooling
+preinstalled for the `/nix` overlay setup.
 
-## Troubleshooting
+The module also preserves NAR metadata under
+`~/.local/state/nac/cache` and mounts it into the container at
+`/var/cache/nix/narinfo`.
+
+## Runtime Behavior
+
+Two user launch agents are installed:
+
+- `container-builder-runtime`
+  - bootstraps SSH keys if missing
+  - runs `container system start`
+  - starts or resumes the builder container
+  - removes stale older builder generations automatically
+  - waits for a real SSH handshake before considering the builder ready
+  - attempts one recovery pass and exits cleanly if the Apple runtime is unhealthy
+
+- `container-builder-bridge`
+  - exposes `127.0.0.1:2222`
+  - forwards connections into the builder wake-and-relay proxy
+
+## Logs
+
+Logs live in the durable state directory:
+
+- `container-runtime.log`
+- `container-runtime.out.log`
+- `container-runtime.err.log`
+- `container-readiness.log`
+- `socat-bridge.out.log`
+- `socat-bridge.err.log`
+
+The bridge logs are part of the normal runtime path for daemon-driven builds.
+
+## Verification
+
+Useful checks after activation:
 
 ```bash
-# Enable debug logging
-# Set services.virby.debug = true; and rebuild
-
-# View daemon logs
-tail -f /tmp/virbyd.log
-
-# Check if the service is registered
-sudo launchctl print system/org.nixos.virbyd | grep state
-
-# Check if VM process is running
-ps aux | grep vfkit
+nac status
+nac repair
+ssh container-builder true
+nix store ping --store ssh-ng://container-builder
+nix build --max-jobs 0 --rebuild nixpkgs#legacyPackages.aarch64-linux.hello
 ```
+
+`nac repair` is the recovery-aware path. It can try to
+restart the Apple container runtime before re-checking builder health.
+
+## Known Gaps
+
+- depends on a working Apple `container` installation and user session
+- bridge-free daemon access is still not the default path
+- the default builder image now depends on the published GHCR package being available
+- on-demand startup now works, but the helper and runtime still depend on Apple `container` staying healthy
