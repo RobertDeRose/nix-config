@@ -13,8 +13,8 @@ builder for Linux derivations. Nix delegates builds to `ssh-ng://container-build
 - Status helper: `nac`
 
 This is functional, but Apple `container` remains an external mutable runtime,
-so this should still be treated as an in-progress integration rather than a
-fully hardened subsystem.
+so this should still be treated as a practical integration rather than a fully
+hardened subsystem.
 
 ## Components
 
@@ -54,7 +54,6 @@ Activation installs helper files into the builder state directory:
 - `ssh-wrapper.sh`
 - `ssh_config`
 - `ssh_config_root`
-- `cache/` for the persistent NAR metadata cache
 
 It also installs the root SSH alias and configures `nix.buildMachines` so the
 daemon can delegate Linux builds to `container-builder`.
@@ -68,17 +67,25 @@ The root daemon path still uses the localhost bridge on `127.0.0.1:2222`, which
 remains the compatible path for `nix.buildMachines` and real remote builds on
 the current host setup.
 
-The builder container itself remains ephemeral, but `/nix` is now mounted as an
-overlay filesystem inside the guest. The image's built-in `/nix` stays as the
-lower layer while the stable Apple container volume `nix-builder-store` backs
-the upper layer so store writes can survive container recreation.
+The builder container is generation-aware and can be restarted or recreated as
+needed, but `/nix` is mounted as an overlay filesystem inside the guest. The
+image's built-in `/nix` stays as the lower layer while the stable Apple
+container volume `nix-builder-store` backs the upper layer so store writes can
+survive ordinary container recreation.
 
 By default the module now expects a custom GHCR builder image with mount tooling
 preinstalled for the `/nix` overlay setup.
 
-The module also preserves NAR metadata under
-`~/.local/state/nac/cache` and mounts it into the container at
-`/var/cache/nix/narinfo`.
+The file layout intentionally keeps operational builder state together:
+
+- `~/.local/state/nac`
+  - generated helper scripts and SSH configs
+  - persistent SSH host/client keys
+  - operational logs
+
+Idle shutdown is enabled by default. The watchdog runs inside the guest,
+resets its timer while active SSH sessions exist, and stops `sshd` after the
+configured timeout so the builder can go offline and release host memory.
 
 ## Runtime Behavior
 
@@ -104,6 +111,8 @@ Logs live in the durable state directory:
 - `container-runtime.out.log`
 - `container-runtime.err.log`
 - `container-readiness.log`
+- `container-builder-idle.log`
+- `init-debug.log`
 - `socat-bridge.out.log`
 - `socat-bridge.err.log`
 
@@ -129,4 +138,4 @@ restart the Apple container runtime before re-checking builder health.
 - depends on a working Apple `container` installation and user session
 - bridge-free daemon access is still not the default path
 - the default builder image now depends on the published GHCR package being available
-- on-demand startup now works, but the helper and runtime still depend on Apple `container` staying healthy
+- on-demand startup and idle shutdown now work, but the helper and runtime still depend on Apple `container` staying healthy

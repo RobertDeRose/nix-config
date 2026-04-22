@@ -21,7 +21,13 @@ environment.systemPackages = with pkgs; [ terraform ];
 system.defaults.dock.autohide = false;
 
 # Enable the Apple container Linux builder
-services.container-builder.enable = true;
+services.container-builder = {
+  enable = true;
+  cpus = 4;
+  memory = "8G";
+  maxJobs = 4;
+  bridge.enable = true;
+};
 ```
 
 ### User-level (in `home.nix`)
