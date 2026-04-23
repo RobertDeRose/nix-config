@@ -29,8 +29,8 @@
     # Declarative Homebrew installation for nix-darwin
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
 
-    apple-container-builder = {
-      url = "github:RobertDeRose/nix-apple-container-builder";
+    nix-hex-box = {
+      url = "github:RobertDeRose/nix-hex-box";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.darwin.follows = "darwin";
     };
@@ -198,7 +198,7 @@
                 ./modules/darwin/apps.nix
                 ./modules/darwin/iterm2.nix
 
-                inputs.apple-container-builder.darwinModules.default
+                inputs."nix-hex-box".darwinModules.default
                 inputs.nix-homebrew.darwinModules.nix-homebrew
                 inputs.home-manager.darwinModules.home-manager
                 (
