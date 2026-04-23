@@ -41,20 +41,38 @@ Check the font name in your app's config and update it to the v3 name.
 
 ### Linux builder VM won't start
 
-If `launchctl kickstart` does nothing:
+The builder is managed through the `hb` helper and user launch agents, not a
+single system launchd service. Start with the current builder summary:
+
+```bash
+hb status
+```
+
+If the builder is unhealthy or the Apple container runtime is wedged, run the
+recovery path first:
+
+```bash
+hb repair
+```
+
+If it still will not come up:
 
 1. Check if the service is registered:
    ```bash
-   sudo launchctl print system/org.nixos.linux-builder | head -5
-   ```
-2. If it shows "Could not find service", the plist isn't loaded. Run
-   `darwin-rebuild switch` to register it.
-3. If state is "not running", `kickstart` should start it. Check system logs:
+   launchctl print gui/$(id -u)/org.nixos.hexbox-runtime | head -20
+   launchctl print gui/$(id -u)/org.nixos.hexbox-bridge | head -20
+    ```
+2. If either agent shows "Could not find service", the launch agents are not
+   loaded. Run `mise nix:switch` or `sudo darwin-rebuild switch --flake .#$(hostname -s)`.
+3. If the agents are loaded but readiness still fails, inspect the HexBox logs:
    ```bash
-   log show --predicate 'process == "launchd"' --last 1m | grep linux-builder
-   ```
+   hb logs runtime
+   hb logs readiness
+   hb logs bridge
+   hb logs boot
+    ```
 
-### `nix build` doesn't use the linux-builder
+### `nix build` doesn't use the Linux builder
 
 Nix prefers binary cache substitution over remote building. If the package
 is already cached, the builder is never contacted. Force remote building with:

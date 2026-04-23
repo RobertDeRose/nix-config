@@ -7,7 +7,7 @@ function squash_merge_delete() {
   local branch="${1}"
 
   if mergeBase="$(git merge-base "${DEFAULT}" "${branch}")"; then
-    if [[ "$(git cherry "${DEFAULT}" "$(git commit-tree "$(git rev-parse "${branch}^{tree}")" -p "${mergeBase}" -m _)")" == "-"* ]]; then
+    if [[ "$(git cherry "${DEFAULT}" "$(git commit-tree "$(git rev-parse "${branch}^{tree}")" -p "${mergeBase}" -m _)" )" == "-"* ]]; then
       if command -v gh && grep -q '\- deletion' < <(gh ruleset check "${branch}"); then
         return
       fi
@@ -51,9 +51,9 @@ git branch --merged | grep -Ev "${DEFAULT}|${PROTECT}" | while read -r branch; d
   fi
 done
 
-git for-each-ref refs/heads/ "--format=%(refname:short)" | while read -r branch; do
+git for-each-ref refs/heads/ --format=%(refname:short) | while read -r branch; do
   if mergeBase="$(git merge-base "${DEFAULT}" "${branch}")"; then
-    if [[ "$(git cherry "${DEFAULT}" "$(git commit-tree "$(git rev-parse "${branch}^{tree}")" -p "${mergeBase}" -m _)")" == "-"* ]]; then
+    if [[ "$(git cherry "${DEFAULT}" "$(git commit-tree "$(git rev-parse "${branch}^{tree}")" -p "${mergeBase}" -m _)" )" == "-"* ]]; then
       if "${DRYRUN}"; then
         echo "Would delete ${branch}"
       else

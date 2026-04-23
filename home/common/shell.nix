@@ -90,6 +90,24 @@ in
     initContent = ''
       export PATH="$PATH:$HOME/.local/bin"
 
+      # Restore the shell editing behavior we relied on before nix-darwin.
+      autoload -Uz select-word-style up-line-or-beginning-search down-line-or-beginning-search
+      select-word-style bash
+      zle -N up-line-or-beginning-search
+      zle -N down-line-or-beginning-search
+
+      bindkey "^[[3~" delete-char
+      [[ -n "''${terminfo[kdch1]:-}" ]] && bindkey "''${terminfo[kdch1]}" delete-char
+
+      bindkey "^[[A" up-line-or-beginning-search
+      bindkey "^[[B" down-line-or-beginning-search
+      [[ -n "''${terminfo[kcuu1]:-}" ]] && bindkey "''${terminfo[kcuu1]}" up-line-or-beginning-search
+      [[ -n "''${terminfo[kcud1]:-}" ]] && bindkey "''${terminfo[kcud1]}" down-line-or-beginning-search
+
+      if [[ -f "$HOME/.zshrc.local" ]]; then
+        source "$HOME/.zshrc.local"
+      fi
+
       # Navigate up N directories: `up 3` = cd ../../..
       # Dot aliases use this for convenience.
       up() {
@@ -147,7 +165,8 @@ in
     less = "bat";
     cat = "bat";
     oc = "opencode";
-    cgb = "clean_git_branches";
+    gcb = "~/.local/bin/gcb";
+    gwt = "source ~/.local/bin/gwt";
 
     # ── Git (portable subset of oh-my-zsh git plugin) ───────────────
     gst = "git status";

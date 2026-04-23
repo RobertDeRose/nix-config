@@ -1,13 +1,17 @@
 # home/common/opencode.nix
 # OpenCode AI coding agent configuration.
 # See https://opencode.ai/docs/config/ for available settings.
-{ pkgs, ... }:
+{
+  pkgs,
+  inputs,
+  ...
+}:
 let
-  # opencode is in nixpkgs meta.badPlatforms for x86_64-darwin
-  unsupported = pkgs.stdenv.hostPlatform.isx86_64 && pkgs.stdenv.hostPlatform.isDarwin;
+  opencodePkg = inputs.opencode.packages.${pkgs.stdenv.hostPlatform.system}.opencode;
 in
 {
   programs.opencode = {
-    enable = !unsupported;
+    enable = true;
+    package = opencodePkg;
   };
 }
