@@ -1,68 +1,109 @@
 #!/bin/bash
 #vim: ts=4 sw=4 et
+#
+# gcb — Git Clean Branches
+# Deletes local branches that have been merged into the default branch,
+# including squash-merged branches. Respects GitHub branch protection rules.
 
 set -eu
 
-function squash_merge_delete() {
-  local branch="${1}"
-
-  if mergeBase="$(git merge-base "${DEFAULT}" "${branch}")"; then
-    if [[ "$(git cherry "${DEFAULT}" "$(git commit-tree "$(git rev-parse "${branch}^{tree}")" -p "${mergeBase}" -m _)" )" == "-"* ]]; then
-      if command -v gh && grep -q '\- deletion' < <(gh ruleset check "${branch}"); then
-        return
-      fi
-
-      if "${DRYRUN}"; then
-        echo "Would delete ${branch}"
-      else
-        git branch -D "${branch}"
-      fi
-    fi
-  fi
-}
-
 DRYRUN="false"
 
-while getopts "d" options; do
+usage() {
+  echo "Usage: gcb [-d] [default-branch]"
+  echo "  -d  Dry run (show what would be deleted)"
+  echo "  default-branch defaults to 'main'"
+  exit 0
+}
+
+while getopts "dh" options; do
     case "${options}" in
       d) DRYRUN="true" ;;
+      h) usage ;;
       :) echo "Error: -${OPTARG} requires an argument"; exit 1 ;;
-      *) echo "Unknown arg"; exit 2 ;;
+      *) usage ;;
     esac
 done
 shift "$((OPTIND - 1))"
 
 DEFAULT="${1:-main}"
-PROTECT="dev"
-CURRENT="$(git branch | grep '\*' | cut -d' ' -f2)"
+PROTECT="^(dev|${DEFAULT})$"
+CURRENT="$(git branch --show-current)"
 
 if ! git checkout -q "${DEFAULT}"; then
   echo "Unable to switch to ${DEFAULT}"
   exit 1
 fi
 
-git fetch -q --prune --prune-tags origin || git pull -q
+git fetch --prune --prune-tags origin || echo "Warning: fetch failed, continuing with local state"
+git merge --ff-only "origin/${DEFAULT}" 2>/dev/null || true
 
-git branch --merged | grep -Ev "${DEFAULT}|${PROTECT}" | while read -r branch; do
-  if "${DRYRUN}"; then
-    echo "Would delete ${branch}"
-  else
-    git branch -d "${branch}"
+# Collect branches to delete first, then delete (avoid modifying refs while iterating)
+to_delete=()
+force_delete=()
+
+# Pass 1: branches git knows are merged (fast-forward merges)
+while read -r branch; do
+  [[ -z "${branch}" ]] && continue
+  # Trim whitespace
+  branch="${branch## }"
+  if [[ "${branch}" =~ ${PROTECT} ]]; then
+    continue
   fi
-done
+  to_delete+=("${branch}")
+done < <(git branch --merged "${DEFAULT}" --format='%(refname:short)')
 
-git for-each-ref refs/heads/ --format=%(refname:short) | while read -r branch; do
-  if mergeBase="$(git merge-base "${DEFAULT}" "${branch}")"; then
-    if [[ "$(git cherry "${DEFAULT}" "$(git commit-tree "$(git rev-parse "${branch}^{tree}")" -p "${mergeBase}" -m _)" )" == "-"* ]]; then
-      if "${DRYRUN}"; then
-        echo "Would delete ${branch}"
-      else
-        git branch -D "${branch}"
+# Pass 2: detect squash-merged branches (tree matches after replaying on merge-base)
+while read -r branch; do
+  [[ -z "${branch}" ]] && continue
+  if [[ "${branch}" =~ ${PROTECT} ]]; then
+    continue
+  fi
+
+  # Skip if already queued from pass 1
+  for queued in "${to_delete[@]+"${to_delete[@]}"}"; do
+    [[ "${queued}" == "${branch}" ]] && continue 2
+  done
+
+  merge_base="$(git merge-base "${DEFAULT}" "${branch}" 2>/dev/null)" || continue
+  tree_commit="$(git commit-tree "$(git rev-parse "${branch}^{tree}")" -p "${merge_base}" -m _)" || continue
+  cherry_output="$(git cherry "${DEFAULT}" "${tree_commit}")" || continue
+
+  if [[ "${cherry_output}" == "-"* ]]; then
+    # Check GitHub branch protection rules if gh is available
+    if command -v gh &>/dev/null; then
+      if gh ruleset check "${branch}" 2>/dev/null | grep -q '\- deletion'; then
+        echo "Skipping ${branch} (protected by ruleset)"
+        continue
       fi
     fi
+    force_delete+=("${branch}")
+  fi
+done < <(git for-each-ref refs/heads/ --format='%(refname:short)')
+
+# Delete merged branches
+for branch in "${to_delete[@]+"${to_delete[@]}"}"; do
+  if "${DRYRUN}"; then
+    echo "Would delete ${branch} (merged)"
+  else
+    git branch -d "${branch}" 2>/dev/null || true
   fi
 done
 
+# Delete squash-merged branches (requires -D since git doesn't know they're merged)
+for branch in "${force_delete[@]+"${force_delete[@]}"}"; do
+  if "${DRYRUN}"; then
+    echo "Would delete ${branch} (squash-merged)"
+  else
+    git branch -D "${branch}" 2>/dev/null || true
+  fi
+done
+
+# Switch back to original branch if it still exists
 if [[ "${CURRENT}" != "${DEFAULT}" ]]; then
-  git checkout -q "${CURRENT}"
+  if git rev-parse --verify "${CURRENT}" &>/dev/null; then
+    git checkout -q "${CURRENT}"
+  else
+    echo "Previous branch '${CURRENT}' was deleted, staying on ${DEFAULT}"
+  fi
 fi
