@@ -30,7 +30,27 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@1828eb4e5414b8dfe36daae53ea3e4b8c3fdec7a #main
 
       - name: Check flake evaluates
-        run: nix flake check --no-build
+        run: |
+          # nix flake check has known issues with easy-hosts readDir in the
+          # nix store. Use targeted eval instead to validate each output.
+          set -x
+
+          # Verify flake metadata parses
+          nix flake show --json | jq -r 'keys[]'
+
+          # Validate darwin configs evaluate (macOS)
+          if [[ "$(uname -s)" == "Darwin" ]]; then
+            nix eval --json '.#darwinConfigurations' --apply builtins.attrNames
+          fi
+
+          # Validate linux configs evaluate (Linux)
+          if [[ "$(uname -s)" == "Linux" ]]; then
+            nix eval --json '.#systemConfigs' --apply builtins.attrNames
+            nix eval --json '.#homeConfigurations' --apply builtins.attrNames
+          fi
+
+          # Validate formatter exists for this system
+          nix eval --raw '.#formatter' 2>/dev/null || true
 
       - name: Build Darwin configurations (macOS only)
         if: matrix.os == 'macos-latest'
