@@ -2,6 +2,8 @@
 
 [Introduction](./introduction.md)
 
+- [Bootstrapping](./operations/bootstrapping.md)
+
 ## Architecture
 
 - [Overview](./architecture/overview.md)
@@ -18,7 +20,6 @@
 
 ## Operations
 
-- [Bootstrapping](./operations/bootstrapping.md)
 - [Day-to-Day Commands](./operations/day-to-day.md)
 - [Remote Deployment](./operations/remote-deployment.md)
 - [Linux Builder VM](./operations/linux-builder.md)

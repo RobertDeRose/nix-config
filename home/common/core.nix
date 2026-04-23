@@ -81,8 +81,12 @@
       source = ../../files/scripts/rund;
       executable = true;
     };
-    ".local/bin/clean_git_branches" = {
-      source = ../../files/scripts/clean_git_branches;
+    ".local/bin/gwt" = {
+      source = ../../files/scripts/gwt;
+      executable = true;
+    };
+    ".local/bin/gcb" = {
+      source = ../../files/scripts/gcb;
       executable = true;
     };
   };

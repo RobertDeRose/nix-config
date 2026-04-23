@@ -51,8 +51,8 @@ shell.
 ### `home/common/core.nix`
 
 25+ cross-platform CLI tools including: bat, btop, eza, fzf, jq, ripgrep, yazi
-(file manager), glow (markdown viewer), and custom scripts (`rund`,
-`clean_git_branches`). Sets Helix as the default `$EDITOR`.
+(file manager), glow (markdown viewer), and custom scripts (`rund`, `gwt`,
+`gcb`). Sets Helix as the default `$EDITOR`.
 
 ### `home/common/shell.nix`
 
@@ -95,8 +95,9 @@ modal mode, Copilot edit predictions. Custom keybindings matching Helix.
 
 ### `home/common/opencode.nix`
 
-OpenCode AI coding agent. Enabled on all platforms except x86_64-darwin
-(not supported).
+OpenCode AI coding agent. Uses the `opencode` flake input, currently backed by
+Numtide's `llm-agents.nix`, so the package can come from `cache.numtide.com`
+without rebuilding the upstream Bun workspace locally.
 
 ### `home/darwin/ssh.nix`
 

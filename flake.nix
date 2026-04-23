@@ -35,6 +35,11 @@
       inputs.darwin.follows = "darwin";
     };
 
+    opencode = {
+      url = "github:numtide/llm-agents.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Provide a default pin for system-manager so all evaluators
     # use lockfile revisions instead of GitHub HEAD lookups.
     system-manager = {
@@ -133,6 +138,7 @@
 
           extraSpecialArgs = hostUser // {
             inherit hostname;
+            inherit inputs;
           };
 
           modules = [
@@ -201,6 +207,7 @@
                     home-manager.useGlobalPkgs = true;
                     home-manager.useUserPackages = true;
                     home-manager.verbose = true;
+                    home-manager.extraSpecialArgs.inputs = inputs;
                     home-manager.backupCommand = "${pkgs.writeShellScript "hm-backup" ''
                       set -eo pipefail
                       [ $# -ge 1 ] || exit 0

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Arguments
+branch=$1
+prefix=${2:-"$(git rev-parse --show-toplevel 2>/dev/null)/../worktrees"}
+
+# Validation
+if [ -z "$branch" ]; then
+    echo "Usage: gwt <branch-name> [prefix-path]"
+    return 1 2>/dev/null || exit 1
+fi
+
+# 1. Fetch from origin to see if the branch exists there
+git fetch origin "$branch" --quiet 2>/dev/null
+
+# 2. Check if a worktree for this branch already exists
+# We use porcelain and awk to handle slashes in branch names safely
+target_path=$(git worktree list --porcelain | awk -v br="refs/heads/$branch" '
+    /^worktree / { p = $2 }
+    /^branch /   { if ($2 == br) { print p; exit } }
+')
+
+# 3. If it doesn't exist, create it
+if [ -z "$target_path" ]; then
+    target_path="$prefix/$branch"
+    mkdir -p "$(dirname "$target_path")"
+
+    # --guess-remote ensures we track origin/$branch if it exists
+    git worktree add --guess-remote -B "$branch" "$target_path" "$branch"
+else
+    echo "Switching to existing worktree at: $target_path"
+fi
+
+# 4. Jump to the folder (requires sourcing the script)
+cd "$target_path"
