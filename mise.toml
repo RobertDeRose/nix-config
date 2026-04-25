@@ -400,6 +400,67 @@ description = "Apply config with debug traces"
 quiet = true
 run = "mise run nix:switch --debug"
 
+[tasks."nix:dry-run"]
+description = "Dry-run a nix build target or the current host config"
+quiet = true
+usage = '''
+arg "[target]" help="Flake target to dry-run (example: .#packages.aarch64-darwin.default). Defaults to the current host system target."
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+TARGET="${usage_target:-}"
+NIX_FLAGS=(--accept-flake-config --extra-experimental-features "nix-command flakes")
+
+if [ -z "$TARGET" ]; then
+  HOST="$(hostname -s)"
+  if [ "$(uname -s)" = "Darwin" ]; then
+    TARGET=".#darwinConfigurations.${HOST}.system"
+  else
+    TARGET=".#systemConfigs.${HOST}"
+  fi
+fi
+
+echo "==> Dry-running $TARGET"
+nix build "${NIX_FLAGS[@]}" --dry-run -L "$TARGET"
+'''
+
+[tasks."nix:check-cache"]
+description = "Check whether a drv or output path exists in configured substituters"
+quiet = true
+usage = '''
+arg "<path>" help="A .drv path or output path under /nix/store"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+STORE_PATH="${usage_path}"
+
+if [[ "$STORE_PATH" == *.drv ]]; then
+  TARGETS="$(nix derivation show "$STORE_PATH" | jq -r 'to_entries[0].value.outputs | to_entries[] | .value.path')"
+else
+  TARGETS="$STORE_PATH"
+fi
+
+SUBSTITUTERS="$(nix config show --json | jq -r '.substituters.value[]')"
+
+while IFS= read -r target; do
+  [ -n "$target" ] || continue
+  echo "==> $target"
+  while IFS= read -r store; do
+    [ -n "$store" ] || continue
+    if nix path-info --store "$store" "$target" >/dev/null 2>&1; then
+      echo "HIT  $store"
+    else
+      echo "MISS $store"
+    fi
+  done <<< "$SUBSTITUTERS"
+  echo ""
+done <<< "$TARGETS"
+'''
+
 [tasks."nix:deploy"]
 description = "Build locally and deploy system config to a remote Linux host via SSH"
 quiet = true
