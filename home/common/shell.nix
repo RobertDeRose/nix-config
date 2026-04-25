@@ -96,8 +96,23 @@ in
       zle -N up-line-or-beginning-search
       zle -N down-line-or-beginning-search
 
+      # oh-my-zsh sudo plugin behavior: press Esc Esc to toggle a leading sudo.
+      sudo-command-line() {
+        local prefix="sudo "
+        if [[ "$BUFFER" == "$prefix"* ]]; then
+          BUFFER="''${BUFFER#$prefix}"
+        else
+          BUFFER="$prefix$BUFFER"
+        fi
+        CURSOR=$#BUFFER
+        zle redisplay
+      }
+      zle -N sudo-command-line
+
       bindkey "^[[3~" delete-char
       [[ -n "''${terminfo[kdch1]:-}" ]] && bindkey "''${terminfo[kdch1]}" delete-char
+
+      bindkey '\e\e' sudo-command-line
 
       bindkey "^[[A" up-line-or-beginning-search
       bindkey "^[[B" down-line-or-beginning-search

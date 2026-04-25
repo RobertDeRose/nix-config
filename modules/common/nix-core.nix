@@ -17,6 +17,7 @@ in
   nix = {
     # Lix on all platforms except x86_64-darwin (Lix dropped Intel Mac support)
     package = if useCppNix then pkgs.nix else pkgs.lixPackageSets.latest.lix;
+    channel.enable = false;
     optimise.automatic = true;
 
     settings = {
