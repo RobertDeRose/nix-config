@@ -9,7 +9,7 @@ builder for Linux derivations. Nix delegates builds to `ssh-ng://container-build
 - Host alias: `container-builder`
 - Current transport: localhost bridge for the root `nix-daemon`, plus `ProxyCommand` via `~/.local/state/hb/proxy.sh` for user-side helper access
 - Durable state directory: `/Users/<username>/.local/state/hb`
-- Runtime model: user launch agents start the container runtime and the host-side bridge
+- Runtime model: the host-side bridge stays loaded and starts the builder on demand
 - Status helper: `hb`
 
 This is functional, but Apple `container` remains an external mutable runtime,
@@ -25,7 +25,6 @@ hardened subsystem.
 | SSH alias | `container-builder` |
 | Durable state | `/Users/<username>/.local/state/hb` |
 | Root SSH config | `/etc/ssh/ssh_config.d/201-container-builder.conf` |
-| Launch agent | `hexbox-runtime` |
 | Launch agent | `hexbox-bridge` |
 
 ## Host Configuration
@@ -68,13 +67,9 @@ remains the compatible path for `nix.buildMachines` and real remote builds on
 the current host setup.
 
 The builder container is generation-aware and can be restarted or recreated as
-needed, but `/nix` is mounted as an overlay filesystem inside the guest. The
-image's built-in `/nix` stays as the lower layer while the stable Apple
-container volume `nix-builder-store` backs the upper layer so store writes can
-survive ordinary container recreation.
-
-By default the module now expects a custom GHCR builder image with mount tooling
-preinstalled for the `/nix` overlay setup.
+needed. The image's built-in `/nix` is used directly inside the guest; build
+outputs live in the container's writable layer and are re-fetched from
+substituters if the container is recreated.
 
 The file layout intentionally keeps operational builder state together:
 
@@ -89,15 +84,7 @@ configured timeout so the builder can go offline and release host memory.
 
 ## Runtime Behavior
 
-Two user launch agents are installed:
-
-- `hexbox-runtime`
-  - bootstraps SSH keys if missing
-  - runs `container system start`
-  - starts or resumes the builder container
-  - removes stale older builder generations automatically
-  - waits for a real SSH handshake before considering the builder ready
-  - attempts one recovery pass and exits cleanly if the Apple runtime is unhealthy
+One user launch agent is installed:
 
 - `hexbox-bridge`
   - exposes `127.0.0.1:2222`
@@ -107,7 +94,6 @@ Two user launch agents are installed:
 
 Logs live in the durable state directory:
 
-- `hexbox-runtime.log`
 - `hexbox-readiness.log`
 - `hexbox-idle.log`
 - `init-debug.log`
@@ -135,5 +121,5 @@ restart the Apple container runtime before re-checking builder health.
 
 - depends on a working Apple `container` installation and user session
 - bridge-free daemon access is still not the default path
-- the default builder image now depends on the published GHCR package being available
+- the default builder image now depends on the pinned upstream `nixos/nix` image remaining compatible with the module bootstrap logic
 - on-demand startup and idle shutdown now work, but the helper and runtime still depend on Apple `container` staying healthy

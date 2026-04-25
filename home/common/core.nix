@@ -12,6 +12,8 @@
     bash # bash 5.x (macOS ships ancient 3.2)
     btop
     jq # lightweight and flexible command-line JSON processor
+    openspec
+    pstree
     pv # monitor data progress through a pipeline
     ripgrep # recursively searches directories for a regex pattern
     rlwrap # readline wrapper for CLI programs lacking line editing
