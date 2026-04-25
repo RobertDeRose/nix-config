@@ -2,6 +2,7 @@
 {
   programs.zed-editor = {
     enable = true;
+    package = null;
 
     userSettings = {
       base_keymap = "VSCode";
@@ -63,6 +64,6 @@
       }
     ];
 
-    installRemoteServer = lib.mkDefault true;
+    installRemoteServer = false;
   };
 }
