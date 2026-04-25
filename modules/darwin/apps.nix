@@ -28,6 +28,7 @@ in
     enable = true;
     user = username;
     autoMigrate = true; # migrate existing manual Homebrew installs
+    extraEnv.HOMEBREW_NO_ENV_HINTS = "1";
   };
 
   homebrew = {

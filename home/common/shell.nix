@@ -123,6 +123,10 @@ in
         source "$HOME/.zshrc.local"
       fi
 
+      if command -v mise >/dev/null 2>&1; then
+        eval "$(mise activate zsh)"
+      fi
+
       # Navigate up N directories: `up 3` = cd ../../..
       # Dot aliases use this for convenience.
       up() {
