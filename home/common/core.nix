@@ -26,6 +26,8 @@
     # git tools
     git-absorb # automatic git commit --fixup
     git-filter-repo # fast git history rewriting
+    git-town # higher-level git branch workflow automation
+    git-trim # trim local tracking branches merged remotely
 
     # misc
     gnused
@@ -81,14 +83,6 @@
   home.file = {
     ".local/bin/rund" = {
       source = ../../files/scripts/rund;
-      executable = true;
-    };
-    ".local/bin/gwt" = {
-      source = ../../files/scripts/gwt;
-      executable = true;
-    };
-    ".local/bin/gcb" = {
-      source = ../../files/scripts/gcb;
       executable = true;
     };
   };

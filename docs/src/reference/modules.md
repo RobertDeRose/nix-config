@@ -52,8 +52,9 @@ shell.
 ### `home/common/core.nix`
 
 Cross-platform CLI tools including `btop`, `jq`, `openspec`, `pstree`,
-`ripgrep`, `tmux`, `yazi`, `yq`, and repo helper scripts (`rund`, `gwt`,
-`gcb`). Sets Helix as the default editor outside Zed-integrated terminals.
+`ripgrep`, `tmux`, `yazi`, `yq`, `git-town`, `git-trim`, and repo helper
+scripts (`rund`). Sets Helix as the default editor outside Zed-integrated
+terminals.
 
 ### `home/common/shell.nix`
 

@@ -19,5 +19,11 @@
     stateVersion = "25.11";
   };
 
+  programs.worktrunk = {
+    enable = true;
+    enableZshIntegration = true;
+    enableBashIntegration = true;
+  };
+
   programs.home-manager.enable = true;
 }
