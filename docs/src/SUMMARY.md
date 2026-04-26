@@ -22,7 +22,7 @@
 
 - [Day-to-Day Commands](./operations/day-to-day.md)
 - [Remote Deployment](./operations/remote-deployment.md)
-- [Linux Builder VM](./operations/linux-builder.md)
+- [Linux Builder](./operations/linux-builder.md)
 - [Lima VM Testing](./operations/lima-testing.md)
 
 ## Reference
