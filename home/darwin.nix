@@ -3,11 +3,12 @@
 # Imports shared config + macOS-specific modules.
 {
   username,
-  pkgs,
+  inputs,
   ...
 }:
 {
   imports = [
+    ./modules/worktrunk.nix
     ./common
     ./common/ghostty.nix
     ./common/zed.nix

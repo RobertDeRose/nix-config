@@ -50,8 +50,6 @@ Global aliases defined in `shell.nix`:
 | `ls`, `l`, `ll`, `la` | `eza` variants | With icons and git status |
 | `cat`, `less` | `bat` | Syntax-highlighted pager |
 | `oc` | `opencode` | AI coding agent |
-| `gcb` | `~/.local/bin/gcb` | Delete merged or squash-merged local git branches |
-| `gwt` | `source ~/.local/bin/gwt` | Create or jump to a git worktree for a branch |
 | `gst`, `gd`, `ga`, `gc`... | git shortcuts | Common git operations |
 | `docker` | `container` | macOS only (Apple container runtime) |
 | `up N` | `cd ../../../...` | Navigate up N directories |
@@ -60,16 +58,24 @@ Per-host aliases go in `hosts/<arch>-darwin/<hostname>/home.nix` or
 `systems/<arch>-linux/<hostname>/home.nix` -- see
 [Per-Host Overrides](./per-host-overrides.md).
 
-## Custom Scripts
+## CLI Helpers
 
-`~/.local/bin` contains repo-managed helper scripts installed from
-`files/scripts/`:
+Repo-managed helper scripts installed from `files/scripts/`:
 
 | Script | Purpose |
 |--------|---------|
 | `rund` | Run a disposable Ubuntu container with the current directory mounted in |
-| `gwt` | Create or reuse a git worktree for a branch and `cd` into it |
-| `gcb` | Delete merged and squash-merged local branches against a base branch |
+
+Packaged Git workflow tools installed via Home Manager:
+
+| Tool | Purpose |
+|------|---------|
+| `wt` | Worktrunk worktree management with shell integration |
+| `git trim` | Trim tracking branches merged or gone upstream |
+| `git town` | Higher-level branch workflow and sync helpers |
+
+Git worktree management is now provided by Worktrunk via the `wt` command and
+its shell integration configured in `home/common/default.nix`.
 
 ## Platform-Aware Behavior
 

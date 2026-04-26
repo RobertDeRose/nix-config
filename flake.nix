@@ -40,6 +40,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    worktrunk = {
+      url = "github:max-sixty/worktrunk";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Provide a default pin for system-manager so all evaluators
     # use lockfile revisions instead of GitHub HEAD lookups.
     system-manager = {

@@ -70,8 +70,6 @@
 │
 ├── files/
 │   ├── scripts/
-│   │   ├── gcb                # Delete merged git branches
-│   │   ├── gwt                # Create or jump to a git worktree
 │   │   └── rund               # Run in disposable Ubuntu container
 │   └── workflows/             # macOS Finder Quick Actions
 │

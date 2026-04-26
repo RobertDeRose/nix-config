@@ -184,8 +184,6 @@ in
     less = "bat";
     cat = "bat";
     oc = "opencode";
-    gcb = "~/.local/bin/gcb";
-    gwt = "source ~/.local/bin/gwt";
 
     # ── Git (portable subset of oh-my-zsh git plugin) ───────────────
     gst = "git status";
