@@ -67,7 +67,7 @@ global modules. Nix merges all option definitions:
 ```
 hosts/aarch64-darwin/MYMACHINE/
 ├── default.nix     # System overrides (required)
-├── user.nix        # Username + email (required)
+├── user.nix        # Username, name, email, GitHub username (required)
 └── home.nix        # Home-manager overrides (optional)
 ```
 

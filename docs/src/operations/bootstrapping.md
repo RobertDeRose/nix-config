@@ -34,7 +34,7 @@ sh -c 'curl -sSfL https://raw.githubusercontent.com/RobertDeRose/nix-config/main
 Once the initial bootstrap completes, day-to-day changes are applied with:
 
 ```bash
-mise switch
+mise run nix:switch
 ```
 
 ## CI Mode

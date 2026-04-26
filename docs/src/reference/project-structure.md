@@ -12,7 +12,7 @@
 │   ├── aarch64-darwin/
 │   │   └── <hostname>/
 │   │       ├── default.nix    # System config (required)
-│   │       ├── user.nix       # Username + email (required)
+│   │       ├── user.nix       # Username, name, email, GitHub username
 │   │       └── home.nix       # Per-host HM overrides (optional)
 │   └── x86_64-darwin/
 │       └── <hostname>/...
@@ -21,7 +21,7 @@
 │   ├── x86_64-linux/
 │   │   └── <hostname>/
 │   │       ├── system.nix     # system-manager config
-│   │       ├── user.nix       # Username + email
+│   │       ├── user.nix       # Username, name, email, GitHub username
 │   │       └── home.nix       # Per-host HM overrides (optional)
 │   └── aarch64-linux/
 │       └── <hostname>/...
@@ -62,7 +62,7 @@
 │   │   ├── htop.nix           # htop config
 │   │   └── opencode.nix       # OpenCode AI agent
 │   └── darwin/
-│       └── ssh.nix            # Bitwarden SSH agent
+│       └── ssh.nix            # Bitwarden Desktop SSH agent config
 │
 ├── config/
 │   └── iterm2/

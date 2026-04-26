@@ -20,8 +20,8 @@ Runs on pushes to `main` and pull requests.
 
 **Bootstrap test** (separate job):
 - Runs `./bootstrap.sh ci-bootstrap` on a fresh runner
-- Verifies the entire bootstrap pipeline works end-to-end
-- Evaluates all configurations without building (CI mode)
+- Verifies the bootstrap pipeline reaches the handoff to the real tasks
+- Evaluates the target configurations without building or activating them (CI mode)
 
 ### What It Catches
 

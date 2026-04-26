@@ -29,10 +29,12 @@ hk fix -a
 |-------|-------|-------------|
 | `nixfmt` | `**/*.nix` | Format Nix files |
 | `shfmt` | `**/*.sh` | Format shell scripts |
-| `pkl-fmt` | `**/*.pkl` | Format Pkl files |
-| `tombi` | `**/*.toml` | Format TOML files |
+| `pkl_format` | `**/*.pkl` | Format Pkl files |
+| `tombi_format` | `**/*.toml` | Format TOML files |
 | `actionlint` | `.github/workflows/*.yml` | Lint GitHub Actions |
 | `shellcheck` | `**/*.sh` | Lint shell scripts |
+| `mise-fmt` | `mise.toml` | Format the mise config |
+| `mise` | `mise.toml` | Validate mise task definitions |
 
 ### Security & Hygiene
 

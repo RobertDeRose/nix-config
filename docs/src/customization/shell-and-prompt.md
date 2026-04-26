@@ -56,7 +56,8 @@ Global aliases defined in `shell.nix`:
 | `docker` | `container` | macOS only (Apple container runtime) |
 | `up N` | `cd ../../../...` | Navigate up N directories |
 
-Per-host aliases go in `hosts/<arch>/<hostname>/home.nix` -- see
+Per-host aliases go in `hosts/<arch>-darwin/<hostname>/home.nix` or
+`systems/<arch>-linux/<hostname>/home.nix` -- see
 [Per-Host Overrides](./per-host-overrides.md).
 
 ## Custom Scripts
@@ -74,4 +75,6 @@ Per-host aliases go in `hosts/<arch>/<hostname>/home.nix` -- see
 
 - macOS adds `/opt/homebrew/bin` and `/opt/homebrew/sbin` to `$PATH`
 - The `docker` alias only applies on Darwin (maps to Apple's `container` runtime)
+- `Esc Esc` toggles a leading `sudo ` like the oh-my-zsh sudo plugin
+- `mise activate zsh` is loaded when `mise` is available
 - Ghostty shell integration is sourced manually (workaround for cmux)

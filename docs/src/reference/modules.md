@@ -18,6 +18,7 @@ Meslo LG, Symbols Only), Font Awesome, and Material Design Icons.
 ### `modules/common/overlays.nix`
 
 Temporary nixpkgs overrides. Currently:
+
 - Disables direnv tests (fail under macOS SIP sandbox)
 - Replaces `mas` with version 6.0.1 (required by Homebrew, not yet in nixpkgs)
 
@@ -30,8 +31,8 @@ three-finger drag), Keyboard (Caps Lock remapped to Escape), security
 
 ### `modules/darwin/apps.nix`
 
-Declarative package management: nix system packages (bat, eza, git, fastfetch),
-Homebrew taps, brews, casks (26 GUI apps), and Mac App Store apps. Uses `zap`
+Declarative package management: nix system packages (bat, eza, git, fastfetch,
+devenv), Homebrew taps, brews, casks, and Mac App Store apps. Uses `zap`
 cleanup to remove anything not listed.
 
 ### `modules/darwin/iterm2.nix`
@@ -50,15 +51,15 @@ shell.
 
 ### `home/common/core.nix`
 
-25+ cross-platform CLI tools including: bat, btop, eza, fzf, jq, ripgrep, yazi
-(file manager), glow (markdown viewer), and custom scripts (`rund`, `gwt`,
-`gcb`). Sets Helix as the default `$EDITOR`.
+Cross-platform CLI tools including `btop`, `jq`, `openspec`, `pstree`,
+`ripgrep`, `tmux`, `yazi`, `yq`, and repo helper scripts (`rund`, `gwt`,
+`gcb`). Sets Helix as the default editor outside Zed-integrated terminals.
 
 ### `home/common/shell.nix`
 
 Zsh with autosuggestions and syntax highlighting. Starship prompt with Ayu
 Mirage colors and Nerd Font pill segments. Navigation aliases, git shortcuts,
-and platform-aware PATH setup.
+double-Escape sudo toggling, `mise activate zsh`, and platform-aware PATH setup.
 
 ### `home/common/git.nix`
 
@@ -90,8 +91,9 @@ Homebrew).
 
 ### `home/common/zed.nix`
 
-Zed editor (macOS only): Ayu Mirage Dark theme, VSCode keymap with Helix
-modal mode, Copilot edit predictions. Custom keybindings matching Helix.
+Zed editor config (macOS only): package managed outside Nix, theme set to Ayu
+Mirage, VSCode keymap with Helix mode, Copilot edit predictions, and custom
+keybindings matching Helix.
 
 ### `home/common/opencode.nix`
 

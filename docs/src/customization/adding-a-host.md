@@ -8,7 +8,7 @@ right place and it's auto-discovered.
 From any machine with mise installed:
 
 ```bash
-mise add-host <hostname> [os] [arch]
+mise run add-host <hostname> [os] [arch]
 ```
 
 - `os` accepts `darwin` or `linux` (defaults to current machine)
@@ -27,12 +27,14 @@ mkdir -p hosts/aarch64-darwin/<hostname>
 cp templates/darwin/* hosts/aarch64-darwin/<hostname>/
 ```
 
-Edit `user.nix` with the machine's username and email:
+Edit `user.nix` with the machine's identity fields:
 
 ```nix
 {
   username = "jdoe";
-  email = "jdoe@example.com";
+  fullname = "Jane Doe";
+  useremail = "jdoe@example.com";
+  githubUsername = "jdoe";
 }
 ```
 
@@ -51,13 +53,13 @@ After creating the host directory:
 
 ```bash
 # macOS -- build without activating
-nix build .#darwinConfigurations.<hostname>.config.system.build.toplevel
+nix build --accept-flake-config .#darwinConfigurations.<hostname>.system
 
 # Linux system-manager
-nix build .#systemManagerConfigurations.<hostname>.config.build.toplevel
+nix build --accept-flake-config .#systemConfigs.<hostname>
 
 # Linux home-manager
-nix build .#homeConfigurations.<hostname>.activationPackage
+nix build --accept-flake-config .#homeConfigurations.<hostname>.activationPackage
 ```
 
 ## Activating
@@ -76,5 +78,5 @@ home-manager switch --flake .#<hostname>
 Or use the mise tasks which handle platform detection:
 
 ```bash
-mise switch
+mise run nix:switch
 ```
