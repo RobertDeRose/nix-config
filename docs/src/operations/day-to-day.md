@@ -6,26 +6,26 @@ All commands are run via [mise](https://mise.jdx.dev) tasks defined in `mise.tom
 
 ```bash
 # Apply config on the current machine (auto-detects hostname + platform)
-mise switch
+mise run nix:switch
 
 # Debug a failing build (show trace)
-mise debug
+mise run nix:debug
 
 # Update all flake inputs
-mise up
+mise run nix:up
 
 # Update a single input
-mise upp nixpkgs
+mise run nix:up nixpkgs
 
 # Garbage-collect old generations
-mise gc      # aggressive: delete all old generations
-mise clean   # gentle: delete generations older than 7 days
+mise run nix:gc      # aggressive: delete old system and user generations
+mise run nix:clean   # remove old system generations older than 7 days
 
 # Format all .nix files
-mise fmt
+mise run nix:fmt
 
 # Open a nix repl with the flake loaded
-mise repl
+mise run nix:repl
 ```
 
 ## Listing All Tasks
@@ -39,7 +39,7 @@ building blocks) are not shown by default.
 
 ## Platform Detection
 
-`mise switch` and `mise debug` automatically detect:
+`mise run nix:switch` and `mise run nix:debug` automatically detect:
 
 - **Hostname** from the system
 - **Platform** (darwin vs linux)
@@ -52,8 +52,7 @@ They then run the appropriate build command (`darwin-rebuild switch` on macOS,
 
 ```bash
 # Show recent flake input changes
-mise history
+mise run nix:history
 ```
 
-This runs `nix flake metadata` to display the locked revisions and dates of
-all inputs.
+This shows the system profile generation history for the current machine.

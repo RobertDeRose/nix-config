@@ -6,7 +6,7 @@ Hosts are auto-discovered from the filesystem. No manual registration in
 ## macOS Hosts (easy-hosts)
 
 [easy-hosts](https://github.com/tgirlcloud/easy-hosts) scans
-`hosts/<arch>/<hostname>/` directories and generates `darwinConfigurations`
+`hosts/<arch>-darwin/<hostname>/` directories and generates `darwinConfigurations`
 entries automatically.
 
 ```
@@ -45,7 +45,7 @@ systems/
 
 easy-hosts assumes all `*-linux` directories are NixOS, but these are Ubuntu
 machines using system-manager. So `flake.nix` contains custom logic to scan
-`systems/` and generate `systemManagerConfigurations` + `homeConfigurations`.
+`systems/` and generate `systemConfigs` + `homeConfigurations`.
 
 ## Why Two Directories?
 

@@ -39,7 +39,8 @@ See [Bootstrapping](./operations/bootstrapping.md) for details.
 - **No flake.nix editing to add hosts** -- drop a directory into `hosts/` and it's
   auto-discovered.
 - **Shared modules, per-host overrides** -- global config in `modules/` and `home/`,
-  host-specific additions in `hosts/<arch>/<hostname>/`.
+  host-specific additions in `hosts/<arch>-darwin/<hostname>/` or
+  `systems/<arch>-linux/<hostname>/`.
 - **Declarative Homebrew** -- casks, brews, and Mac App Store apps are managed via Nix
   and cleaned up automatically.
 - **Consistent Ayu Mirage theme** -- terminal, editor, multiplexer, and prompt all share

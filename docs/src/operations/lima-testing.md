@@ -7,22 +7,22 @@ from macOS before deploying to real servers.
 
 ```bash
 # Create a new Ubuntu VM
-mise vm:create
+mise run vm:create
 
 # Open a shell in the VM
-mise vm:shell
+mise run vm:shell
 
 # Recreate the VM (destroy + create)
-mise vm:recreate
+mise run vm:recreate
 
 # Remove the VM
-mise vm:remove
+mise run vm:remove
 ```
 
 ## How It Works
 
 The `vm:create` task spins up an Ubuntu Lima VM matching the target
-architecture. Once inside the VM via `mise vm:shell`, you can test the full
+architecture. Once inside the VM via `mise run vm:shell`, you can test the full
 Linux bootstrap and configuration flow:
 
 ```bash

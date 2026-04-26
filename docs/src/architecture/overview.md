@@ -27,9 +27,10 @@ flake.nix
 ├── modules/darwin/        macOS system defaults, Homebrew, iTerm2
 ├── modules/linux/         system-manager SSH, users, packages
 ├── home/common/           Cross-platform: shell, git, editors, tools
-├── home/darwin.nix        macOS-specific: Ghostty, Zed, SSH agent
-├── home/linux.nix         Linux-specific: XDG dirs
-└── hosts/<arch>/<name>/   Per-host overrides
+├── home/darwin.nix        macOS-specific entry point + SSH agent
+├── home/linux.nix         Linux-specific entry point
+├── hosts/<arch>-darwin/   Per-host Darwin overrides
+└── systems/<arch>-linux/  Per-host Linux overrides
 ```
 
 See the sub-pages for details on each layer.

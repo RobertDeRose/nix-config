@@ -39,10 +39,10 @@ shows a fallback font:
 
 Check the font name in your app's config and update it to the v3 name.
 
-### Linux builder VM won't start
+### Linux Builder won't start
 
-The builder is managed through the `hb` helper and user launch agents, not a
-single system launchd service. Start with the current builder summary:
+The builder is managed through the `hb` helper and a user bridge launch agent,
+not a single system launchd service. Start with the current builder summary:
 
 ```bash
 hb status
@@ -57,20 +57,20 @@ hb repair
 
 If it still will not come up:
 
-1. Check if the service is registered:
+1. Check if the bridge agent is registered:
    ```bash
-   launchctl print gui/$(id -u)/org.nixos.hexbox-runtime | head -20
    launchctl print gui/$(id -u)/org.nixos.hexbox-bridge | head -20
-    ```
-2. If either agent shows "Could not find service", the launch agents are not
-   loaded. Run `mise nix:switch` or `sudo darwin-rebuild switch --flake .#$(hostname -s)`.
-3. If the agents are loaded but readiness still fails, inspect the HexBox logs:
+     ```
+2. If the bridge agent shows "Could not find service", the launch agent is not
+   loaded. Run `mise run nix:switch` or
+   `sudo darwin-rebuild switch --flake .#$(hostname -s)`.
+3. If the bridge agent is loaded but readiness still fails, inspect the HexBox logs:
    ```bash
-   hb logs runtime
    hb logs readiness
    hb logs bridge
    hb logs boot
-    ```
+   hb inspect
+     ```
 
 ### `nix build` doesn't use the Linux builder
 
@@ -107,4 +107,4 @@ activation must be run as root:
 sudo darwin-rebuild switch --flake .
 ```
 
-The `mise switch` task handles this automatically.
+The `mise run nix:switch` task handles this automatically.

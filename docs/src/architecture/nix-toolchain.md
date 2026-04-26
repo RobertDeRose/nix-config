@@ -42,5 +42,5 @@ nix.gc = {
 };
 ```
 
-Manual GC is available via `mise gc` (aggressive) and `mise clean` (remove old
-generations).
+Manual GC is available via `mise run nix:gc` (aggressive) and
+`mise run nix:clean` (remove old generations).

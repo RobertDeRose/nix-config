@@ -15,11 +15,11 @@ The deploy task:
 ## Usage
 
 ```bash
-mise deploy <hostname> [user@host]
+mise run nix:deploy <user@host-or-ssh-alias> [config-name]
 ```
 
-If the SSH destination is omitted, it defaults to `<hostname>` (assuming SSH
-config has the host defined).
+If the config name is omitted, the task resolves it from `hostname -s` on the
+remote machine.
 
 ## Prerequisites
 
@@ -32,7 +32,7 @@ config has the host defined).
 
 This repo uses the [Bitwarden SSH agent](https://bitwarden.com/help/ssh-agent/)
 on macOS for key management. The SSH agent configuration is in
-`home/darwin/ssh.nix` and uses the Bitwarden desktop app's sandboxed socket.
+`home/darwin/ssh.nix` and uses the Bitwarden Desktop app's sandboxed socket.
 
 For remote hosts, SSH authorized keys are fetched from GitHub
 (`github.com/<username>.keys`) with a caching mechanism configured in

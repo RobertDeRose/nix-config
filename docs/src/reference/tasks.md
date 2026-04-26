@@ -1,6 +1,7 @@
 # Task Reference
 
-All tasks are defined in `mise.toml` and run via `mise <task>` or `mise run <task>`.
+All tasks are defined in `mise.toml` and are safest to run as
+`mise run <task>`.
 
 ## Bootstrap & Host Management
 
@@ -16,22 +17,23 @@ All tasks are defined in `mise.toml` and run via `mise <task>` or `mise run <tas
 
 | Task | Description |
 |------|-------------|
-| `nix:switch` (alias: `switch`) | Apply config on the current machine |
-| `nix:debug` (alias: `debug`) | Apply config with `--show-trace` for debugging |
-| `nix:deploy` (alias: `deploy`) | Build locally and deploy to a remote Linux host |
+| `nix:switch` | Apply config on the current machine |
+| `nix:debug` | Apply config with `--show-trace` for debugging |
+| `nix:dry-run` | Dry-run a build target or the current host config |
+| `nix:check-cache` | Check whether a store path exists in configured substituters |
+| `nix:deploy` | Build locally and deploy system config to a remote Linux host |
 
 ## Maintenance
 
 | Task | Description |
 |------|-------------|
-| `nix:up` (alias: `up`) | Update all flake inputs |
-| `nix:upp` (alias: `upp`) | Update a single flake input |
-| `nix:history` (alias: `history`) | Show flake input metadata |
-| `nix:repl` (alias: `repl`) | Open nix repl with flake loaded |
-| `nix:clean` (alias: `clean`) | Delete generations older than 7 days |
-| `nix:gc` (alias: `gc`) | Aggressive garbage collection |
-| `nix:gcroot` (alias: `gcroot`) | List GC roots |
-| `nix:fmt` (alias: `fmt`) | Format all .nix files with nixfmt |
+| `nix:up` | Update a single flake input, or all inputs if none specified |
+| `nix:history` | List system profile generations |
+| `nix:repl` | Open a nix repl with nixpkgs |
+| `nix:clean` | Remove system profile generations older than 7 days |
+| `nix:gc` | Garbage-collect unused store entries |
+| `nix:gcroot` | List auto GC roots |
+| `nix:fmt` | Format all `.nix` files with the configured formatter |
 | `nix:trust` | Add current user to Nix trusted-users |
 | `nix:uninstall` | Fully uninstall Nix from the system |
 
@@ -56,3 +58,6 @@ All tasks are defined in `mise.toml` and run via `mise <task>` or `mise run <tas
 |------|-------------|
 | `docs:build` | Build the mdBook documentation site |
 | `docs:serve` | Serve docs locally with hot-reload |
+
+Hidden helper tasks also exist for bootstrap flow: `install-nix`,
+`github-auth`, `add-host`, and `activate`.

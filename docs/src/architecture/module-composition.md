@@ -30,7 +30,7 @@ modules/common/fonts.nix       Shared fonts
 
 ```
 home/common/default.nix        Aggregator -- imports all shared modules below
-home/common/core.nix           25+ CLI tools (bat, ripgrep, jq, fzf, eza, yazi...)
+home/common/core.nix           Cross-platform CLI tools and repo helper scripts
 home/common/shell.nix          zsh + starship prompt + aliases
 home/common/git.nix            git, gh, lazygit, SSH signing, difftastic
 home/common/direnv.nix         direnv + nix-direnv + mise integration
@@ -38,8 +38,8 @@ home/common/helix.nix          Helix editor + LSPs
 home/common/zellij.nix         Zellij multiplexer
 home/common/htop.nix           htop layout
 home/common/opencode.nix       OpenCode AI agent
-home/common/ghostty.nix        Ghostty terminal (macOS only, imported by darwin.nix)
-home/common/zed.nix            Zed editor (macOS only, imported by darwin.nix)
+home/common/ghostty.nix        Ghostty terminal (macOS only, imported by home/darwin.nix)
+home/common/zed.nix            Zed editor config (macOS only, imported by home/darwin.nix)
 ```
 
 `home/darwin.nix` and `home/linux.nix` are the platform entry points. They import
