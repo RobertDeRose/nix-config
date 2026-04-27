@@ -17,9 +17,10 @@ mise run nix:up
 # Update a single input
 mise run nix:up nixpkgs
 
-# Garbage-collect old generations
-mise run nix:gc      # aggressive: delete old system and user generations
-mise run nix:clean   # remove old system generations older than 7 days
+# Clean up nix-config history
+mise run nix:clean              # default retention: 7d
+mise run nix:clean 30d          # keep 30 days of nix-config generations
+mise run nix:gc                 # aggressive: free unused store paths across the machine
 
 # Format all .nix files
 mise run nix:fmt
@@ -48,11 +49,14 @@ building blocks) are not shown by default.
 They then run the appropriate build command (`darwin-rebuild switch` on macOS,
 `system-manager switch` + `home-manager switch` on Linux).
 
-## Flake History
+## System History
 
 ```bash
-# Show recent flake input changes
+# Show recent system generations
 mise run nix:history
 ```
 
-This shows the system profile generation history for the current machine.
+This shows the system profile generations for the current machine.
+
+Use `mise run nix:clean` when you want to trim old `nix-config` generations
+without collecting unrelated store paths from other projects.
