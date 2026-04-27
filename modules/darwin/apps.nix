@@ -48,7 +48,6 @@ in
     # brew install — CLI tools that aren't in nixpkgs (or are marked EOL there)
     brews = [
       "bitwarden-cli" # Bitwarden vault CLI (bw) — node-gyp fails in nix sandbox
-      "lima" # Linux VMs on macOS (nixpkgs version is EOL)
     ]
     ++ lib.optionals isAarch64 [
       "container-compose" # Docker Compose-like tool for Apple containers (aarch64 only)

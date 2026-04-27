@@ -28,10 +28,10 @@ All tasks are defined in `mise.toml` and are safest to run as
 | Task | Description |
 |------|-------------|
 | `nix:up` | Update a single flake input, or all inputs if none specified |
-| `nix:history` | List system profile generations |
+| `nix:history` | List system profile generations via `nix-env` |
 | `nix:repl` | Open a nix repl with nixpkgs |
-| `nix:clean` | Remove system profile generations older than 7 days |
-| `nix:gc` | Garbage-collect unused store entries |
+| `nix:clean` | Remove system generations older than a retention window |
+| `nix:gc` | Garbage-collect unused store entries across the machine |
 | `nix:gcroot` | List auto GC roots |
 | `nix:fmt` | Format all `.nix` files with the configured formatter |
 | `nix:trust` | Add current user to Nix trusted-users |
@@ -43,14 +43,11 @@ All tasks are defined in `mise.toml` and are safest to run as
 |------|-------------|
 | `iterm:export` | Re-export iTerm2 preferences plist |
 
-## Lima VMs (macOS only)
+## Apple Container Tests (macOS only)
 
 | Task | Description |
 |------|-------------|
-| `vm:create` | Create an Ubuntu Lima VM |
-| `vm:remove` | Remove the Lima VM |
-| `vm:recreate` | Destroy and recreate the VM |
-| `vm:shell` | Open a shell in the VM |
+| `test:bootstrap` | Run Linux bootstrap validation in an Apple container |
 
 ## Documentation
 
