@@ -1,47 +1,54 @@
 # home/common/core.nix
 # Cross-platform CLI tools and programs — works on macOS and Linux.
-{ pkgs, ... }:
+{ pkgs, inputs, ... }:
+let
+  llmAgentPkgs = inputs.opencode.packages.${pkgs.stdenv.hostPlatform.system};
+in
 {
-  home.packages = with pkgs; [
-    # archives
-    zip
-    xz
-    unzip
+  home.packages =
+    with pkgs;
+    [
+      # archives
+      zip
+      xz
+      unzip
 
-    # utils
-    bash # bash 5.x (macOS ships ancient 3.2)
-    btop
-    jq # lightweight and flexible command-line JSON processor
-    openspec
-    pstree
-    pv # monitor data progress through a pipeline
-    ripgrep # recursively searches directories for a regex pattern
-    rlwrap # readline wrapper for CLI programs lacking line editing
-    tmux
-    yq-go # yaml processor https://github.com/mikefarah/yq
+      # utils
+      bash # bash 5.x (macOS ships ancient 3.2)
+      btop
+      jq # lightweight and flexible command-line JSON processor
+      pstree
+      pv # monitor data progress through a pipeline
+      ripgrep # recursively searches directories for a regex pattern
+      rlwrap # readline wrapper for CLI programs lacking line editing
+      tmux
+      yq-go # yaml processor https://github.com/mikefarah/yq
 
-    socat # replacement of openbsd-netcat
-    nmap # utility for network discovery and security auditing
+      socat # replacement of openbsd-netcat
+      nmap # utility for network discovery and security auditing
 
-    # git tools
-    git-absorb # automatic git commit --fixup
-    git-filter-repo # fast git history rewriting
-    git-town # higher-level git branch workflow automation
-    git-trim # trim local tracking branches merged remotely
+      # git tools
+      git-absorb # automatic git commit --fixup
+      git-filter-repo # fast git history rewriting
+      git-town # higher-level git branch workflow automation
+      git-trim # trim local tracking branches merged remotely
 
-    # misc
-    gnused
-    gnutar
-    gawk
-    zstd
+      # misc
+      gnused
+      gnutar
+      gawk
+      zstd
 
-    # nix
-    nixpkgs-fmt
-    nixd
+      # nix
+      nixpkgs-fmt
+      nixd
 
-    # productivity
-    glow # markdown previewer in terminal
-  ];
+      # productivity
+      glow # markdown previewer in terminal
+    ]
+    ++ [
+      llmAgentPkgs.openspec
+    ];
 
   programs = {
     # command-line fuzzy finder

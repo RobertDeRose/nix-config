@@ -37,7 +37,6 @@
 
     opencode = {
       url = "github:numtide/llm-agents.nix";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     worktrunk = {
@@ -67,29 +66,6 @@
         useremail = "rderose@checkpt.com";
         githubUsername = "RobertDeRose";
       };
-      systemManagerNoCheckOverlay = final: prev: {
-        rustPlatform = prev.rustPlatform // {
-          buildRustPackage =
-            args:
-            prev.rustPlatform.buildRustPackage (
-              if builtins.isFunction args then
-                finalAttrs:
-                let
-                  resolved = args finalAttrs;
-                in
-                resolved
-                // lib.optionalAttrs ((resolved.pname or "") == "system-manager") {
-                  doCheck = false;
-                }
-              else
-                args
-                // lib.optionalAttrs ((args.pname or "") == "system-manager") {
-                  doCheck = false;
-                }
-            );
-        };
-      };
-
       # Collect all Linux hosts from systems/*-linux/<hostname>/
       # Linux hosts live under systems/ (not hosts/) to avoid easy-hosts
       # auto-discovery, since easy-hosts assumes all *-linux dirs are NixOS.
@@ -133,7 +109,6 @@
           hostUser = if builtins.pathExists userNix then import userNix else defaultUser;
         in
         inputs.system-manager.lib.makeSystemConfig {
-          overlays = [ systemManagerNoCheckOverlay ];
           modules = [
             { nixpkgs.hostPlatform = host.system; }
             ./modules/linux/system.nix
@@ -202,18 +177,15 @@
         {
           formatter = pkgs.nixfmt;
         }
-        // lib.optionalAttrs (inputs.system-manager.packages ? ${system}) {
-          packages.system-manager =
-            let
-              systemManagerPkgs = import inputs.nixpkgs {
-                inherit system;
-                overlays = [
-                  systemManagerNoCheckOverlay
-                  inputs.system-manager.overlays.default
-                ];
-              };
-            in
-            systemManagerPkgs.system-manager;
+        // lib.optionalAttrs (builtins.hasAttr system inputs.system-manager.packages) {
+          packages.system-manager = inputs.system-manager.packages.${system}.default;
+        }
+        // lib.optionalAttrs (builtins.hasAttr system inputs.opencode.packages) {
+          packages.opencode = inputs.opencode.packages.${system}.opencode;
+          packages.openspec = inputs.opencode.packages.${system}.openspec;
+        }
+        // lib.optionalAttrs (builtins.hasAttr system inputs.worktrunk.packages) {
+          packages.worktrunk = inputs.worktrunk.packages.${system}.worktrunk;
         };
 
       easy-hosts = {
