@@ -42,5 +42,6 @@ nix.gc = {
 };
 ```
 
-Manual GC is available via `mise run nix:gc` (aggressive) and
-`mise run nix:clean` (remove old generations).
+Manual cleanup is available via `mise run nix:clean [window]` (prune old
+system generations for this config) and `mise run nix:gc` (aggressive
+store-wide garbage collection).
