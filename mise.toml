@@ -674,118 +674,91 @@ echo -e "\nDone! Open a new shell or restart your computer to fully clear change
 '''
 
 # ---------------------------------------------------------------------------
-# Lima VM management (macOS only — for testing Linux configs)
+# Apple Container test flows (macOS only — for testing Linux configs)
 # ---------------------------------------------------------------------------
 
-[tasks."vm:create"]
-description = "Create and start a fresh Lima VM for testing"
+[tasks."test:image"]
+description = "Build the Apple Container Linux test image"
+hide = true
 quiet = true
-usage = '''
-arg "[name]" help="VM name" default="nix-test"
-arg "[template]" help="Lima template" default="template:ubuntu"
-'''
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
-VM="${usage_name}"
-TEMPLATE="${usage_template}"
+IMAGE="local/nix-config-test-linux:24.04"
 
-if limactl list --json | jq -e --arg vm "$VM" 'select(.name == $vm)' &>/dev/null; then
-  echo "ERROR: VM '$VM' already exists. Use 'mise run vm:recreate' to replace it."
+echo "==> Building Linux test image $IMAGE..."
+container build -f test/Containerfile -t "$IMAGE" .
+'''
+
+[tasks."test:bootstrap"]
+description = "Run Linux bootstrap validation in an Apple container"
+depends = ["test:image"]
+quiet = true
+usage = 'arg "[hostname]" help="Test hostname passed to bootstrap" default="ci-bootstrap"'
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+NAME="test-bootstrap"
+HOSTNAME="${usage_hostname:-ci-bootstrap}"
+IMAGE="local/nix-config-test-linux:24.04"
+BRANCH="$(git branch --show-current)"
+ORIGIN_URL="$(git remote get-url origin)"
+
+if [ -z "$BRANCH" ]; then
+  echo "ERROR: test:bootstrap must be run from a named branch."
   exit 1
 fi
 
-echo "==> Creating Lima VM '$VM' from $TEMPLATE..."
-limactl create --yes \
-  --name="$VM" \
-  --containerd=none \
-  --mount-writable \
-  --set '.user.name = "rderose"' \
-  --set '.user.home = "/home/rderose"' \
-  "$TEMPLATE"
+case "$ORIGIN_URL" in
+  git@github.com:*.git)
+    REPO="${ORIGIN_URL#git@github.com:}"
+    REPO="${REPO%.git}"
+    ;;
+  https://github.com/*.git)
+    REPO="${ORIGIN_URL#https://github.com/}"
+    REPO="${REPO%.git}"
+    ;;
+  https://github.com/*)
+    REPO="${ORIGIN_URL#https://github.com/}"
+    ;;
+  *)
+    echo "ERROR: Unsupported origin URL: $ORIGIN_URL"
+    exit 1
+    ;;
+esac
 
-echo "==> Starting VM '$VM'..."
-limactl start "$VM"
-
-echo ""
-echo "VM '$VM' is ready. Run 'mise run vm:shell' to connect."
-'''
-
-[tasks."vm:remove"]
-description = "Stop and remove a Lima VM"
-quiet = true
-usage = 'arg "[name]" help="VM name" default="nix-test"'
-confirm = "This will destroy the VM and all its data. Continue?"
-run = '''
-#!/usr/bin/env bash
-set -euo pipefail
-
-VM="${usage_name}"
-
-if ! limactl list --json | jq -e --arg vm "$VM" 'select(.name == $vm)' &>/dev/null; then
-  echo "VM '$VM' does not exist."
-  exit 0
+if ! git rev-parse --verify --quiet "origin/$BRANCH" >/dev/null; then
+  echo "WARNING: origin/$BRANCH does not exist yet, so test:bootstrap cannot exercise this branch."
+  echo "         Push this branch first, then rerun test:bootstrap."
+  exit 1
 fi
 
-echo "==> Stopping VM '$VM'..."
-limactl stop "$VM" 2>/dev/null || true
-
-echo "==> Removing VM '$VM'..."
-limactl delete "$VM"
-echo "VM '$VM' removed."
-'''
-
-[tasks."vm:recreate"]
-description = "Destroy and recreate a fresh Lima VM"
-quiet = true
-usage = '''
-arg "[name]" help="VM name" default="nix-test"
-arg "[template]" help="Lima template" default="template:ubuntu"
-'''
-confirm = "This will destroy the VM and recreate it from scratch. Continue?"
-run = '''
-#!/usr/bin/env bash
-set -euo pipefail
-
-VM="${usage_name}"
-TEMPLATE="${usage_template}"
-
-# Remove existing VM if present
-if limactl list --json | jq -e --arg vm "$VM" 'select(.name == $vm)' &>/dev/null; then
-  echo "==> Stopping VM '$VM'..."
-  limactl stop "$VM" 2>/dev/null || true
-  echo "==> Removing VM '$VM'..."
-  limactl delete "$VM"
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "WARNING: Local changes are not pushed to origin and will not be tested by test:bootstrap."
 fi
 
-echo "==> Creating Lima VM '$VM' from $TEMPLATE..."
-limactl create --yes \
-  --name="$VM" \
-  --containerd=none \
-  --mount-writable \
-  --set '.user.name = "rderose"' \
-  --set '.user.home = "/home/rderose"' \
-  "$TEMPLATE"
+if git rev-parse --verify --quiet "origin/$BRANCH" >/dev/null && [ "$(git rev-list --count "origin/$BRANCH..HEAD")" -gt 0 ]; then
+  echo "WARNING: This branch has local commits not pushed to origin/$BRANCH; they will not be tested."
+fi
 
-echo "==> Starting VM '$VM'..."
-limactl start "$VM"
+BOOTSTRAP_URL="https://raw.githubusercontent.com/$REPO/$BRANCH/bootstrap.sh"
+
+echo "==> Recreating Apple container '$NAME'..."
+container delete --force "$NAME" >/dev/null 2>&1 || true
+container run -d \
+  --name "$NAME" \
+  --memory 4G \
+  --dns 1.1.1.1 \
+  --dns 8.8.8.8 \
+  "$IMAGE" >/dev/null
+
+echo "==> Running bootstrap validation from $BOOTSTRAP_URL..."
+container exec "$NAME" bash -lc "sudo -iu tester bash -lc 'git config --global user.name \"Container Test User\" && git config --global user.email \"tester@localhost\" && export HOME_MANAGER_USER=tester NIX_BUILD_CORES=1 CARGO_BUILD_JOBS=1 NIX_INSTALLER_NO_SANDBOX=true && curl -sSfL \"$BOOTSTRAP_URL\" | bash -s -- \"$HOSTNAME\"'"
 
 echo ""
-echo "VM '$VM' is ready. Run 'mise run vm:shell' to connect."
-'''
-
-[tasks."vm:shell"]
-description = "Open a shell in the Lima VM"
-quiet = true
-usage = 'arg "[name]" help="VM name" default="nix-test"'
-run = '''
-#!/usr/bin/env bash
-set -euo pipefail
-
-VM="${usage_name}"
-echo "==> Connecting to VM '$VM'..."
-exec limactl shell "$VM"
+echo "Bootstrap test completed in container '$NAME'."
 '''
 
 # ---------------------------------------------------------------------------
