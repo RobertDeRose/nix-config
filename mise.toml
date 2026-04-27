@@ -44,6 +44,12 @@ export NIX_INSTALLER_ENABLE_FLAKES="true"
 export NIX_INSTALLER_EXTRA_CONF="trusted-users = root $(whoami)
 extra-substituters = https://nix-community.cachix.org https://cache.numtide.com
 extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
+
+if [[ "${NIX_INSTALLER_NO_SANDBOX:-false}" == "true" ]]; then
+  export NIX_INSTALLER_EXTRA_CONF="$NIX_INSTALLER_EXTRA_CONF
+sandbox = false"
+fi
+
 [ $(uname -s) = 'Darwin' ] && export NIX_INSTALLER_SSL_CERT_FILE='/etc/ssl/cert.pem'
 
 echo "==> Installing Nix..."
