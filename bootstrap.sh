@@ -25,8 +25,11 @@ _detect_from_curl() {
     grep -F 'bootstrap.sh' |
     grep -v grep |
     head -n1 |
-    grep -oE 'https://raw\.githubusercontent\.com/[^ ]+' |
+    grep -oE 'https://raw\.githubusercontent\.com/[^[:space:]]+' |
     head -n1) || true
+
+  # Strip shell quoting/trailing pipeline text and keep only the bootstrap URL.
+  url=$(printf '%s\n' "$url" | sed -E "s#(/bootstrap\.sh).*#\1#; s/[\"'[:space:]].*$//")
 
   if [[ -n ${url:-} ]]; then
     # URL: https://raw.githubusercontent.com/<owner>/<repo>/<branch>/bootstrap.sh
