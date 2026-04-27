@@ -106,6 +106,8 @@ if ! git rev-parse --is-inside-work-tree &> /dev/null; then
   cd "$REPO_DIR"
 fi
 
+export MISE_TRUSTED_CONFIG_PATHS="${PWD}"
+
 # ------------------------------------------------------------------ #
 # Install mise if missing
 # ------------------------------------------------------------------ #
@@ -129,5 +131,4 @@ fi
 echo "==> Handing off to mise..."
 export MISE_CEILING_PATHS
 export MISE_AUTO_INSTALL=false
-export MISE_TRUSTED_CONFIG_PATHS="${PWD}"
 mise run nix:init "$HOSTNAME"
