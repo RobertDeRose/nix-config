@@ -568,7 +568,7 @@ fi
 [tasks."nix:history"]
 description = "List all system profile generations"
 quiet = true
-run = "nix profile history --profile /nix/var/nix/profiles/system"
+run = "sudo -H nix-env --list-generations --profile /nix/var/nix/profiles/system"
 
 [tasks."nix:repl"]
 description = "Open a nix repl with nixpkgs"
@@ -576,9 +576,18 @@ quiet = true
 run = "nix repl --expr 'import (builtins.getFlake \"nixpkgs\") {}'"
 
 [tasks."nix:clean"]
-description = "Remove all profile generations older than 7 days"
+description = "Remove system generations older than a retention window"
 quiet = true
-run = "sudo nix profile wipe-history --profile /nix/var/nix/profiles/system --older-than 7d"
+usage = 'arg "[older_than]" help="Retention window (examples: 7d, 30d, 4w)" default="7d"'
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+OLDER_THAN="${usage_older_than:-7d}"
+
+echo "==> Removing old system generations..."
+sudo -H nix-env --delete-generations "$OLDER_THAN" --profile /nix/var/nix/profiles/system
+'''
 
 [tasks."nix:gc"]
 description = "Garbage-collect all unused nix store entries (system + user)"
