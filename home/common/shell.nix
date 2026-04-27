@@ -5,6 +5,7 @@
 # Nerd Font glyphs are encoded via builtins.fromJSON "\uXXXX" so they survive
 # editors, formatters, and copy-paste that strip Private Use Area codepoints.
 {
+  config,
   pkgs,
   lib,
   ...
@@ -87,6 +88,7 @@ in
   programs.zsh = {
     enable = true;
     enableCompletion = true;
+    dotDir = config.home.homeDirectory;
     initContent = ''
       export PATH="$PATH:$HOME/.local/bin"
 
