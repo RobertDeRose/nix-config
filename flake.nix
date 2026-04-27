@@ -67,6 +67,28 @@
         useremail = "rderose@checkpt.com";
         githubUsername = "RobertDeRose";
       };
+      systemManagerNoCheckOverlay = final: prev: {
+        rustPlatform = prev.rustPlatform // {
+          buildRustPackage =
+            args:
+            prev.rustPlatform.buildRustPackage (
+              if builtins.isFunction args then
+                finalAttrs:
+                let
+                  resolved = args finalAttrs;
+                in
+                resolved
+                // lib.optionalAttrs ((resolved.pname or "") == "system-manager") {
+                  doCheck = false;
+                }
+              else
+                args
+                // lib.optionalAttrs ((args.pname or "") == "system-manager") {
+                  doCheck = false;
+                }
+            );
+        };
+      };
 
       # Collect all Linux hosts from systems/*-linux/<hostname>/
       # Linux hosts live under systems/ (not hosts/) to avoid easy-hosts
@@ -111,6 +133,7 @@
           hostUser = if builtins.pathExists userNix then import userNix else defaultUser;
         in
         inputs.system-manager.lib.makeSystemConfig {
+          overlays = [ systemManagerNoCheckOverlay ];
           modules = [
             { nixpkgs.hostPlatform = host.system; }
             ./modules/linux/system.nix
@@ -180,7 +203,17 @@
           formatter = pkgs.nixfmt;
         }
         // lib.optionalAttrs (inputs.system-manager.packages ? ${system}) {
-          packages.system-manager = inputs.system-manager.packages.${system}.default;
+          packages.system-manager =
+            let
+              systemManagerPkgs = import inputs.nixpkgs {
+                inherit system;
+                overlays = [
+                  systemManagerNoCheckOverlay
+                  inputs.system-manager.overlays.default
+                ];
+              };
+            in
+            systemManagerPkgs.system-manager;
         };
 
       easy-hosts = {

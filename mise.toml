@@ -323,7 +323,18 @@ else
 
   echo "==> Activating home-manager configuration..."
   nix build "${NIX_FLAGS[@]}" "${HOME_TARGET[@]}" --out-link .hm-result
-  HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
+  ACTIVATE_USER="${HOME_MANAGER_USER:-${USER:-$(whoami)}}"
+  ACTIVATE_HOME="$(getent passwd "$ACTIVATE_USER" | cut -d: -f6)"
+  ACTIVATE_PATH="/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:$PATH"
+  if [ -z "$ACTIVATE_HOME" ]; then
+    ACTIVATE_HOME="/home/$ACTIVATE_USER"
+  fi
+  sudo install -d -m755 -o "$ACTIVATE_USER" -g "$(id -gn "$ACTIVATE_USER")" "/nix/var/nix/profiles/per-user/$ACTIVATE_USER"
+  if [ "$(id -un)" = "$ACTIVATE_USER" ]; then
+    USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
+  else
+    sudo -u "$ACTIVATE_USER" env USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
+  fi
 fi
 
 # Suggest pushing the host branch to origin after a successful activation.
@@ -765,6 +776,123 @@ container exec "$NAME" bash -lc "sudo -iu tester bash -lc 'git config --global u
 
 echo ""
 echo "Bootstrap test completed in container '$NAME'."
+'''
+
+[tasks."test:deploy"]
+description = "Run Apple Container remote deployment validation"
+depends = ["test:image"]
+quiet = true
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+NAME="apple-ssh-test"
+IMAGE="local/nix-config-test-linux:24.04"
+TARGET="tester"
+SSH_KEY="$HOME/.ssh/id_ed25519"
+PUBKEY_FILE="$HOME/.ssh/id_ed25519.pub"
+PUBKEY_DIR="$(dirname "$PUBKEY_FILE")"
+PUBKEY_NAME="$(basename "$PUBKEY_FILE")"
+KNOWN_HOSTS="$HOME/.ssh/known_hosts"
+REPO_ROOT="$PWD"
+STAGE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/nix-config-deploy.XXXXXX")"
+
+cleanup() {
+  rm -rf "$STAGE_DIR"
+}
+trap cleanup EXIT
+
+if [ ! -f "$SSH_KEY" ] || [ ! -f "$PUBKEY_FILE" ]; then
+  echo "ERROR: SSH keypair not found at $SSH_KEY / $PUBKEY_FILE"
+  exit 1
+fi
+
+echo "==> Preparing staged repo copy for deploy test..."
+rsync -a --delete \
+  --exclude .git \
+  --exclude result \
+  --exclude .hm-result \
+  "$REPO_ROOT/" "$STAGE_DIR/"
+git -C "$STAGE_DIR" init -q
+git -C "$STAGE_DIR" add -A
+mise trust "$STAGE_DIR/mise.toml" >/dev/null
+mkdir -p "$STAGE_DIR/systems/aarch64-linux/apple-ssh-test"
+cp "$STAGE_DIR/templates/linux/system.nix" "$STAGE_DIR/systems/aarch64-linux/apple-ssh-test/system.nix"
+cp "$STAGE_DIR/templates/linux/home.nix" "$STAGE_DIR/systems/aarch64-linux/apple-ssh-test/home.nix"
+cat > "$STAGE_DIR/systems/aarch64-linux/apple-ssh-test/user.nix" <<'EOF'
+{
+  username = "tester";
+  fullname = "Container Test User";
+  useremail = "tester@localhost";
+  githubUsername = "RobertDeRose";
+}
+EOF
+git -C "$STAGE_DIR" add -A
+
+echo "==> Recreating Apple deploy test container '$NAME'..."
+container delete --force "$NAME" >/dev/null 2>&1 || true
+container run -d \
+  --name "$NAME" \
+  --dns 1.1.1.1 \
+  --dns 8.8.8.8 \
+  -v "$PUBKEY_DIR:/workspace/host-ssh" \
+  "$IMAGE" >/dev/null
+
+IP="$(container inspect "$NAME" | node -e 'const fs = require("fs"); const data = JSON.parse(fs.readFileSync(0, "utf8")); process.stdout.write(data[0].networks[0].ipv4Address.split("/")[0]);')"
+
+echo "==> Installing SSH key for $TARGET@$IP..."
+container exec "$NAME" sh -lc "cp /workspace/host-ssh/$PUBKEY_NAME /home/tester/.ssh/authorized_keys && chown tester:tester /home/tester/.ssh/authorized_keys && chmod 600 /home/tester/.ssh/authorized_keys"
+
+echo "==> Waiting for SSH to accept connections..."
+SSH_READY=false
+for _ in $(seq 1 120); do
+  if ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=2 "$TARGET@$IP" true >/dev/null 2>&1; then
+    SSH_READY=true
+    break
+  fi
+  sleep 1
+done
+
+if [ "$SSH_READY" != true ]; then
+  echo "ERROR: SSH on $TARGET@$IP did not become ready in time."
+  exit 1
+fi
+
+echo "==> Installing Nix on remote test target..."
+ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" 'export NIX_INSTALLER_NO_CONFIRM=true NIX_INSTALLER_ENABLE_FLAKES=true; curl -sSfL https://install.lix.systems/lix | sh -s -- install'
+
+echo "==> Configuring trusted-users and PATH on remote target..."
+ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" <<'EOF'
+sudo sh -lc '
+mkdir -p /etc/nix /usr/local/bin
+touch /etc/nix/nix.custom.conf
+if ! grep -qE "^(extra-)?trusted-users\\b.*\\btester\\b" /etc/nix/nix.conf /etc/nix/nix.custom.conf 2>/dev/null; then
+  if grep -q "^extra-trusted-users" /etc/nix/nix.custom.conf; then
+    sed -i "s/^extra-trusted-users.*/& tester/" /etc/nix/nix.custom.conf
+  else
+    printf "extra-trusted-users = tester\\n" >> /etc/nix/nix.custom.conf
+  fi
+fi
+ln -sf /nix/var/nix/profiles/default/bin/nix-store /usr/local/bin/nix-store
+ln -sf /nix/var/nix/profiles/default/bin/nix /usr/local/bin/nix
+systemctl restart nix-daemon.socket 2>/dev/null || true
+systemctl restart nix-daemon.service 2>/dev/null || true
+'
+EOF
+
+echo "==> Trusting remote host key in local known_hosts..."
+touch "$KNOWN_HOSTS"
+ssh-keygen -R "$IP" -f "$KNOWN_HOSTS" >/dev/null 2>&1 || true
+ssh-keyscan "$IP" >> "$KNOWN_HOSTS"
+
+echo "==> Running deployment test..."
+(
+  cd "$STAGE_DIR"
+  GIT_SSH_COMMAND="ssh -i '$SSH_KEY' -o IdentitiesOnly=yes" mise run nix:deploy "$TARGET@$IP" apple-ssh-test
+)
+
+echo ""
+echo "Deploy test completed against $TARGET@$IP using container '$NAME'."
 '''
 
 # ---------------------------------------------------------------------------
