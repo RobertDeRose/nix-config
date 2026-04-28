@@ -721,6 +721,13 @@ if [ -z "$BRANCH" ]; then
   exit 1
 fi
 
+# Validate branch name doesn't contain URL-breaking characters.
+# Note: '/' in branch names is fine — GitHub raw URLs resolve them correctly.
+if [[ "$BRANCH" =~ [[:space:]\?\#] ]]; then
+  echo "ERROR: Branch name '$BRANCH' contains characters that break URL construction."
+  exit 1
+fi
+
 case "$ORIGIN_URL" in
   git@github.com:*.git)
     REPO="${ORIGIN_URL#git@github.com:}"
