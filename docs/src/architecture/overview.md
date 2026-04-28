@@ -23,7 +23,7 @@ is not NixOS -- it manages config files and services on an existing distro.
 
 ```
 flake.nix
-├── modules/common/       Shared Nix settings, fonts, overlays
+├── modules/common/       Darwin Nix settings, fonts, overlays
 ├── modules/darwin/        macOS system defaults, Homebrew, iTerm2
 ├── modules/linux/         system-manager SSH, users, packages
 ├── home/common/           Cross-platform: shell, git, editors, tools
