@@ -176,16 +176,17 @@
         { pkgs, system, ... }:
         {
           formatter = pkgs.nixfmt;
-        }
-        // lib.optionalAttrs (builtins.hasAttr system inputs.system-manager.packages) {
-          packages.system-manager = inputs.system-manager.packages.${system}.default;
-        }
-        // lib.optionalAttrs (builtins.hasAttr system inputs.opencode.packages) {
-          packages.opencode = inputs.opencode.packages.${system}.opencode;
-          packages.openspec = inputs.opencode.packages.${system}.openspec;
-        }
-        // lib.optionalAttrs (builtins.hasAttr system inputs.worktrunk.packages) {
-          packages.worktrunk = inputs.worktrunk.packages.${system}.worktrunk;
+          packages =
+            lib.optionalAttrs (builtins.hasAttr system inputs.system-manager.packages) {
+              system-manager = inputs.system-manager.packages.${system}.default;
+            }
+            // lib.optionalAttrs (builtins.hasAttr system inputs.opencode.packages) {
+              opencode = inputs.opencode.packages.${system}.opencode;
+              openspec = inputs.opencode.packages.${system}.openspec;
+            }
+            // lib.optionalAttrs (builtins.hasAttr system inputs.worktrunk.packages) {
+              worktrunk = inputs.worktrunk.packages.${system}.worktrunk;
+            };
         };
 
       easy-hosts = {
