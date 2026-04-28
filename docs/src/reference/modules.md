@@ -6,9 +6,11 @@ Quick reference for what each module provides.
 
 ### `modules/common/nix-core.nix`
 
-Nix daemon settings shared across platforms. Configures experimental features
+Nix daemon settings for Darwin only. Configures experimental features
 (`nix-command`, `flakes`), binary caches, trusted users, and weekly garbage
-collection. Selects Lix or CppNix based on platform.
+collection. Selects Lix or CppNix based on platform. Linux uses its own Nix
+config in `modules/linux/system.nix` because system-manager does not support
+NixOS-style nix module options.
 
 ### `modules/common/fonts.nix`
 
