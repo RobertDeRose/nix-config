@@ -192,12 +192,12 @@ if [ -z "$GITHUB" ]; then
 fi
 
 # Escape a value for safe inclusion in a Nix string literal.
-# Nix strings are delimited by " and interpret \, ", and ${ specially.
+# In Nix "..." strings, special sequences are: \\, \", and ${
 nix_escape() {
   local val="$1"
-  val="${val//\\/\\\\}"    # backslash
-  val="${val//\"/\\\"}"    # double quote
-  val="${val//\$/\\\$}"    # dollar (prevents ${...} interpolation)
+  val="${val//\\/\\\\}"      # backslash → \\
+  val="${val//\"/\\\"}"      # double quote → \"
+  val="${val//\$\{/\\\$\{}"  # ${ → \${  (prevents interpolation)
   printf '%s' "$val"
 }
 
