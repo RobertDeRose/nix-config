@@ -94,9 +94,9 @@ If using the non-App Store version, the path will be different.
 
 ### `mas` (Mac App Store CLI) errors
 
-The repo uses a patched `mas` 6.0.1 via an overlay in `modules/common/overlays.nix`.
-If you see errors about Mac App Store apps failing to install, check that the
-overlay is still working and that you're signed into the App Store.
+`mas` is installed via Homebrew directly. If you see errors about Mac App
+Store apps failing to install, ensure you are signed into the App Store and
+that `mas` is up to date (`brew upgrade mas`).
 
 ### Sudo prompts during `darwin-rebuild switch`
 
