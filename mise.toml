@@ -308,8 +308,10 @@ if [ "$(uname -s)" = "Darwin" ]; then
       sudo mv "$f" "$f.before-nix-darwin"
     fi
   done
-  # nix.custom.conf is created by nix:trust and is never managed by nix-darwin
-  if [ -f /etc/nix/nix.custom.conf ]; then
+  # nix.custom.conf is created by nix:trust and is never managed by nix-darwin.
+  # Only move it aside on first-run; once nix-darwin owns the system it manages
+  # trusted-users and substituters via nix.settings.
+  if [ ! -e /run/current-system/darwin-version ] && [ -f /etc/nix/nix.custom.conf ]; then
     echo "==> Moving /etc/nix/nix.custom.conf aside for nix-darwin first-run..."
     sudo mv /etc/nix/nix.custom.conf /etc/nix/nix.custom.conf.before-nix-darwin
   fi
