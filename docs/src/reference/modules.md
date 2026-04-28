@@ -19,10 +19,8 @@ Meslo LG, Symbols Only), Font Awesome, and Material Design Icons.
 
 ### `modules/common/overlays.nix`
 
-Temporary nixpkgs overrides. Currently:
-
-- Disables direnv tests (fail under macOS SIP sandbox)
-- Replaces `mas` with version 6.0.1 (required by Homebrew, not yet in nixpkgs)
+Temporary nixpkgs overrides. The overlay list is currently empty and serves
+as a placeholder for future overrides as needed.
 
 ### `modules/darwin/system.nix`
 
