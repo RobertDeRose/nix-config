@@ -15,8 +15,8 @@ build_target() {
   local target="$1"
 
   echo "==> Building ${target}"
-  cachix watch-exec "$CACHE_NAME" -- \
-    nix build --accept-flake-config --no-link "$target"
+  nix build --accept-flake-config --no-link --print-out-paths "$target" |
+    cachix push "$CACHE_NAME"
 }
 
 case "$SYSTEM" in
