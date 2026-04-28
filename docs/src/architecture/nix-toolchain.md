@@ -23,13 +23,14 @@ These are required for `nix build`, `nix develop`, and flake-based workflows.
 
 ## Binary Caches
 
-Three substituters are configured to speed up builds:
+Four substituters are configured to speed up builds:
 
 | Cache | Purpose |
 |-------|---------|
 | `cache.nixos.org` | Official NixOS cache |
 | `nix-community.cachix.org` | Community packages (home-manager, etc.) |
 | `cache.numtide.com` | numtide packages (system-manager) |
+| `robertderose.cachix.org` | Personal cache (pre-built config derivations) |
 
 ## Garbage Collection
 
