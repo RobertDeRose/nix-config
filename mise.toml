@@ -103,7 +103,7 @@ mise x gh -- gh auth login
 '''
 
 [tasks.add-host]
-description = "Register a new host by creating its directory (no flake.nix editing needed)"
+description = "Scaffold a new host directory from templates"
 hide = true
 quiet = true
 raw = true
@@ -191,45 +191,36 @@ if [ -z "$GITHUB" ]; then
   fi
 fi
 
-# Persist git identity so future commits (and nix:switch) just work
-if ! git config user.name &>/dev/null; then
-  git config user.name "$FULLNAME"
-fi
-if ! git config user.email &>/dev/null; then
-  git config user.email "$EMAIL"
-fi
+# Escape a value for safe inclusion in a Nix string literal.
+# Nix strings are delimited by " and interpret \, ", and ${ specially.
+nix_escape() {
+  local val="$1"
+  val="${val//\\/\\\\}"    # backslash
+  val="${val//\"/\\\"}"    # double quote
+  val="${val//\$/\\\$}"    # dollar (prevents ${...} interpolation)
+  printf '%s' "$val"
+}
 
 cat > "${HOST_DIR}/user.nix" << EOF
 {
-  username = "${USERNAME}";
-  fullname = "${FULLNAME}";
-  useremail = "${EMAIL}";
-  githubUsername = "${GITHUB}";
+  username = "$(nix_escape "$USERNAME")";
+  fullname = "$(nix_escape "$FULLNAME")";
+  useremail = "$(nix_escape "$EMAIL")";
+  githubUsername = "$(nix_escape "$GITHUB")";
 }
 EOF
 echo "    Generated ${HOST_DIR}/user.nix for user '${USERNAME}'"
 
-# Ensure host files are always tracked — nix flakes only see git-tracked files.
+# Ensure host files are tracked — nix flakes only see git-tracked files.
 git add "${HOST_DIR}"
 
-# Create a feature branch for this host (skip if it already exists or we're in CI).
-# Do this before committing so the commit lands on the feature branch, not the current branch.
-if [[ "${CI:-false}" != "true" ]] && ! git rev-parse --verify "host/${HOSTNAME}" &>/dev/null; then
-  git checkout -b "host/${HOSTNAME}"
-fi
-
-# Commit the new host files so the flake doesn't see a dirty tree.
-if [[ "${CI:-false}" != "true" ]] && ! git diff --cached --quiet; then
-  git commit -m "feat: add host ${HOSTNAME} (${SYSTEM})"
-fi
-
-[ "${MISE_TASK:-}" != "add_host" ] && exit 0
-
 echo "
-Added '${HOSTNAME}' as a ${OS} host in: ${HOST_DIR}
+Scaffolded '${HOSTNAME}' as a ${OS} host in: ${HOST_DIR}
 
-To bootstrap the machine, clone this repo on it and run:
-  ./bootstrap.sh ${HOSTNAME}
+Next steps — apply the configuration with:
+  mise run nix:init ${HOSTNAME}
+  # or, if Nix is already installed:
+  mise run nix:switch
 "
 '''
 
