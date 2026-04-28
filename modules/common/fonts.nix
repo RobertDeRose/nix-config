@@ -1,5 +1,5 @@
 # modules/common/fonts.nix
-# Shared font packages — imported by both Darwin and NixOS system modules.
+# Font packages for Darwin system configuration.
 { pkgs, ... }:
 {
   fonts.packages = with pkgs; [
