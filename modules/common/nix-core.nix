@@ -1,5 +1,6 @@
 # modules/common/nix-core.nix
-# Shared Nix daemon settings — works on both nix-darwin and NixOS.
+# Nix daemon settings for Darwin (nix-darwin). Linux uses system-manager
+# which has its own nix config approach in modules/linux/system.nix.
 {
   pkgs,
   lib,
