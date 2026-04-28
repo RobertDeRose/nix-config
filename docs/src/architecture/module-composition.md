@@ -11,7 +11,7 @@ modules/darwin/apps.nix        Homebrew casks/brews/masApps + nix system package
 modules/darwin/iterm2.nix      Declarative iTerm2 plist management
 modules/common/nix-core.nix    Nix daemon, caches, GC, experimental features
 modules/common/fonts.nix       Nerd Fonts, Font Awesome, Material Design Icons
-modules/common/overlays.nix    Temporary nixpkgs patches
+modules/common/overlays.nix    Nixpkgs overlay placeholder (currently empty)
 ```
 
 These are imported by `flake.nix` for every Darwin host. A host's `default.nix`
