@@ -88,7 +88,13 @@
             acc: hostname: _:
             let
               hostDir = archDir + "/${hostname}";
-              system = if lib.hasPrefix "x86_64" archName then "x86_64-linux" else "aarch64-linux";
+              system =
+                if lib.hasPrefix "x86_64" archName then
+                  "x86_64-linux"
+                else if lib.hasPrefix "aarch64" archName then
+                  "aarch64-linux"
+                else
+                  throw "Unsupported Linux architecture directory '${archName}'. Expected 'x86_64-linux' or 'aarch64-linux'.";
             in
             if acc ? "${hostname}" then
               throw "Duplicate Linux hostname '${hostname}' found in systems/*-linux/. Hostnames must be unique across Linux architectures."
