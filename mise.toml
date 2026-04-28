@@ -234,7 +234,7 @@ To bootstrap the machine, clone this repo on it and run:
 '''
 
 [tasks.activate]
-description = "Build and activate the nix config for a host"
+description = "Activate host config (evaluate-only in CI)"
 depends = ["install-nix"]
 hide = true
 quiet = true
