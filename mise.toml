@@ -33,6 +33,8 @@ run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
 # Skip if Nix is already installed
 if [ -e /nix/receipt.json ]; then
   echo "Nix is already installed, skipping."
@@ -266,6 +268,7 @@ usage = 'arg "[hostname]" help="Hostname to activate"'
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 # Prefer explicit GITHUB_TOKEN, fall back to gh CLI auth if available
 if [ -z "${GITHUB_TOKEN:-}" ]; then
@@ -291,10 +294,10 @@ fi
 NIX_FLAGS=(--accept-flake-config --extra-experimental-features "nix-command flakes")
 HOSTNAME="${usage_hostname:-$(hostname -s)}"
 if [ "$(uname -s)" = "Darwin" ]; then
-  TARGET=(".#darwinConfigurations.${HOSTNAME}.system")
+  TARGET=("$REPO_ROOT#darwinConfigurations.${HOSTNAME}.system")
 else
-  TARGET=(".#systemConfigs.${HOSTNAME}")
-  HOME_TARGET=(".#homeConfigurations.${HOSTNAME}.activationPackage")
+  TARGET=("$REPO_ROOT#systemConfigs.${HOSTNAME}")
+  HOME_TARGET=("$REPO_ROOT#homeConfigurations.${HOSTNAME}.activationPackage")
 fi
 
 echo "==> $( [ "${CI:-false}" = "true" ] && echo "Validating" || echo "Deploying" ) configuration for '${HOSTNAME}'..."
@@ -320,7 +323,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
     sleep 2
   fi
 
-  nix build "${NIX_FLAGS[@]}" "${TARGET[@]}"
+  nix build "${NIX_FLAGS[@]}" --out-link "$REPO_ROOT/result" "${TARGET[@]}"
 
   # nix-darwin refuses to activate if /etc/nix/ contains config files it didn't
   # write.  On first run (or after a Lix/Nix re-install), move them aside so
@@ -341,14 +344,14 @@ if [ "$(uname -s)" = "Darwin" ]; then
   fi
 
   echo "==> Activating configuration..."
-  sudo ./result/sw/bin/darwin-rebuild switch --flake ".#${HOSTNAME}"
+  sudo "$REPO_ROOT/result/sw/bin/darwin-rebuild" switch --flake "$REPO_ROOT#${HOSTNAME}"
 else
   echo "==> Activating system configuration..."
-  nix build "${NIX_FLAGS[@]}" ".#system-manager"
-  ./result/bin/system-manager switch --flake ".#${HOSTNAME}" --sudo
+  nix build "${NIX_FLAGS[@]}" --out-link "$REPO_ROOT/result" "$REPO_ROOT#system-manager"
+  "$REPO_ROOT/result/bin/system-manager" switch --flake "$REPO_ROOT#${HOSTNAME}" --sudo
 
   echo "==> Activating home-manager configuration..."
-  nix build "${NIX_FLAGS[@]}" "${HOME_TARGET[@]}" --out-link .hm-result
+  nix build "${NIX_FLAGS[@]}" "${HOME_TARGET[@]}" --out-link "$REPO_ROOT/.hm-result"
   ACTIVATE_USER="${HOME_MANAGER_USER:-${USER:-$(whoami)}}"
   ACTIVATE_HOME="$(getent passwd "$ACTIVATE_USER" | cut -d: -f6)"
   ACTIVATE_PATH="/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:$PATH"
@@ -357,9 +360,9 @@ else
   fi
   sudo install -d -m755 -o "$ACTIVATE_USER" -g "$(id -gn "$ACTIVATE_USER")" "/nix/var/nix/profiles/per-user/$ACTIVATE_USER"
   if [ "$(id -un)" = "$ACTIVATE_USER" ]; then
-    USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
+    USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak "$REPO_ROOT/.hm-result/activate"
   else
-    sudo -u "$ACTIVATE_USER" env USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
+    sudo -u "$ACTIVATE_USER" env USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak "$REPO_ROOT/.hm-result/activate"
   fi
 fi
 
@@ -407,6 +410,7 @@ run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 HOST="$(hostname -s)"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 # Prefer explicit GITHUB_TOKEN, fall back to gh CLI auth if available
 if [ -z "${GITHUB_TOKEN:-}" ]; then
@@ -429,12 +433,23 @@ fi
 
 echo ""
 if [ "$(uname -s)" = "Darwin" ]; then
-  sudo darwin-rebuild switch --flake ".#$HOST" "${REBUILD_FLAGS[@]}"
+  sudo darwin-rebuild switch --flake "$REPO_ROOT#$HOST" "${REBUILD_FLAGS[@]}"
 else
-  nix build "${NIX_FLAGS[@]}" ".#system-manager"
-  ./result/bin/system-manager switch --flake ".#$HOST" --sudo
-  nix build "${NIX_FLAGS[@]}" ".#homeConfigurations.$HOST.activationPackage" --out-link .hm-result
-  HOME_MANAGER_BACKUP_EXT=hm_bak ./.hm-result/activate
+  nix build "${NIX_FLAGS[@]}" --out-link "$REPO_ROOT/result" "$REPO_ROOT#system-manager"
+  "$REPO_ROOT/result/bin/system-manager" switch --flake "$REPO_ROOT#$HOST" --sudo
+  nix build "${NIX_FLAGS[@]}" "$REPO_ROOT#homeConfigurations.$HOST.activationPackage" --out-link "$REPO_ROOT/.hm-result"
+  ACTIVATE_USER="${HOME_MANAGER_USER:-${USER:-$(whoami)}}"
+  ACTIVATE_HOME="$(getent passwd "$ACTIVATE_USER" | cut -d: -f6)"
+  ACTIVATE_PATH="/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:$PATH"
+  if [ -z "$ACTIVATE_HOME" ]; then
+    ACTIVATE_HOME="/home/$ACTIVATE_USER"
+  fi
+  sudo install -d -m755 -o "$ACTIVATE_USER" -g "$(id -gn "$ACTIVATE_USER")" "/nix/var/nix/profiles/per-user/$ACTIVATE_USER"
+  if [ "$(id -un)" = "$ACTIVATE_USER" ]; then
+    USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak "$REPO_ROOT/.hm-result/activate"
+  else
+    sudo -u "$ACTIVATE_USER" env USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak "$REPO_ROOT/.hm-result/activate"
+  fi
 fi
 '''
 
