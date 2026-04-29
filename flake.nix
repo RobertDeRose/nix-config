@@ -37,6 +37,7 @@
 
     opencode = {
       url = "github:numtide/llm-agents.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     worktrunk = {
@@ -165,7 +166,6 @@
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         inputs.easy-hosts.flakeModule
-        inputs.flake-parts.flakeModules.easyOverlay
       ];
 
       flake.systemConfigs = linuxHosts;
