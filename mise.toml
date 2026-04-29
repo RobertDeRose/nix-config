@@ -574,6 +574,7 @@ set -euo pipefail
 
 USER="$(whoami)"
 CONF="/etc/nix/nix.custom.conf"
+USER_REGEX="$(printf '%s' "$USER" | sed 's/[][(){}.^$*+?|\\-]/\\&/g')"
 
 # Ensure the file exists (nix.conf already includes it via !include)
 if [ ! -f "$CONF" ]; then
@@ -583,7 +584,7 @@ fi
 
 # Check if the user is already trusted in any nix config file
 for f in /etc/nix/nix.conf "$CONF"; do
-  if [ -f "$f" ] && grep -qE "^(extra-)?trusted-users\b.*\b${USER}\b" "$f" 2>/dev/null; then
+  if [ -f "$f" ] && grep -qE "^(extra-)?trusted-users\b.*\b${USER_REGEX}\b" "$f" 2>/dev/null; then
     echo "'$USER' is already a trusted user."
     exit 0
   fi
@@ -592,7 +593,13 @@ done
 # Append to existing extra-trusted-users line, or create one
 if grep -qE "^extra-trusted-users\b" "$CONF" 2>/dev/null; then
   echo "==> Adding '$USER' to existing extra-trusted-users..."
-  sudo sed -i.bak "s/^\(extra-trusted-users.*\)/\1 ${USER}/" "$CONF"
+  tmp_conf="$(mktemp)"
+  trap 'rm -f "$tmp_conf"' EXIT
+  sudo awk -v user="$USER" '
+    /^extra-trusted-users[[:space:]]*=/ { print $0 " " user; next }
+    { print }
+  ' "$CONF" > "$tmp_conf"
+  sudo install -m 0644 "$tmp_conf" "$CONF"
 else
   echo "==> Adding extra-trusted-users line for '$USER'..."
   echo "extra-trusted-users = ${USER}" | sudo tee -a "$CONF" > /dev/null
