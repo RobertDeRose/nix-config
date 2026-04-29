@@ -1,5 +1,5 @@
-# modules/common/fonts.nix
-# Font packages for Darwin system configuration.
+# modules/darwin/fonts.nix
+# System-wide font packages installed via nix-darwin.
 { pkgs, ... }:
 {
   fonts.packages = with pkgs; [

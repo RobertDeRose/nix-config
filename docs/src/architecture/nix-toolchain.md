@@ -7,7 +7,7 @@ its improved error messages and performance. The exception is **x86_64-darwin**
 (Intel Macs), where Lix dropped support -- those machines use the upstream
 CppNix package instead.
 
-The selection logic lives in `modules/common/nix-core.nix`:
+The selection logic lives in `modules/darwin/config.nix`:
 
 ```nix
 nix.package =
