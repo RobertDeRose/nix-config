@@ -579,7 +579,7 @@ IS_DARWIN=false
 
 # nix-darwin manages trusted-users in nix.conf directly after first activation.
 if $IS_DARWIN && [ -e /run/current-system/darwin-version ]; then
-  if [ -f /etc/nix/nix.conf ] && grep -qE "^(extra-)?trusted-users\b.*\b${USER_REGEX}\b" /etc/nix/nix.conf 2>/dev/null; then
+  if [ -f /etc/nix/nix.conf ] && grep -qE "^(extra-)?trusted-users[[:space:]]*=.*(^|[[:space:]])${USER_REGEX}([[:space:]]|$)" /etc/nix/nix.conf 2>/dev/null; then
     echo "'$USER' is already a trusted user."
     exit 0
   fi
@@ -597,14 +597,14 @@ fi
 
 # Check if the user is already trusted in any nix config file
 for f in /etc/nix/nix.conf "$CONF"; do
-  if [ -f "$f" ] && grep -qE "^(extra-)?trusted-users\b.*\b${USER_REGEX}\b" "$f" 2>/dev/null; then
+  if [ -f "$f" ] && grep -qE "^(extra-)?trusted-users[[:space:]]*=.*(^|[[:space:]])${USER_REGEX}([[:space:]]|$)" "$f" 2>/dev/null; then
     echo "'$USER' is already a trusted user."
     exit 0
   fi
 done
 
 # Append to existing extra-trusted-users line, or create one
-if grep -qE "^extra-trusted-users\b" "$CONF" 2>/dev/null; then
+if grep -qE "^extra-trusted-users([[:space:]]|=)" "$CONF" 2>/dev/null; then
   echo "==> Adding '$USER' to existing extra-trusted-users..."
   tmp_conf="$(mktemp)"
   trap 'rm -f "$tmp_conf"' EXIT
