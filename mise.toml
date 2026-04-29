@@ -34,8 +34,6 @@ run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-
 # Skip if Nix is already installed
 if [ -e /nix/receipt.json ]; then
   echo "Nix is already installed, skipping."
