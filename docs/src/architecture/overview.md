@@ -23,9 +23,9 @@ is not NixOS -- it manages config files and services on an existing distro.
 
 ```
 flake.nix
-├── modules/common/       Darwin Nix settings, fonts, overlays
-├── modules/darwin/        macOS system defaults, Homebrew, iTerm2
-├── modules/linux/         system-manager SSH, users, packages
+├── modules/common/        Shared cross-platform system building blocks (cache data)
+├── modules/darwin/        Nix daemon config, system defaults, Homebrew, fonts, iTerm2
+├── modules/linux/         system-manager SSH, users, packages, Nix substituters
 ├── home/common/           Cross-platform: shell, git, editors, tools
 ├── home/darwin.nix        macOS-specific entry point + SSH agent
 ├── home/linux.nix         Linux-specific entry point

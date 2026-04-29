@@ -16,7 +16,7 @@ configured tools for a consistent visual experience.
 
 ## Fonts
 
-Font configuration lives in `modules/common/fonts.nix` (Darwin only — Linux
+Font configuration lives in `modules/darwin/fonts.nix` (Linux
 servers are headless and do not use GUI fonts):
 
 - **DejaVu SansM Nerd Font** -- Ghostty terminal

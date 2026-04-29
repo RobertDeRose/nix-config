@@ -210,7 +210,7 @@
           modules =
             if class == "darwin" then
               [
-                ./modules/common/nix-core.nix
+                ./modules/darwin/config.nix
                 ./modules/darwin/system.nix
                 ./modules/darwin/apps.nix
                 ./modules/darwin/iterm2.nix

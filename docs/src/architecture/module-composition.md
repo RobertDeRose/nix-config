@@ -9,21 +9,23 @@ previous one, and Nix's module system merges lists and attribute sets automatica
 modules/darwin/system.nix      macOS defaults (Dock, Finder, keyboard, trackpad)
 modules/darwin/apps.nix        Homebrew casks/brews/masApps + nix system packages
 modules/darwin/iterm2.nix      Declarative iTerm2 plist management
-modules/common/nix-core.nix    Nix daemon, caches, GC, experimental features
-modules/common/fonts.nix       Nerd Fonts, Font Awesome, Material Design Icons
-modules/common/overlays.nix    Nixpkgs overlay placeholder (currently empty)
+modules/common/cache.nix       Shared binary cache URLs and public keys
+modules/darwin/config.nix      nix-darwin Nix daemon, GC, experimental features
+modules/darwin/fonts.nix       Nerd Fonts, Font Awesome, Material Design Icons
 ```
 
-These are imported by `flake.nix` for every Darwin host. A host's `default.nix`
-can set any of the same options to add packages, change defaults, or enable features
-like the linux-builder.
+These make up the Darwin system layer for every macOS host. `flake.nix` imports
+`modules/darwin/config.nix`, `modules/darwin/system.nix`, `modules/darwin/apps.nix`,
+and `modules/darwin/iterm2.nix`; `config.nix` and `system.nix` then pull in the
+shared cache data and font packages. A host's `default.nix` can set any of the same
+options to add packages, change defaults, or enable features like the linux-builder.
 
 ## System Modules (Linux)
 
 ```
-modules/linux/system.nix       system-manager: SSH hardening, users, packages, locale
-modules/common/nix-core.nix    Shared Nix daemon settings
-modules/common/fonts.nix       Shared fonts
+modules/common/cache.nix       Shared binary cache URLs and public keys
+modules/linux/system.nix       system-manager: SSH hardening, users, packages,
+                               locale, Nix substituter config
 ```
 
 ## Home-Manager Modules
