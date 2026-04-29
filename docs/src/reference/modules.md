@@ -4,23 +4,23 @@ Quick reference for what each module provides.
 
 ## System Modules
 
-### `modules/common/nix-core.nix`
+### `modules/common/cache.nix`
 
-Nix daemon settings for Darwin only. Configures experimental features
-(`nix-command`, `flakes`), binary caches, trusted users, and weekly garbage
-collection. Selects Lix or CppNix based on platform. Linux uses its own Nix
-config in `modules/linux/system.nix` because system-manager does not support
-NixOS-style nix module options.
+Shared binary cache/substituter data used by both Darwin and Linux system
+config. Defines the cache URLs and trusted public keys in one place to avoid
+drift between nix-darwin and system-manager.
 
-### `modules/common/fonts.nix`
+### `modules/darwin/config.nix`
+
+Nix daemon settings for nix-darwin hosts. Configures experimental features
+(`nix-command`, `flakes`), trusted users, binary caches (from
+`modules/common/cache.nix`), weekly garbage collection, and Lix/CppNix
+selection.
+
+### `modules/darwin/fonts.nix`
 
 Font packages installed system-wide: Nerd Fonts (DejaVu Sans Mono, Fira Code,
 Meslo LG, Symbols Only), Font Awesome, and Material Design Icons.
-
-### `modules/common/overlays.nix`
-
-Temporary nixpkgs overrides. The overlay list is currently empty and serves
-as a placeholder for future overrides as needed.
 
 ### `modules/darwin/system.nix`
 

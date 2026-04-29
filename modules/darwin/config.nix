@@ -1,6 +1,6 @@
-# modules/common/nix-core.nix
-# Nix daemon settings for Darwin (nix-darwin). Linux uses system-manager
-# which has its own nix config approach in modules/linux/system.nix.
+# modules/darwin/config.nix
+# nix-darwin-specific Nix daemon settings: caches, GC, trusted users,
+# experimental features, and Lix/CppNix selection.
 {
   pkgs,
   lib,
@@ -8,11 +8,10 @@
   ...
 }:
 let
+  cache = import ../common/cache.nix;
   useCppNix = pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.hostPlatform.isx86_64;
 in
 {
-  imports = [ ./overlays.nix ];
-
   nixpkgs.config.allowUnfree = true;
 
   nix = {
@@ -29,20 +28,10 @@ in
       ];
       trusted-users = [ username ];
 
-      # Bake extra caches into nix.conf so darwin-rebuild and system-manager
-      # can use them without --accept-flake-config.
-      extra-substituters = [
-        "https://cache.nixos.org"
-        "https://nix-community.cachix.org"
-        "https://cache.numtide.com"
-        "https://robertderose.cachix.org"
-      ];
-      extra-trusted-public-keys = [
-        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-        "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
-        "robertderose.cachix.org-1:LGSby4A1Kg1W19IC5AoB3oGhLSgfg1x3j2GF0Ve2hKM="
-      ];
+      # Bake extra caches into nix.conf so darwin-rebuild can use them without
+      # relying on flake-level accept-flake-config behavior.
+      extra-substituters = cache.substituters;
+      extra-trusted-public-keys = cache.trustedPublicKeys;
     }
     // lib.optionalAttrs useCppNix {
       # CppNix 2.24+ only — Lix doesn't recognise this setting

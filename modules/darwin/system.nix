@@ -8,7 +8,7 @@
   ...
 }:
 {
-  imports = [ ../common/fonts.nix ];
+  imports = [ ./fonts.nix ];
 
   # Declare the primary user — nix-darwin needs this for system features,
   # and home-manager reads users.users.<name>.home for homeDirectory.
