@@ -704,6 +704,11 @@ run = """
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ "$(uname -s)" != "Darwin" ]; then
+  echo "ERROR: iterm:export is macOS-only."
+  exit 1
+fi
+
 SRC="$HOME/Library/Preferences/com.googlecode.iterm2.plist"
 DST="config/iterm2/com.googlecode.iterm2.plist"
 
