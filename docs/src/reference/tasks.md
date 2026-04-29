@@ -47,7 +47,9 @@ All tasks are defined in `mise.toml` and are safest to run as
 
 | Task | Description |
 |------|-------------|
+| `test:image` | Build the Apple Container Linux test image (hidden) |
 | `test:bootstrap` | Run Linux bootstrap validation in an Apple container |
+| `test:deploy` | Run Apple Container remote deployment validation |
 
 ## Documentation
 

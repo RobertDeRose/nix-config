@@ -4,7 +4,7 @@
 .
 ├── flake.nix                  # Entry point — flake-parts + easy-hosts
 ├── flake.lock                 # Pinned input revisions
-├── mise.toml                  # Task runner (30+ tasks)
+├── mise.toml                  # Task runner (25 tasks)
 ├── bootstrap.sh               # One-liner bootstrap (curl | bash)
 ├── hk.pkl                     # Pre-commit hook config (Pkl language)
 │
@@ -36,10 +36,10 @@
 │
 ├── modules/                   # System-level configuration modules
 │   ├── common/
-│   │   ├── nix-core.nix       # Nix daemon, caches, GC, Lix/CppNix
-│   │   ├── fonts.nix          # Shared fonts
-│   │   └── overlays.nix       # Temporary nixpkgs patches
+│   │   └── cache.nix          # Shared binary cache URLs and public keys
 │   ├── darwin/
+│   │   ├── config.nix         # nix-darwin Nix daemon settings
+│   │   ├── fonts.nix          # Darwin-only system fonts
 │   │   ├── system.nix         # macOS defaults (Dock, Finder, trackpad...)
 │   │   ├── apps.nix           # Homebrew + nix system packages
 │   │   └── iterm2.nix         # iTerm2 plist management
@@ -79,7 +79,8 @@
 │   └── src/
 │
 └── .github/workflows/
-    ├── ci.yml                 # Validate: flake check + build configs
+    ├── ci.yml                 # Validate: config eval and build checks
+    ├── cache-refresh.yml      # Refresh flake.lock, warm caches, auto-merge
     ├── hk.yml                 # Lint: hk checks on PRs
     └── docs.yml               # Deploy: mdBook to GitHub Pages
 ```
