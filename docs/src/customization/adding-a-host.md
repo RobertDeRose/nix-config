@@ -15,8 +15,8 @@ mise run add-host <hostname> [os] [arch]
 - `arch` accepts `aarch64` or `x86_64` (defaults to current machine)
 
 This creates the host directory from the appropriate template, generates
-`user.nix` from git config, creates a feature branch `host/<hostname>`, and
-commits.
+`user.nix` from git config (or interactive prompts), creates a feature branch
+`host/<hostname>`, and commits the new files so the flake can see them.
 
 ## Manual Way
 

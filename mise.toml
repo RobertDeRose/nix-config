@@ -59,7 +59,11 @@ if [ "$(uname -sm)" = "Darwin x86_64" ]; then
 else
   # Lix installer self-test may warn about daemon socket not being ready yet;
   # this is a known race condition — verify nix works after a short wait.
-  curl -sSfL https://install.lix.systems/lix | bash -s -- install || true
+  lix_rc=0
+  curl -sSfL https://install.lix.systems/lix | bash -s -- install || lix_rc=$?
+  if [ $lix_rc -ne 0 ]; then
+    echo "WARNING: Lix installer exited with code $lix_rc (may be a known race condition — verifying...)"
+  fi
 fi
 
 # Wait for the daemon socket to come up before continuing
@@ -103,7 +107,7 @@ mise x gh -- gh auth login
 '''
 
 [tasks.add-host]
-description = "Scaffold a new host directory from templates"
+description = "Scaffold a new host from templates, branch, and commit"
 hide = true
 quiet = true
 raw = true
@@ -135,6 +139,18 @@ if [ "${OS}" != "darwin" ] && [ "${OS}" != "linux" ]; then
 fi
 
 SYSTEM="${ARCH}-${OS}"
+HOST_BRANCH="host/${HOSTNAME}"
+
+if [[ "${CI:-false}" != "true" ]]; then
+  CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+  if [ "$CURRENT_BRANCH" != "$HOST_BRANCH" ]; then
+    if git rev-parse --verify "$HOST_BRANCH" &>/dev/null; then
+      git checkout "$HOST_BRANCH"
+    else
+      git checkout -b "$HOST_BRANCH"
+    fi
+  fi
+fi
 
 # Darwin hosts live under hosts/ (managed by easy-hosts);
 # Linux hosts live under systems/ (managed by system-manager).
@@ -192,7 +208,7 @@ if [ -z "$GITHUB" ]; then
 fi
 
 # Escape a value for safe inclusion in a Nix string literal.
-# In Nix "..." strings, special sequences are: \\, \", and ${
+# For this use case, escape backslashes, double quotes, and ${ to prevent interpolation.
 nix_escape() {
   local val="$1"
   val="${val//\\/\\\\}"      # backslash → \\
@@ -201,26 +217,43 @@ nix_escape() {
   printf '%s' "$val"
 }
 
-cat > "${HOST_DIR}/user.nix" << EOF
 {
-  username = "$(nix_escape "$USERNAME")";
-  fullname = "$(nix_escape "$FULLNAME")";
-  useremail = "$(nix_escape "$EMAIL")";
-  githubUsername = "$(nix_escape "$GITHUB")";
-}
-EOF
+  printf '{\n'
+  printf '  username = "%s";\n' "$(nix_escape "$USERNAME")"
+  printf '  fullname = "%s";\n' "$(nix_escape "$FULLNAME")"
+  printf '  useremail = "%s";\n' "$(nix_escape "$EMAIL")"
+  printf '  githubUsername = "%s";\n' "$(nix_escape "$GITHUB")"
+  printf '}\n'
+} > "${HOST_DIR}/user.nix"
 echo "    Generated ${HOST_DIR}/user.nix for user '${USERNAME}'"
 
 # Ensure host files are tracked — nix flakes only see git-tracked files.
 git add "${HOST_DIR}"
 
+# Commit the new host files so the flake doesn't see a dirty tree.
+if [[ "${CI:-false}" != "true" ]] && ! git diff --cached --quiet -- "${HOST_DIR}"; then
+  git_commit_args=(-m "feat: add host ${HOSTNAME} (${SYSTEM})" -- "${HOST_DIR}")
+  if git config user.name &>/dev/null && git config user.email &>/dev/null; then
+    git commit "${git_commit_args[@]}"
+  else
+    GIT_AUTHOR_NAME="$FULLNAME" \
+    GIT_AUTHOR_EMAIL="$EMAIL" \
+    GIT_COMMITTER_NAME="$FULLNAME" \
+    GIT_COMMITTER_EMAIL="$EMAIL" \
+    git commit "${git_commit_args[@]}"
+  fi
+fi
+
 echo "
-Scaffolded '${HOSTNAME}' as a ${OS} host in: ${HOST_DIR}
+Added '${HOSTNAME}' as a ${OS} host in: ${HOST_DIR}
 
 Next steps — apply the configuration with:
   mise run nix:init ${HOSTNAME}
   # or, if Nix is already installed:
   mise run nix:switch
+
+To push the host branch to origin:
+  git push -u origin ${HOST_BRANCH}
 "
 '''
 
