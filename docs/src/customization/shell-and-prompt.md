@@ -34,9 +34,9 @@ shows:
 | Segment | What it displays |
 |---------|-----------------|
 | OS icon | macOS/Linux logo |
-| Directory | Current path (truncated to 3 levels) |
+| Directory | Current path (truncated to 2 levels) |
 | Git branch | Branch name + status |
-| Languages | Node, Python, Rust, Go, Java versions (when detected) |
+| Languages | Node.js, Python, Rust, and C versions (when detected) |
 | Duration | Command execution time (if > 2 seconds) |
 | Shell | Current shell name |
 | Time | HH:MM format |
@@ -47,12 +47,13 @@ Global aliases defined in `shell.nix`:
 
 | Alias | Command | Notes |
 |-------|---------|-------|
-| `ls`, `l`, `ll`, `la` | `eza` variants | With icons and git status |
+| `ls` | `eza` | Directory listing with icons |
 | `cat`, `less` | `bat` | Syntax-highlighted pager |
 | `oc` | `opencode` | AI coding agent |
 | `gst`, `gd`, `ga`, `gc`... | git shortcuts | Common git operations |
 | `docker` | `container` | macOS only (Apple container runtime) |
-| `up N` | `cd ../../../...` | Navigate up N directories |
+| `up N` | shell function | Navigate up N directories |
+| `..`, `...`, `....`, `.....` | `up 1..4` | Convenience directory aliases |
 
 Per-host aliases go in `hosts/<arch>-darwin/<hostname>/home.nix` or
 `systems/<arch>-linux/<hostname>/home.nix` -- see
