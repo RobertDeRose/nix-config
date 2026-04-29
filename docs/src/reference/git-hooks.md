@@ -31,6 +31,7 @@ hk fix -a
 | `shfmt` | `**/*.sh` | Format shell scripts |
 | `pkl_format` | `**/*.pkl` | Format Pkl files |
 | `tombi_format` | `**/*.toml` | Format TOML files |
+| `tombi` | `**/*.toml` | Lint TOML files |
 | `actionlint` | `.github/workflows/*.yml` | Lint GitHub Actions |
 | `shellcheck` | `**/*.sh` | Lint shell scripts |
 | `mise-fmt` | `mise.toml` | Format the mise config |
@@ -43,9 +44,11 @@ hk fix -a
 | `detect-private-key` | Catch accidentally committed private keys |
 | `check-merge-conflict` | Detect merge conflict markers |
 | `check-added-large-files` | Prevent large file commits |
-| `check-byte-order-marker` | Detect UTF-8 BOM |
-| `check-case-conflict` | Detect case-only filename conflicts |
-| `check-symlinks` | Validate symlink targets exist |
+| `check_byte_order_marker` | Detect UTF-8 BOM |
+| `check_case_conflict` | Detect case-only filename conflicts |
+| `check_executables_have_shebangs` | Ensure executable files have shebangs |
+| `check-exec-shebangs` | Alternate executable shebang check alias |
+| `check_symlinks` | Validate symlink targets exist |
 
 ### Whitespace
 
