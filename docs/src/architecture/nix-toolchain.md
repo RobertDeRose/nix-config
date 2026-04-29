@@ -11,9 +11,9 @@ The selection logic lives in `modules/darwin/config.nix`:
 
 ```nix
 nix.package =
-  if pkgs.stdenv.hostPlatform.system == "x86_64-darwin"
+  if pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.hostPlatform.isx86_64
   then pkgs.nix
-  else pkgs.lix;
+  else pkgs.lixPackageSets.latest.lix;
 ```
 
 ## Experimental Features
