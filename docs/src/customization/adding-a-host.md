@@ -27,7 +27,8 @@ mkdir -p hosts/aarch64-darwin/<hostname>
 cp templates/darwin/* hosts/aarch64-darwin/<hostname>/
 ```
 
-Edit `user.nix` with the machine's identity fields:
+Then create `hosts/aarch64-darwin/<hostname>/user.nix` with the machine's
+identity fields:
 
 ```nix
 {
@@ -45,7 +46,7 @@ mkdir -p systems/x86_64-linux/<hostname>
 cp templates/linux/* systems/x86_64-linux/<hostname>/
 ```
 
-Edit `user.nix` the same way.
+Then create `systems/x86_64-linux/<hostname>/user.nix` the same way.
 
 ## Testing
 
