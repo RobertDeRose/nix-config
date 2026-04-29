@@ -30,6 +30,9 @@ jobs:
       - uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
         with:
           extra_nix_config: |
+            # Keep these cache settings in sync with modules/common/cache.nix and
+            # tasks.install-nix in mise.toml; this workflow needs them before any
+            # managed system config is evaluated.
             experimental-features = nix-command flakes
             access-tokens = github.com=${{ github.token }}
             extra-substituters = https://cache.nixos.org https://nix-community.cachix.org https://cache.numtide.com https://robertderose.cachix.org
@@ -81,6 +84,9 @@ jobs:
       - uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
         with:
           extra_nix_config: |
+            # Keep these cache settings in sync with modules/common/cache.nix and
+            # tasks.install-nix in mise.toml; this workflow needs them before any
+            # managed system config is evaluated.
             experimental-features = nix-command flakes
             access-tokens = github.com=${{ github.token }}
             extra-substituters = https://cache.nixos.org https://nix-community.cachix.org https://cache.numtide.com https://robertderose.cachix.org

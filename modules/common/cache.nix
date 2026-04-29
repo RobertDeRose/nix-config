@@ -1,3 +1,5 @@
+# modules/common/cache.nix
+# Shared binary cache endpoints and trusted public keys.
 {
   substituters = [
     "https://cache.nixos.org"
