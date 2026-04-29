@@ -574,6 +574,20 @@ set -euo pipefail
 USER="$(whoami)"
 CONF="/etc/nix/nix.custom.conf"
 USER_REGEX="$(printf '%s' "$USER" | sed 's/[][(){}.^$*+?|\\-]/\\&/g')"
+IS_DARWIN=false
+[ "$(uname -s)" = "Darwin" ] && IS_DARWIN=true
+
+# nix-darwin manages trusted-users in nix.conf directly after first activation.
+if $IS_DARWIN && [ -e /run/current-system/darwin-version ]; then
+  if [ -f /etc/nix/nix.conf ] && grep -qE "^(extra-)?trusted-users\b.*\b${USER_REGEX}\b" /etc/nix/nix.conf 2>/dev/null; then
+    echo "'$USER' is already a trusted user."
+    exit 0
+  fi
+
+  echo "==> nix-darwin is active; trusted-users is managed by the system config."
+  echo "Run 'mise run activate' to apply any pending nix-darwin changes."
+  exit 1
+fi
 
 # Ensure the file exists (nix.conf already includes it via !include)
 if [ ! -f "$CONF" ]; then
@@ -605,7 +619,7 @@ else
 fi
 
 echo "==> Restarting nix daemon..."
-if [ "$(uname -s)" = "Darwin" ]; then
+if $IS_DARWIN; then
   sudo launchctl kickstart -k system/org.nixos.nix-daemon
 else
   sudo systemctl restart nix-daemon
