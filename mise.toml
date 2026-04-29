@@ -6,6 +6,7 @@ env_shell_expand = true
 [tools]
 hk = { version = "1.41", arch = "aarch64" }
 actionlint = "1.7.12"
+jq = "latest"
 mdbook = "0.5.2"
 pkl = "0.31.1"
 shellcheck = "0.11.0"
@@ -922,7 +923,7 @@ container run -d \
   -v "$PUBKEY_DIR:/workspace/host-ssh" \
   "$IMAGE" >/dev/null
 
-IP="$(container inspect "$NAME" | node -e 'const fs = require("fs"); const data = JSON.parse(fs.readFileSync(0, "utf8")); process.stdout.write(data[0].networks[0].ipv4Address.split("/")[0]);')"
+IP="$(container inspect "$NAME" | jq -r '.[0].networks[0].ipv4Address | split("/")[0]')"
 
 echo "==> Installing SSH key for $TARGET@$IP..."
 container exec "$NAME" sh -lc "cp /workspace/host-ssh/$PUBKEY_NAME /home/tester/.ssh/authorized_keys && chown tester:tester /home/tester/.ssh/authorized_keys && chmod 600 /home/tester/.ssh/authorized_keys"
