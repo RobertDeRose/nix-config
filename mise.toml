@@ -26,7 +26,7 @@ postinstall = "command -v hk >/dev/null && hk install --mise || true"
 
 # Hidden tasks — building blocks for nix:init, individually testable in CI
 [tasks.install-nix]
-description = "Install Nix via nix-installer if missing"
+description = "Install Nix or Lix if missing"
 hide = true
 quiet = true
 raw = true
@@ -383,12 +383,12 @@ fi
 # ---------------------------------------------------------------------------
 
 [tasks."nix:init"]
-description = "Full init for a new machine: install Nix, then apply config (Homebrew is managed by nix-darwin)"
+description = "Full init for a new machine: install Nix/Lix, then apply config"
 depends = ["nix:trust"]
 quiet = true
 raw = true
 usage = '''
-arg "<hostname>" help="Hostname to assign" long_help="The hostname used as the nix config identifier. Delegates to add-host to create the host directory, then installs prerequisites (Nix, Homebrew) and builds/activates the configuration."
+arg "<hostname>" help="Hostname to assign" long_help="The hostname used as the nix config identifier. Delegates to add-host to create the host directory, then installs Nix/Lix and builds/activates the configuration. On Darwin, Homebrew is managed during nix-darwin activation."
 '''
 run = '''
 #!/usr/bin/env bash
