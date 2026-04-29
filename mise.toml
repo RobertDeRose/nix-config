@@ -633,7 +633,21 @@ fi
 [tasks."nix:history"]
 description = "List all system profile generations"
 quiet = true
-run = "sudo -H nix-env --list-generations --profile /nix/var/nix/profiles/system"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ -e /nix/var/nix/profiles/system-manager-profiles/system-manager ]; then
+  PROFILE="/nix/var/nix/profiles/system-manager-profiles/system-manager"
+elif [ -e /nix/var/nix/profiles/system ]; then
+  PROFILE="/nix/var/nix/profiles/system"
+else
+  echo "ERROR: no system profile found under /nix/var/nix/profiles/"
+  exit 1
+fi
+
+sudo -H nix-env --list-generations --profile "$PROFILE"
+'''
 
 [tasks."nix:repl"]
 description = "Open a nix repl with nixpkgs"
@@ -650,17 +664,32 @@ set -euo pipefail
 
 OLDER_THAN="${usage_older_than:-7d}"
 
+if [ -e /nix/var/nix/profiles/system-manager-profiles/system-manager ]; then
+  PROFILE="/nix/var/nix/profiles/system-manager-profiles/system-manager"
+elif [ -e /nix/var/nix/profiles/system ]; then
+  PROFILE="/nix/var/nix/profiles/system"
+else
+  echo "ERROR: no system profile found under /nix/var/nix/profiles/"
+  exit 1
+fi
+
 echo "==> Removing old system generations..."
-sudo -H nix-env --delete-generations "$OLDER_THAN" --profile /nix/var/nix/profiles/system
+sudo -H nix-env --delete-generations "$OLDER_THAN" --profile "$PROFILE"
 '''
 
 [tasks."nix:gc"]
 description = "Garbage-collect all unused nix store entries (system + user)"
 quiet = true
-run = [
-  "sudo nix-collect-garbage --delete-older-than 7d",
-  "nix-collect-garbage --delete-older-than 7d",
-]
+usage = 'arg "[older_than]" help="Retention window (examples: 7d, 30d, 4w)" default="7d"'
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+OLDER_THAN="${usage_older_than:-7d}"
+
+sudo nix-collect-garbage --delete-older-than "$OLDER_THAN"
+nix-collect-garbage --delete-older-than "$OLDER_THAN"
+'''
 
 [tasks."nix:fmt"]
 description = "Format all .nix files in this repo"
