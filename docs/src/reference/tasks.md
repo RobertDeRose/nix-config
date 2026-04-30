@@ -8,10 +8,10 @@ All tasks are defined in `mise.toml` and are safest to run as
 | Task | Description |
 |------|-------------|
 | `nix:init` | Full bootstrap pipeline (install nix, add host, activate) |
-| `add-host` | Create a new host directory from template |
-| `install-nix` | Install Nix via nix-installer (hidden) |
+| `add-host` | Scaffold a host from template, branch, and commit |
+| `install-nix` | Install Nix or Lix if missing (hidden) |
 | `github-auth` | Authenticate with GitHub CLI (hidden) |
-| `activate` | Build and activate the current machine's config (hidden) |
+| `activate` | Activate a host config, eval-only in CI (hidden) |
 
 ## Day-to-Day
 
