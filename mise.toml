@@ -614,7 +614,7 @@ done
 # Append to existing extra-trusted-users line, or create one
 if grep -qE "^extra-trusted-users([[:space:]]|=)" "$CONF" 2>/dev/null; then
   echo "==> Adding '$USER' to existing extra-trusted-users..."
-  tmp_conf="$(mktemp)"
+  tmp_conf="$(mktemp "${TMPDIR:-/tmp}/nix.custom.conf.XXXXXX")"
   trap 'rm -f "$tmp_conf"' EXIT
   sudo awk -v user="$USER" '
     /^extra-trusted-users[[:space:]]*=/ { print $0 " " user; next }

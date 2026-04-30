@@ -19,6 +19,7 @@ in
     text = ''
       extra-substituters = ${builtins.concatStringsSep " " cache.substituters}
       extra-trusted-public-keys = ${builtins.concatStringsSep " " cache.trustedPublicKeys}
+      extra-trusted-users = root ${username}
     '';
     replaceExisting = true;
   };
