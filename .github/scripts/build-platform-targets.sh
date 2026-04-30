@@ -2,21 +2,12 @@
 set -euo pipefail
 
 SYSTEM="$1"
-CACHE_NAME="$2"
-
-if [ -z "${CACHIX_AUTH_TOKEN:-}" ]; then
-  echo "Missing CACHIX_AUTH_TOKEN secret" >&2
-  exit 1
-fi
-
-cachix authtoken "$CACHIX_AUTH_TOKEN"
 
 build_target() {
   local target="$1"
 
   echo "==> Building ${target}"
-  nix build --accept-flake-config --no-link --print-out-paths "$target" |
-    cachix push "$CACHE_NAME"
+  nix build --accept-flake-config --no-link "$target"
 }
 
 collect_hosts() {

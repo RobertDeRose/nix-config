@@ -92,9 +92,13 @@ jobs:
             extra-substituters = https://cache.nixos.org https://nix-community.cachix.org https://cache.numtide.com https://robertderose.cachix.org
             extra-trusted-public-keys = ${{ env.NIXOS_CACHE_KEY }} ${{ env.NIX_COMMUNITY_KEY }} ${{ env.NUMTIDE_KEY }} ${{ env.CACHIX_PUBLIC_KEY }}
 
-      - name: Push refresh package targets to Cachix
-        env:
-          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c # v17
+        with:
+          name: ${{ env.CACHIX_CACHE }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          skipAddingSubstituter: true
+
+      - name: Build refresh package targets
         run: |
           kernel="$(uname -s | tr '[:upper:]' '[:lower:]')"
           arch="$(uname -m)"
@@ -111,8 +115,7 @@ jobs:
           target="$arch-$kernel"
           echo "Refreshing cache targets for $target"
 
-          nix shell nixpkgs#cachix --command \
-            bash .github/scripts/build-platform-targets.sh "$target" "$CACHIX_CACHE"
+          bash .github/scripts/build-platform-targets.sh "$target"
 
   commit-lock:
     needs:
