@@ -20,7 +20,19 @@
 
   programs.worktrunk = {
     package = pkgs.writeShellScriptBin "worktrunk" ''
-      exec /opt/homebrew/bin/worktrunk "$@"
+      if [ -x /opt/homebrew/bin/brew ]; then
+        brew_bin=/opt/homebrew/bin/brew
+      elif [ -x /usr/local/bin/brew ]; then
+        brew_bin=/usr/local/bin/brew
+      else
+        brew_bin=$(command -v brew) || {
+          echo "worktrunk wrapper: Homebrew not found" >&2
+          exit 127
+        }
+      fi
+
+      prefix="$($brew_bin --prefix worktrunk)" || exit $?
+      exec "$prefix/bin/wt" "$@"
     '';
   };
 
