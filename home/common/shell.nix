@@ -132,9 +132,9 @@ in
       # Navigate up N directories: `up 3` = cd ../../..
       # Dot aliases use this for convenience.
       up() {
-        local path=""
-        for ((i = 0; i < ''${1:-1}; i++)); do path+="../"; done
-        cd "$path" || return
+        local target=""
+        for ((i = 0; i < ''${1:-1}; i++)); do target+="../"; done
+        cd "$target" || return
       }
       alias ..='up 1'
       alias ...='up 2'
