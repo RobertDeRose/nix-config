@@ -161,6 +161,16 @@ in
         source "''${GHOSTTY_RESOURCES_DIR}/shell-integration/zsh/ghostty-integration" 2>/dev/null || \
           source "''${GHOSTTY_RESOURCES_DIR%/ghostty}/shell-integration/ghostty-integration.zsh" 2>/dev/null
       fi
+
+      # cmux/Ghostty can preseed MANPATH too narrowly, which makes macOS `man`
+      # lose the system manuals. Rebuild from the default path and preserve any
+      # terminal-provided extra entries.
+      if [[ -n "''${MANPATH:-}" ]]; then
+        typeset -aU default_manpath extra_manpath manpath
+        default_manpath=(''${(s/:/)$(env -u MANPATH manpath 2>/dev/null)})
+        extra_manpath=(''${(s/:/)MANPATH})
+        manpath=($default_manpath $extra_manpath)
+      fi
     '';
     plugins = [
       {
