@@ -4,7 +4,7 @@
 { username, inputs, ... }:
 {
   imports = [
-    ./modules/worktrunk.nix
+    inputs.worktrunk.homeModules.default
     ./common
   ];
 

@@ -3,12 +3,13 @@
 # Imports shared config + macOS-specific modules.
 {
   username,
+  pkgs,
   inputs,
   ...
 }:
 {
   imports = [
-    ./modules/worktrunk.nix
+    inputs.worktrunk.homeModules.default
     ./common
     ./common/ghostty.nix
     ./common/zed.nix
@@ -16,6 +17,12 @@
   ];
 
   home.homeDirectory = "/Users/${username}";
+
+  programs.worktrunk = {
+    package = pkgs.writeShellScriptBin "worktrunk" ''
+      exec /opt/homebrew/bin/worktrunk "$@"
+    '';
+  };
 
   fonts.fontconfig.enable = true;
 
