@@ -127,6 +127,7 @@ in
 
       if command -v mise >/dev/null 2>&1; then
         eval "$(mise activate zsh)"
+        source <(mise completion zsh)
       fi
 
       # Navigate up N directories: `up 3` = cd ../../..
