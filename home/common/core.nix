@@ -45,6 +45,7 @@ in
 
       # productivity
       glow # markdown previewer in terminal
+      usage # required for mise task/tab completion
     ]
     ++ [
       llmAgentPkgs.openspec
