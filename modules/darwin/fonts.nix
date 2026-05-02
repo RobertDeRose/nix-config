@@ -3,8 +3,9 @@
 { pkgs, ... }:
 {
   fonts.packages = with pkgs; [
-    material-design-icons
     font-awesome
+    montserrat
+    material-design-icons
     nerd-fonts.dejavu-sans-mono
     nerd-fonts.fira-code
     nerd-fonts.meslo-lg
