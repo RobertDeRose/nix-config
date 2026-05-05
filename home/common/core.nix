@@ -26,6 +26,7 @@ in
 
       socat # replacement of openbsd-netcat
       nmap # utility for network discovery and security auditing
+      snitch # pretty ui for port users
 
       # git tools
       git-absorb # automatic git commit --fixup
