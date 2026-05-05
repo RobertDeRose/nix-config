@@ -27,6 +27,7 @@ services.container-builder = {
   memory = "8G";
   maxJobs = 4;
   bridge.enable = true;
+  socktainer.enable = true;
 };
 ```
 

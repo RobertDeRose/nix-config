@@ -26,6 +26,7 @@ services.container-builder = {
   memory = "8G";
   maxJobs = 4;
   bridge.enable = true;
+  socktainer.enable = true;
 };
 ```
 
@@ -36,6 +37,7 @@ At a high level, this gives the host:
 - helper state and logs under `~/.local/state/hb`
 - on-demand builder startup for user access
 - a compatible bridge path for the root `nix-daemon`
+- an optional Socktainer-managed Docker-compatible user socket
 
 For runtime details, verification steps, recovery behavior, and option
 reference, use the upstream project docs instead of this repo chapter.
