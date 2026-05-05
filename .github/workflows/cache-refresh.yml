@@ -166,8 +166,8 @@ jobs:
           branch="automation/refresh-flake-lock"
           remote_branch_sha="$(git ls-remote --heads origin "$branch" | awk '{print $1}')"
 
-          git config user.name "robborg[bot]"
-          git config user.email "robborg[bot]@users.noreply.github.com"
+          git config user.name "robborg-the-creator[bot]"
+          git config user.email "280037799+robborg-the-creator[bot]@users.noreply.github.com"
           git checkout -b "$branch"
           git add flake.lock
           git commit -m "chore: refresh flake lock"
