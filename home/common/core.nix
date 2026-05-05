@@ -23,6 +23,7 @@ in
       rlwrap # readline wrapper for CLI programs lacking line editing
       tmux
       yq-go # yaml processor https://github.com/mikefarah/yq
+      docker-client
 
       socat # replacement of openbsd-netcat
       nmap # utility for network discovery and security auditing

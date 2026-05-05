@@ -210,7 +210,6 @@ in
   }
   // lib.optionalAttrs pkgs.stdenv.isDarwin {
     # macOS-only aliases
-    docker = "container";
   };
 
   programs.starship = {
