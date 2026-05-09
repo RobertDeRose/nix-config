@@ -213,6 +213,7 @@
                 ./modules/darwin/config.nix
                 ./modules/darwin/system.nix
                 ./modules/darwin/apps.nix
+                ./modules/darwin/homebrew-mas-fix.nix
                 ./modules/darwin/iterm2.nix
 
                 inputs."nix-hex-box".darwinModules.default
