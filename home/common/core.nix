@@ -16,6 +16,7 @@ in
       # utils
       bash # bash 5.x (macOS ships ancient 3.2)
       btop
+      acli
       jq # lightweight and flexible command-line JSON processor
       pstree
       pv # monitor data progress through a pipeline
