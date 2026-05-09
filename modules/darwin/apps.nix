@@ -35,7 +35,7 @@ in
     enable = true;
 
     onActivation = {
-      autoUpdate = false;
+      autoUpdate = true;
       upgrade = false; # only install missing packages, don't upgrade existing ones
       cleanup = "zap"; # remove anything not listed below
     };
