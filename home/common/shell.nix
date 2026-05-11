@@ -224,7 +224,6 @@ in
         "$directory"
         "$git_branch"
         "$fill"
-        "$sudo"
         "$nodejs"
         "$rust"
         "$python"
@@ -319,9 +318,12 @@ in
         symbol = "─";
       };
       sudo = {
+        # The sudo module shells out to `sudo -n true` on every prompt render.
+        # That adds avoidable latency and has caused prompt-time interference
+        # during interactive git workflows, so keep it disabled.
+        disabled = true;
         format = "[$symbol](yellow)";
         symbol = iconSudo;
-        disabled = false;
       };
       c = {
         format = makePill "$symbol" "$version" "blue";
