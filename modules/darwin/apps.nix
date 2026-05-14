@@ -47,7 +47,6 @@ in
 
     # brew install — CLI tools that aren't in nixpkgs (or are marked EOL there)
     brews = [
-      "bitwarden-cli" # Bitwarden vault CLI (bw) — node-gyp fails in nix sandbox
       "worktrunk" # Installed via Homebrew to avoid uncached local Rust builds
     ]
     ++ lib.optionals isAarch64 [
