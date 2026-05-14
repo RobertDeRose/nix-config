@@ -1,8 +1,10 @@
 # hosts/aarch64-darwin/USMBDEROSER/home.nix
 # Per-host home-manager overrides for USMBDEROSER (work MacBook).
 # This file is imported automatically when present beside default.nix.
-{ ... }:
+{ pkgs, ... }:
 {
+  home.packages = with pkgs; [ azure-cli ];
+
   # ── Directory shortcuts (work-specific) ──────────────────────────────────
   home.shellAliases = {
     work = "cd ~/workspace/checkpoint";
