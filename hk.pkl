@@ -26,6 +26,7 @@ local linters = new Mapping<String, Step> {
 
 default_branch = "main"
 fail_fast = false
+exclude = List("**/mise.toml")
 
 hooks {
   ["pre-commit"] {
