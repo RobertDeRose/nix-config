@@ -70,6 +70,7 @@ in
       "balenaetcher"
       "claude"
       "cmux" # Ghostty-based terminal for AI coding agents
+      "docker-desktop"
       "imageoptim"
       "insomnia" # REST client
       "ghostty"

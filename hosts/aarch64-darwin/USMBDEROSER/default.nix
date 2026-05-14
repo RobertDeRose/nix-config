@@ -42,7 +42,7 @@ in
     maxJobs = 4;
     bridge.enable = true;
     cli.completions.enable = true;
-    socktainer.enable = true;
-    socktainer.setDockerHost = true;
+    socktainer.enable = false;
+    socktainer.setDockerHost = false;
   };
 }
