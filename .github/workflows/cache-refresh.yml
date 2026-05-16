@@ -35,7 +35,7 @@ jobs:
             # managed system config is evaluated.
             experimental-features = nix-command flakes
             access-tokens = github.com=${{ github.token }}
-            extra-substituters = https://cache.nixos.org https://nix-community.cachix.org https://cache.numtide.com https://robertderose.cachix.org
+            extra-substituters = https://robertderose.cachix.org https://cache.numtide.com https://cache.nixos.org https://nix-community.cachix.org
             extra-trusted-public-keys = ${{ env.NIXOS_CACHE_KEY }} ${{ env.NIX_COMMUNITY_KEY }} ${{ env.NUMTIDE_KEY }} ${{ env.CACHIX_PUBLIC_KEY }}
 
       - name: Update flake inputs
@@ -89,7 +89,7 @@ jobs:
             # managed system config is evaluated.
             experimental-features = nix-command flakes
             access-tokens = github.com=${{ github.token }}
-            extra-substituters = https://cache.nixos.org https://nix-community.cachix.org https://cache.numtide.com https://robertderose.cachix.org
+            extra-substituters = https://robertderose.cachix.org https://cache.numtide.com https://cache.nixos.org https://nix-community.cachix.org
             extra-trusted-public-keys = ${{ env.NIXOS_CACHE_KEY }} ${{ env.NIX_COMMUNITY_KEY }} ${{ env.NUMTIDE_KEY }} ${{ env.CACHIX_PUBLIC_KEY }}
 
       - uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c # v17

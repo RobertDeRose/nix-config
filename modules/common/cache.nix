@@ -2,10 +2,10 @@
 # Shared binary cache endpoints and trusted public keys.
 {
   substituters = [
+    "https://robertderose.cachix.org"
+    "https://cache.numtide.com"
     "https://cache.nixos.org"
     "https://nix-community.cachix.org"
-    "https://cache.numtide.com"
-    "https://robertderose.cachix.org"
   ];
 
   trustedPublicKeys = [
