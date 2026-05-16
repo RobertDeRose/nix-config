@@ -645,9 +645,11 @@ run = '''
 set -euo pipefail
 
 if [ -n "${usage_input:-}" ]; then
-  nix flake update "${usage_input}"
+  echo "==> Updating flake input: ${usage_input}"
+  nix flake update "${usage_input}" --verbose
 else
-  nix flake update
+  echo "==> Updating all direct flake inputs..."
+  nix flake update --verbose
 fi
 '''
 
