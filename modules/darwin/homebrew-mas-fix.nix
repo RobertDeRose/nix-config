@@ -6,6 +6,7 @@
 }:
 let
   cfg = config.homebrew;
+  setupHomebrew = config.system.activationScripts.setup-homebrew.text;
   homebrewPath = lib.concatStringsSep ":" [
     "${pkgs.mas}/bin"
     "${cfg.prefix}/bin"
@@ -20,6 +21,8 @@ in
 {
   config = lib.mkIf cfg.enable {
     system.activationScripts.homebrew.text = lib.mkForce ''
+      ${setupHomebrew}
+
       # Homebrew Bundle
       echo >&2 "Homebrew bundle..."
       if [ -f "${cfg.prefix}/bin/brew" ]; then

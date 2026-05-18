@@ -172,6 +172,11 @@ in
         extra_manpath=(''${(s/:/)MANPATH})
         manpath=($default_manpath $extra_manpath)
       fi
+
+      # git grep to ignore some basic patterns that generally provide no useful results
+      gg() {
+        git grep "$@" -- ':!*.svg' ':!*.min.js' ':!*.min.css' ':!*/vendor/*.css' ':!*/vendor/*.js'
+      }
     '';
     plugins = [
       {
@@ -207,6 +212,7 @@ in
     gco = "git checkout";
     gdca = "git diff --cached";
     gbD = "git branch --delete --force";
+    gbd = "git branch --delete";
   }
   // lib.optionalAttrs pkgs.stdenv.isDarwin {
     # macOS-only aliases
