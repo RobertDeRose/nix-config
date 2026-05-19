@@ -28,6 +28,8 @@
     ignores = [
       ".DS_Store"
       ".jj"
+      ".bash_history"
+      ".shell"
     ];
     settings = {
       core = {
@@ -46,6 +48,7 @@
         rebase = true;
         ff = "only";
       };
+      rebase.autoStash = true;
       push = {
         default = "current";
         autoSetupRemote = true;
