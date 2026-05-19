@@ -123,10 +123,10 @@ arg "[os]" help="OS class (default: current machine)" {
 arg "[arch]" help="Architecture for the new machine (default: current machine)" long_help="Used to determine the host directory path. Inferred from the current machine if omitted." {
   choices "aarch64" "x86_64"
 }
-flag "--user" help="Username for the host (default: current user)"
-flag "--fullname" help="Full name (default: git config user.name)"
-flag "--email" help="Email (default: git config user.email)"
-flag "--github" help="GitHub username (default: derived from git remote)"
+flag "--user <user>" help="Username for the host (default: current user)"
+flag "--fullname <name>" help="Full name (default: git config user.name)"
+flag "--email <email>" help="Email (default: git config user.email)"
+flag "--github <username>" help="GitHub username (default: derived from git remote)"
 '''
 run = '''
 #!/usr/bin/env bash
@@ -540,6 +540,7 @@ set -euo pipefail
 
 TARGET_HOST="${usage_host}"
 CONFIG_NAME="${usage_name:-}"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 # If no config name given, resolve it from the remote hostname
 if [ -z "$CONFIG_NAME" ]; then
@@ -547,9 +548,75 @@ if [ -z "$CONFIG_NAME" ]; then
   echo "==> Detected remote hostname: $CONFIG_NAME"
 fi
 
+HOST_GLOB="$REPO_ROOT/systems/*-linux/$CONFIG_NAME"
+if ! compgen -G "$HOST_GLOB" >/dev/null; then
+  echo "ERROR: Linux host config '$CONFIG_NAME' does not exist in this repo."
+  echo ""
+  echo "Expected to find a host directory matching:"
+  echo "  systems/*-linux/$CONFIG_NAME"
+  echo ""
+  echo "Add it first, for example:"
+  echo "  mise run add-host $CONFIG_NAME linux aarch64"
+  echo "  # or"
+  echo "  mise run add-host $CONFIG_NAME linux x86_64"
+  exit 1
+fi
+
+HOST_DIR="$(compgen -G "$HOST_GLOB" | head -n 1)"
+USER_NIX="$HOST_DIR/user.nix"
+GITHUB_USERNAME="$(nix eval --impure --raw --expr "let user = import ${USER_NIX}; in user.githubUsername")"
+
+if [ -z "$GITHUB_USERNAME" ]; then
+  echo "ERROR: Could not determine githubUsername from $USER_NIX"
+  exit 1
+fi
+
+echo "==> Host '$CONFIG_NAME' will use GitHub SSH keys from: $GITHUB_USERNAME"
+echo "==> Checking GitHub SSH keys for $GITHUB_USERNAME..."
+if ! KEYS="$(curl -fsSL --connect-timeout 5 --max-time 10 "https://github.com/$GITHUB_USERNAME.keys")"; then
+  echo "ERROR: Failed to fetch GitHub SSH keys for $GITHUB_USERNAME"
+  echo "       Ensure the username is correct and GitHub is reachable before first deploy."
+  exit 1
+fi
+
+if [ -z "$KEYS" ]; then
+  echo "ERROR: GitHub user '$GITHUB_USERNAME' has no public SSH keys."
+  echo "       Add at least one SSH key to https://github.com/settings/keys before first deploy."
+  exit 1
+fi
+
 NIX_FLAGS=(--accept-flake-config --extra-experimental-features "nix-command flakes")
 if [[ "${usage_debug:-}" == "true" ]]; then
   NIX_FLAGS+=("--show-trace" "--verbose")
+fi
+
+echo "==> Checking Nix on remote host..."
+if ! ssh "$TARGET_HOST" 'command -v nix >/dev/null 2>&1'; then
+  echo "==> Nix not found on $TARGET_HOST. Installing Lix..."
+  ssh "$TARGET_HOST" '
+    set -euo pipefail
+    export NIX_INSTALLER_NO_CONFIRM=true
+    export NIX_INSTALLER_ENABLE_FLAKES=true
+    curl -sSfL https://install.lix.systems/lix | sh -s -- install
+
+    mkdir -p /usr/local/bin
+    ln -sf /nix/var/nix/profiles/default/bin/nix-store /usr/local/bin/nix-store
+    ln -sf /nix/var/nix/profiles/default/bin/nix /usr/local/bin/nix
+    systemctl restart nix-daemon.socket 2>/dev/null || true
+    systemctl restart nix-daemon.service 2>/dev/null || true
+
+    for i in $(seq 1 30); do
+      [ -S /nix/var/nix/daemon-socket/socket ] && break
+      sleep 1
+    done
+
+    set +u
+    source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+    set -u
+
+    nix --version >/dev/null
+  '
+  echo "==> Lix installation complete on $TARGET_HOST."
 fi
 
 echo "==> Building system-manager from flake..."

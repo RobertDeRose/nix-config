@@ -10,6 +10,34 @@
 }:
 let
   cache = import ../common/cache.nix;
+  githubAuthorizedKeysScript = pkgs.writeShellScript "github-authorized-keys" ''
+    set -euo pipefail
+
+    requested_user="''${1:-}"
+    if [ "$requested_user" != "${username}" ]; then
+      exit 0
+    fi
+
+    target_file="/etc/ssh/authorized_keys.d/${username}"
+    tmp_file="$(${pkgs.coreutils}/bin/mktemp "$(dirname "$target_file")/${username}.XXXXXX")"
+    trap '${pkgs.coreutils}/bin/rm -f "$tmp_file"' EXIT
+
+    # Refresh the configured user's authorized keys from GitHub.
+    if ${pkgs.curl}/bin/curl --connect-timeout 5 --max-time 10 -fsSL "https://github.com/${githubUsername}.keys" > "$tmp_file"; then
+      if [ ! -s "$tmp_file" ]; then
+        exit 1
+      fi
+      install -m 0644 "$tmp_file" "$target_file"
+      exit 0
+    fi
+
+    # Keep the last successfully installed file if GitHub is unavailable.
+    if [ -s "$target_file" ]; then
+      exit 0
+    fi
+
+    exit 1
+  '';
 in
 {
   # Allow running on non-NixOS distros
@@ -59,67 +87,35 @@ in
   services.openssh = {
     enable = true;
     settings = {
-      PasswordAuthentication = false;
-      PermitRootLogin = "no";
-      AuthorizedKeysCommand = "${pkgs.writeShellScript "github-authorized-keys" ''
-        set -euo pipefail
-
-        requested_user="''${1:-}"
-        if [ "$requested_user" != "${username}" ]; then
-          exit 0
-        fi
-
-        cache_dir="/var/cache/ssh-authorized-keys"
-        cache_file="$cache_dir/${username}.keys"
-
-        ${pkgs.coreutils}/bin/mkdir -p "$cache_dir"
-
-        tmp_file="$(${pkgs.coreutils}/bin/mktemp "$cache_dir/.keys.XXXXXX")"
-        trap '${pkgs.coreutils}/bin/rm -f "$tmp_file"' EXIT
-        cache_ttl_seconds=3600
-        now="$(${pkgs.coreutils}/bin/date +%s)"
-
-        # Serve from cache if fresh
-        if [ -s "$cache_file" ]; then
-          cache_mtime="$(${pkgs.coreutils}/bin/date -r "$cache_file" +%s)"
-          cache_age=$((now - cache_mtime))
-          if [ "$cache_age" -lt "$cache_ttl_seconds" ]; then
-            exec ${pkgs.coreutils}/bin/cat "$cache_file"
-          fi
-        fi
-
-        # Try to refresh from GitHub
-        if ${pkgs.curl}/bin/curl --connect-timeout 5 --max-time 10 -fsSL "https://github.com/${githubUsername}.keys" > "$tmp_file"; then
-          ${pkgs.coreutils}/bin/mv "$tmp_file" "$cache_file"
-          exec ${pkgs.coreutils}/bin/cat "$cache_file"
-        fi
-
-        # Fall back to stale cache if fetch failed
-        if [ -s "$cache_file" ]; then
-          exec ${pkgs.coreutils}/bin/cat "$cache_file"
-        fi
-
-        exit 1
-      ''} %u";
-      AuthorizedKeysCommandUser = "_sshkeys";
+      # Do not harden existing host login policy by default during remote
+      # bootstrap. Preserve the distro's current root/password SSH behavior
+      # unless a specific host opts into stricter settings.
     };
   };
 
-  systemd.tmpfiles.rules = [
-    "d /var/cache/ssh-authorized-keys 0750 _sshkeys nogroup - -"
-  ];
+  systemd.services.prefill-authorized-keys = {
+    wantedBy = [ "system-manager.target" ];
+    after = [
+      "network-online.target"
+      "ssh-system-manager.service"
+    ];
+    wants = [ "network-online.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+    };
+    script = ''
+      set -euo pipefail
+      install -d -m 0755 /etc/ssh/authorized_keys.d
+      if ! ${githubAuthorizedKeysScript} ${username}; then
+        echo "Failed to prefill authorized keys for ${username}" >&2
+        exit 1
+      fi
+    '';
+  };
 
   # ------------------------------------------------------------------ #
   # Users
   # ------------------------------------------------------------------ #
-
-  # Unprivileged user for AuthorizedKeysCommand (least-privilege)
-  users.users."_sshkeys" = {
-    isSystemUser = true;
-    group = "nogroup";
-    home = "/nonexistent";
-    shell = "/usr/sbin/nologin";
-  };
 
   users.users."${username}" = {
     isNormalUser = true;
