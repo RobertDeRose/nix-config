@@ -564,7 +564,13 @@ fi
 
 HOST_DIR="$(compgen -G "$HOST_GLOB" | head -n 1)"
 USER_NIX="$HOST_DIR/user.nix"
+HM_USER="$(nix eval --impure --raw --expr "let user = import ${USER_NIX}; in user.username")"
 GITHUB_USERNAME="$(nix eval --impure --raw --expr "let user = import ${USER_NIX}; in user.githubUsername")"
+
+if [ -z "$HM_USER" ]; then
+  echo "ERROR: Could not determine username from $USER_NIX"
+  exit 1
+fi
 
 if [ -z "$GITHUB_USERNAME" ]; then
   echo "ERROR: Could not determine githubUsername from $USER_NIX"
@@ -588,6 +594,12 @@ fi
 NIX_FLAGS=(--accept-flake-config --extra-experimental-features "nix-command flakes")
 if [[ "${usage_debug:-}" == "true" ]]; then
   NIX_FLAGS+=("--show-trace" "--verbose")
+fi
+
+if ! nix eval "${NIX_FLAGS[@]}" --raw ".#homeConfigurations.$CONFIG_NAME.activationPackage.type" >/dev/null 2>&1; then
+  echo "ERROR: Home Manager configuration '$CONFIG_NAME' does not exist in this repo."
+  echo "       Expected flake target: .#homeConfigurations.$CONFIG_NAME.activationPackage"
+  exit 1
 fi
 
 echo "==> Checking Nix on remote host..."
@@ -628,6 +640,26 @@ echo "==> Deploying system config '$CONFIG_NAME' to $TARGET_HOST..."
   switch \
   --flake ".#$CONFIG_NAME" \
   --sudo
+
+echo "==> Building home-manager activation for '$CONFIG_NAME'..."
+nix build "${NIX_FLAGS[@]}" ".#homeConfigurations.$CONFIG_NAME.activationPackage" --out-link "$REPO_ROOT/.hm-result"
+
+echo "==> Activating home-manager for '$HM_USER' on $TARGET_HOST..."
+REMOTE_HM_DIR="/tmp/home-manager-$CONFIG_NAME"
+REMOTE_HM_PATH="/tmp/home-manager-$CONFIG_NAME/activate"
+ssh "$TARGET_HOST" "rm -rf '$REMOTE_HM_DIR' && mkdir -p '$REMOTE_HM_DIR'"
+tar -C "$REPO_ROOT/.hm-result" -cf - . | ssh "$TARGET_HOST" "tar -C '$REMOTE_HM_DIR' -xf -"
+ssh "$TARGET_HOST" '
+  set -euo pipefail
+  ACTIVATE_USER="'"$HM_USER"'"
+  ACTIVATE_HOME="$(getent passwd "$ACTIVATE_USER" | cut -d: -f6)"
+  ACTIVATE_PATH="/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:$PATH"
+  if [ -z "$ACTIVATE_HOME" ]; then
+    ACTIVATE_HOME="/home/$ACTIVATE_USER"
+  fi
+  install -d -m755 -o "$ACTIVATE_USER" -g "$(id -gn "$ACTIVATE_USER")" "/nix/var/nix/profiles/per-user/$ACTIVATE_USER"
+  sudo -u "$ACTIVATE_USER" env USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak "'"$REMOTE_HM_PATH"'"
+'
 '''
 
 # ---------------------------------------------------------------------------
