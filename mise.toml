@@ -582,8 +582,10 @@ if ! printf '%s' "$CONFIG_NAME" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za
   exit 1
 fi
 
-HOST_GLOB="$REPO_ROOT/systems/*-linux/$CONFIG_NAME"
-mapfile -t HOST_DIRS < <(compgen -G "$HOST_GLOB")
+HOST_PATTERN="$REPO_ROOT/systems/"*-linux/"$CONFIG_NAME"
+shopt -s nullglob
+HOST_DIRS=( $HOST_PATTERN )
+shopt -u nullglob
 HOST_DIR_COUNT=0
 for _ in "${HOST_DIRS[@]}"; do
   HOST_DIR_COUNT=$((HOST_DIR_COUNT + 1))
