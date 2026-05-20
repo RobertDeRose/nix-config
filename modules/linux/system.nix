@@ -180,6 +180,4 @@ in
       "wheel"
     ];
   };
-
-  users.users.root.enable = false;
 }
