@@ -14,7 +14,7 @@ let
   validUsername = builtins.match "[a-z_][a-z0-9_-]*" username != null && username != "root";
   validGithubUsername =
     builtins.match "[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?" githubUsername != null;
-  githubUsernameFile = pkgs.writeText "github-username-${username}" githubUsername;
+  githubUsernameFile = pkgs.writeText "github-username" githubUsername;
   githubAuthorizedKeysScript = pkgs.writeShellScript "github-authorized-keys" ''
     set -euo pipefail
 
@@ -101,7 +101,7 @@ in
 
   environment.etc."sudoers.d/90-system-manager-wheel" = {
     text = ''
-      %wheel ALL=(ALL:ALL) NOPASSWD: ALL
+      ${username} ALL=(ALL:ALL) NOPASSWD: ALL
     '';
     mode = "0440";
     replaceExisting = true;
@@ -118,7 +118,7 @@ in
   system-manager.preActivationAssertions.sudoersIncludeDir = {
     enable = true;
     script = ''
-      if ! ${pkgs.gnugrep}/bin/grep -Eq '^[#@]includedir[[:space:]]+/etc/sudoers\.d([[:space:]]|$)' /etc/sudoers; then
+      if ! ${pkgs.gnugrep}/bin/grep -Eq '^[[:space:]]*[#@]includedir[[:space:]]+/etc/sudoers\.d([[:space:]]|$)' /etc/sudoers; then
         echo "Host /etc/sudoers does not include /etc/sudoers.d; refusing to replace host sudo policy." >&2
         echo "Add '#includedir /etc/sudoers.d' to /etc/sudoers before deploying this Linux config." >&2
         exit 1
