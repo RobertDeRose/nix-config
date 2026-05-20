@@ -194,7 +194,6 @@ in
     lib.optionals pkgs.stdenv.isLinux [
       "${config.home.homeDirectory}/.nix-profile/bin"
       "${config.home.homeDirectory}/.local/state/nix/profiles/profile/bin"
-      "${config.home.homeDirectory}/.local/bin"
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       "/opt/homebrew/bin"
