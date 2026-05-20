@@ -663,9 +663,12 @@ if [[ "${usage_debug:-}" == "true" ]]; then
   NIX_FLAGS+=("--show-trace" "--verbose")
 fi
 
-if ! nix eval "${NIX_FLAGS[@]}" --raw ".#homeConfigurations.$CONFIG_NAME.activationPackage.type" >/dev/null 2>&1; then
+SYSTEM_FLAKE_REF=".#systemConfigs.\"$CONFIG_NAME\""
+HOME_ACTIVATION_REF=".#homeConfigurations.\"$CONFIG_NAME\".activationPackage"
+
+if ! nix eval "${NIX_FLAGS[@]}" --raw "$HOME_ACTIVATION_REF.type" >/dev/null 2>&1; then
   echo "ERROR: Home Manager configuration '$CONFIG_NAME' does not exist in this repo."
-  echo "       Expected flake target: .#homeConfigurations.$CONFIG_NAME.activationPackage"
+  echo "       Expected flake target: $HOME_ACTIVATION_REF"
   exit 1
 fi
 
@@ -718,7 +721,7 @@ SSH_USER="$(ssh -G "$TARGET_HOST" | sed -n 's/^user //p' | head -n 1)"
 SYSTEM_MANAGER_ARGS=(
   --target-host "$TARGET_HOST"
   switch
-  --flake ".#$CONFIG_NAME"
+  --flake "$SYSTEM_FLAKE_REF"
 )
 if [ "$SSH_USER" != "root" ]; then
   SYSTEM_MANAGER_ARGS+=(--sudo)
@@ -728,8 +731,8 @@ echo "==> Deploying system config '$CONFIG_NAME' to $TARGET_HOST..."
 "$REPO_ROOT/result/bin/system-manager" "${SYSTEM_MANAGER_ARGS[@]}"
 
 echo "==> Building home-manager activation for '$CONFIG_NAME'..."
-nix build "${NIX_FLAGS[@]}" ".#homeConfigurations.$CONFIG_NAME.activationPackage" --out-link "$REPO_ROOT/.hm-result"
-HM_STORE_PATH="$(nix path-info "${NIX_FLAGS[@]}" ".#homeConfigurations.$CONFIG_NAME.activationPackage")"
+nix build "${NIX_FLAGS[@]}" "$HOME_ACTIVATION_REF" --out-link "$REPO_ROOT/.hm-result"
+HM_STORE_PATH="$(nix path-info "${NIX_FLAGS[@]}" "$HOME_ACTIVATION_REF")"
 
 echo "==> Activating home-manager for '$HM_USER' on $TARGET_HOST..."
 nix copy "${NIX_FLAGS[@]}" --to "ssh://$TARGET_HOST" "$HM_STORE_PATH"
