@@ -141,45 +141,36 @@ if [ "${OS}" != "darwin" ] && [ "${OS}" != "linux" ]; then
   exit 1
 fi
 
+if ! printf '%s' "$HOSTNAME" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$'; then
+  echo "ERROR: Invalid hostname '$HOSTNAME'." >&2
+  echo "       Use a single DNS label with alphanumeric or hyphen characters." >&2
+  exit 1
+fi
+
 SYSTEM="${ARCH}-${OS}"
 HOST_BRANCH="host/${HOSTNAME}"
 
-if [[ "${CI:-false}" != "true" ]]; then
-  CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-  if [ "$CURRENT_BRANCH" != "$HOST_BRANCH" ]; then
-    if ! git diff --quiet || ! git diff --cached --quiet; then
-      echo "ERROR: working tree must be clean before switching to ${HOST_BRANCH}."
-      echo "Commit or stash your current changes, then rerun add-host."
-      exit 1
-    fi
-
-    if git rev-parse --verify "$HOST_BRANCH" &>/dev/null; then
-      git checkout "$HOST_BRANCH"
-    else
-      git checkout -b "$HOST_BRANCH"
-    fi
-  fi
-fi
-
-# Darwin hosts live under hosts/ (managed by easy-hosts);
-# Linux hosts live under systems/ (managed by system-manager).
-if [ "${OS}" = "darwin" ]; then
-  HOST_DIR="hosts/${SYSTEM}/${HOSTNAME}"
-else
-  HOST_DIR="systems/${SYSTEM}/${HOSTNAME}"
-fi
-
-if [ ! -d "${HOST_DIR}" ]; then
-  echo "==> Creating ${HOST_DIR} from templates/${OS}..."
-  mkdir -p "${HOST_DIR}"
-  cp -vr "templates/${OS}"/* "${HOST_DIR}/"
-fi
-
-# Generate user.nix for this host
+# Generate and validate user metadata before writing scaffold files.
 USERNAME="${usage_user:-$(whoami)}"
 FULLNAME="${usage_fullname:-$(git config user.name 2>/dev/null || echo "")}"
 EMAIL="${usage_email:-$(git config user.email 2>/dev/null || echo "")}"
 GITHUB="${usage_github:-$(git remote get-url origin 2>/dev/null | sed -n 's|.*github.com[:/]\([^/]*\)/.*|\1|p' || echo "")}"
+
+if [ "$USERNAME" = "root" ]; then
+  echo "ERROR: Refusing to scaffold a host with reserved username 'root'." >&2
+  echo "       Pass --user <name> or run as the intended managed non-root user." >&2
+  exit 1
+fi
+
+if ! printf '%s' "$USERNAME" | grep -Eq '^[a-z_][a-z0-9_-]*$'; then
+  echo "ERROR: Invalid username '$USERNAME' for host scaffolding." >&2
+  echo "       Use --user with a portable POSIX account name." >&2
+  exit 1
+fi
+
+valid_github_username() {
+  printf '%s' "$1" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$'
+}
 
 # Prompt for any missing required fields (git may not be configured on a fresh machine)
 ask() {
@@ -214,6 +205,43 @@ if [ -z "$GITHUB" ]; then
   else
     GITHUB="$(ask "GitHub username: ")"
   fi
+fi
+
+if ! valid_github_username "$GITHUB"; then
+  echo "ERROR: Invalid GitHub username '$GITHUB' for host scaffolding." >&2
+  echo "       GitHub usernames must be 1-39 alphanumeric or hyphen characters and cannot start or end with a hyphen." >&2
+  exit 1
+fi
+
+# Darwin hosts live under hosts/ (managed by easy-hosts);
+# Linux hosts live under systems/ (managed by system-manager).
+if [ "${OS}" = "darwin" ]; then
+  HOST_DIR="hosts/${SYSTEM}/${HOSTNAME}"
+else
+  HOST_DIR="systems/${SYSTEM}/${HOSTNAME}"
+fi
+
+if [[ "${CI:-false}" != "true" ]]; then
+  CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+  if [ "$CURRENT_BRANCH" != "$HOST_BRANCH" ]; then
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+      echo "ERROR: working tree must be clean before switching to ${HOST_BRANCH}."
+      echo "Commit or stash your current changes, then rerun add-host."
+      exit 1
+    fi
+
+    if git rev-parse --verify "$HOST_BRANCH" &>/dev/null; then
+      git checkout "$HOST_BRANCH"
+    else
+      git checkout -b "$HOST_BRANCH"
+    fi
+  fi
+fi
+
+if [ ! -d "${HOST_DIR}" ]; then
+  echo "==> Creating ${HOST_DIR} from templates/${OS}..."
+  mkdir -p "${HOST_DIR}"
+  cp -vr "templates/${OS}"/* "${HOST_DIR}/"
 fi
 
 # Escape a value for safe inclusion in a Nix string literal.
@@ -548,8 +576,20 @@ if [ -z "$CONFIG_NAME" ]; then
   echo "==> Detected remote hostname: $CONFIG_NAME"
 fi
 
+if ! printf '%s' "$CONFIG_NAME" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$'; then
+  echo "ERROR: Invalid Linux config name '$CONFIG_NAME'." >&2
+  echo "       Use a single DNS-label hostname matching systems/*-linux/<name>." >&2
+  exit 1
+fi
+
 HOST_GLOB="$REPO_ROOT/systems/*-linux/$CONFIG_NAME"
-if ! compgen -G "$HOST_GLOB" >/dev/null; then
+mapfile -t HOST_DIRS < <(compgen -G "$HOST_GLOB")
+HOST_DIR_COUNT=0
+for _ in "${HOST_DIRS[@]}"; do
+  HOST_DIR_COUNT=$((HOST_DIR_COUNT + 1))
+done
+
+if [ "$HOST_DIR_COUNT" -eq 0 ]; then
   echo "ERROR: Linux host config '$CONFIG_NAME' does not exist in this repo."
   echo ""
   echo "Expected to find a host directory matching:"
@@ -562,7 +602,14 @@ if ! compgen -G "$HOST_GLOB" >/dev/null; then
   exit 1
 fi
 
-HOST_DIR="$(compgen -G "$HOST_GLOB" | head -n 1)"
+if [ "$HOST_DIR_COUNT" -ne 1 ]; then
+  echo "ERROR: Linux host config '$CONFIG_NAME' matched multiple host directories." >&2
+  printf '  %s\n' "${HOST_DIRS[@]}" >&2
+  echo "Choose a unique hostname under systems/*-linux/." >&2
+  exit 1
+fi
+
+HOST_DIR="${HOST_DIRS[0]}"
 USER_NIX="$HOST_DIR/user.nix"
 HM_USER="$(nix eval --impure --raw --expr "let user = import ${USER_NIX}; in user.username")"
 GITHUB_USERNAME="$(nix eval --impure --raw --expr "let user = import ${USER_NIX}; in user.githubUsername")"
@@ -572,8 +619,26 @@ if [ -z "$HM_USER" ]; then
   exit 1
 fi
 
+if [ "$HM_USER" = "root" ]; then
+  echo "ERROR: Refusing to deploy Home Manager for reserved user 'root'."
+  echo "       Set user.username in $USER_NIX to the managed non-root account."
+  exit 1
+fi
+
 if [ -z "$GITHUB_USERNAME" ]; then
   echo "ERROR: Could not determine githubUsername from $USER_NIX"
+  exit 1
+fi
+
+if ! printf '%s' "$HM_USER" | grep -Eq '^[a-z_][a-z0-9_-]*$'; then
+  echo "ERROR: Invalid managed username '$HM_USER' in $USER_NIX"
+  echo "       Use a portable POSIX account name for deploy-time shell commands."
+  exit 1
+fi
+
+if ! printf '%s' "$GITHUB_USERNAME" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$'; then
+  echo "ERROR: Invalid githubUsername '$GITHUB_USERNAME' in $USER_NIX"
+  echo "       GitHub usernames must be 1-39 alphanumeric or hyphen characters and cannot start or end with a hyphen."
   exit 1
 fi
 
@@ -603,63 +668,96 @@ if ! nix eval "${NIX_FLAGS[@]}" --raw ".#homeConfigurations.$CONFIG_NAME.activat
 fi
 
 echo "==> Checking Nix on remote host..."
-if ! ssh "$TARGET_HOST" 'command -v nix >/dev/null 2>&1'; then
+if ! ssh "$TARGET_HOST" 'command -v nix >/dev/null 2>&1 && command -v nix-store >/dev/null 2>&1'; then
   echo "==> Nix not found on $TARGET_HOST. Installing Lix..."
-  ssh "$TARGET_HOST" '
-    set -euo pipefail
-    export NIX_INSTALLER_NO_CONFIRM=true
-    export NIX_INSTALLER_ENABLE_FLAKES=true
-    curl -sSfL https://install.lix.systems/lix | sh -s -- install
+  ssh "$TARGET_HOST" bash -s <<'EOF'
+set -euo pipefail
 
-    mkdir -p /usr/local/bin
-    ln -sf /nix/var/nix/profiles/default/bin/nix-store /usr/local/bin/nix-store
-    ln -sf /nix/var/nix/profiles/default/bin/nix /usr/local/bin/nix
-    systemctl restart nix-daemon.socket 2>/dev/null || true
-    systemctl restart nix-daemon.service 2>/dev/null || true
+SUDO=()
+if [ "$(id -u)" -ne 0 ]; then
+  if ! command -v sudo >/dev/null 2>&1; then
+    echo "ERROR: Remote bootstrap requires root or sudo for privileged setup." >&2
+    exit 1
+  fi
+  SUDO=(sudo)
+fi
 
-    for i in $(seq 1 30); do
-      [ -S /nix/var/nix/daemon-socket/socket ] && break
-      sleep 1
-    done
+if ! command -v nix >/dev/null 2>&1; then
+  export NIX_INSTALLER_NO_CONFIRM=true
+  export NIX_INSTALLER_ENABLE_FLAKES=true
+  curl -sSfL https://install.lix.systems/lix | sh -s -- install
+fi
 
-    set +u
-    source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-    set -u
+"${SUDO[@]}" mkdir -p /usr/local/bin
+"${SUDO[@]}" ln -sf /nix/var/nix/profiles/default/bin/nix-store /usr/local/bin/nix-store
+"${SUDO[@]}" ln -sf /nix/var/nix/profiles/default/bin/nix /usr/local/bin/nix
+"${SUDO[@]}" systemctl restart nix-daemon.socket 2>/dev/null || true
+"${SUDO[@]}" systemctl restart nix-daemon.service 2>/dev/null || true
 
-    nix --version >/dev/null
-  '
-  echo "==> Lix installation complete on $TARGET_HOST."
+for i in $(seq 1 30); do
+  [ -S /nix/var/nix/daemon-socket/socket ] && break
+  sleep 1
+done
+
+set +u
+source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+set -u
+
+nix --version >/dev/null
+nix-store --version >/dev/null
+EOF
+  echo "==> Nix tooling is ready on $TARGET_HOST."
 fi
 
 echo "==> Building system-manager from flake..."
 nix build "${NIX_FLAGS[@]}" ".#system-manager"
 
+SSH_USER="$(ssh -G "$TARGET_HOST" | sed -n 's/^user //p' | head -n 1)"
+SYSTEM_MANAGER_ARGS=(
+  --target-host "$TARGET_HOST"
+  switch
+  --flake ".#$CONFIG_NAME"
+)
+if [ "$SSH_USER" != "root" ]; then
+  SYSTEM_MANAGER_ARGS+=(--sudo)
+fi
+
 echo "==> Deploying system config '$CONFIG_NAME' to $TARGET_HOST..."
-./result/bin/system-manager \
-  --target-host "$TARGET_HOST" \
-  switch \
-  --flake ".#$CONFIG_NAME" \
-  --sudo
+./result/bin/system-manager "${SYSTEM_MANAGER_ARGS[@]}"
 
 echo "==> Building home-manager activation for '$CONFIG_NAME'..."
 nix build "${NIX_FLAGS[@]}" ".#homeConfigurations.$CONFIG_NAME.activationPackage" --out-link "$REPO_ROOT/.hm-result"
+HM_STORE_PATH="$(nix path-info "${NIX_FLAGS[@]}" ".#homeConfigurations.$CONFIG_NAME.activationPackage")"
 
 echo "==> Activating home-manager for '$HM_USER' on $TARGET_HOST..."
-REMOTE_HM_DIR="/tmp/home-manager-$CONFIG_NAME"
-REMOTE_HM_PATH="/tmp/home-manager-$CONFIG_NAME/activate"
-ssh "$TARGET_HOST" "rm -rf '$REMOTE_HM_DIR' && mkdir -p '$REMOTE_HM_DIR'"
-tar -C "$REPO_ROOT/.hm-result" -cf - . | ssh "$TARGET_HOST" "tar -C '$REMOTE_HM_DIR' -xf -"
-ssh "$TARGET_HOST" '
-  set -euo pipefail
-  ACTIVATE_USER="'"$HM_USER"'"
-  ACTIVATE_HOME="$(getent passwd "$ACTIVATE_USER" | cut -d: -f6)"
-  ACTIVATE_PATH="/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:$PATH"
-  if [ -z "$ACTIVATE_HOME" ]; then
-    ACTIVATE_HOME="/home/$ACTIVATE_USER"
+nix copy "${NIX_FLAGS[@]}" --to "ssh://$TARGET_HOST" "$HM_STORE_PATH"
+ssh "$TARGET_HOST" sh -s -- "$HM_USER" "$HM_STORE_PATH/activate" <<'EOF'
+set -eu
+
+ACTIVATE_USER="$1"
+HM_ACTIVATE="$2"
+CURRENT_USER="$(id -un)"
+ACTIVATE_HOME="$(getent passwd "$ACTIVATE_USER" | cut -d: -f6)"
+ACTIVATE_PATH="/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:$PATH"
+
+if [ -z "$ACTIVATE_HOME" ]; then
+  ACTIVATE_HOME="/home/$ACTIVATE_USER"
+fi
+
+install -d -m755 -o "$ACTIVATE_USER" -g "$(id -gn "$ACTIVATE_USER")" "/nix/var/nix/profiles/per-user/$ACTIVATE_USER"
+
+if [ "$CURRENT_USER" = "$ACTIVATE_USER" ]; then
+  env USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak "$HM_ACTIVATE"
+elif [ "$CURRENT_USER" = "root" ]; then
+  if command -v runuser >/dev/null 2>&1; then
+    runuser -u "$ACTIVATE_USER" -- env USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak "$HM_ACTIVATE"
+  else
+    su -s /bin/sh "$ACTIVATE_USER" -c "USER='$ACTIVATE_USER' HOME='$ACTIVATE_HOME' PATH='$ACTIVATE_PATH' HOME_MANAGER_BACKUP_EXT=hm_bak '$HM_ACTIVATE'"
   fi
-  install -d -m755 -o "$ACTIVATE_USER" -g "$(id -gn "$ACTIVATE_USER")" "/nix/var/nix/profiles/per-user/$ACTIVATE_USER"
-  sudo -u "$ACTIVATE_USER" env USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak "'"$REMOTE_HM_PATH"'"
-'
+else
+  sudo -u "$ACTIVATE_USER" env USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak "$HM_ACTIVATE"
+fi
+EOF
 '''
 
 # ---------------------------------------------------------------------------
