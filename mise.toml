@@ -710,7 +710,7 @@ EOF
 fi
 
 echo "==> Building system-manager from flake..."
-nix build "${NIX_FLAGS[@]}" ".#system-manager"
+nix build "${NIX_FLAGS[@]}" ".#system-manager" --out-link "$REPO_ROOT/result"
 
 SSH_USER="$(ssh -G "$TARGET_HOST" | sed -n 's/^user //p' | head -n 1)"
 SYSTEM_MANAGER_ARGS=(
@@ -723,7 +723,7 @@ if [ "$SSH_USER" != "root" ]; then
 fi
 
 echo "==> Deploying system config '$CONFIG_NAME' to $TARGET_HOST..."
-./result/bin/system-manager "${SYSTEM_MANAGER_ARGS[@]}"
+"$REPO_ROOT/result/bin/system-manager" "${SYSTEM_MANAGER_ARGS[@]}"
 
 echo "==> Building home-manager activation for '$CONFIG_NAME'..."
 nix build "${NIX_FLAGS[@]}" ".#homeConfigurations.$CONFIG_NAME.activationPackage" --out-link "$REPO_ROOT/.hm-result"
@@ -744,7 +744,11 @@ if [ -z "$ACTIVATE_HOME" ]; then
   ACTIVATE_HOME="/home/$ACTIVATE_USER"
 fi
 
-install -d -m755 -o "$ACTIVATE_USER" -g "$(id -gn "$ACTIVATE_USER")" "/nix/var/nix/profiles/per-user/$ACTIVATE_USER"
+if [ "$CURRENT_USER" = "root" ]; then
+  install -d -m755 -o "$ACTIVATE_USER" -g "$(id -gn "$ACTIVATE_USER")" "/nix/var/nix/profiles/per-user/$ACTIVATE_USER"
+elif [ "$CURRENT_USER" != "$ACTIVATE_USER" ]; then
+  sudo install -d -m755 -o "$ACTIVATE_USER" -g "$(id -gn "$ACTIVATE_USER")" "/nix/var/nix/profiles/per-user/$ACTIVATE_USER"
+fi
 
 if [ "$CURRENT_USER" = "$ACTIVATE_USER" ]; then
   env USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak "$HM_ACTIVATE"
