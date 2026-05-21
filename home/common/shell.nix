@@ -90,8 +90,6 @@ in
     enableCompletion = true;
     dotDir = config.home.homeDirectory;
     initContent = ''
-      export PATH="$PATH:$HOME/.local/bin"
-
       # Restore the shell editing behavior we relied on before nix-darwin.
       autoload -Uz select-word-style up-line-or-beginning-search down-line-or-beginning-search
       select-word-style bash
@@ -192,8 +190,10 @@ in
 
   home.sessionPath =
     lib.optionals pkgs.stdenv.isLinux [
+      "/run/current-system/sw/bin"
       "${config.home.homeDirectory}/.nix-profile/bin"
       "${config.home.homeDirectory}/.local/state/nix/profiles/profile/bin"
+      "${config.home.homeDirectory}/.local/bin"
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       "/opt/homebrew/bin"
