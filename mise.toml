@@ -586,8 +586,10 @@ HOST_PATTERN="$REPO_ROOT/systems/"*-linux/"$CONFIG_NAME"
 shopt -s nullglob
 HOST_DIRS=( $HOST_PATTERN )
 shopt -u nullglob
-HOST_DIR_COUNT_EXPR='$''{#HOST_DIRS[@]}'
-HOST_DIR_COUNT=$((${HOST_DIR_COUNT_EXPR}))
+HOST_DIR_COUNT=0
+for _ in "${HOST_DIRS[@]}"; do
+  HOST_DIR_COUNT=$((HOST_DIR_COUNT + 1))
+done
 
 if [ "$HOST_DIR_COUNT" -eq 0 ]; then
   echo "ERROR: Linux host config '$CONFIG_NAME' does not exist in this repo."
