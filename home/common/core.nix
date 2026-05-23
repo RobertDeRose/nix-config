@@ -1,6 +1,11 @@
 # home/common/core.nix
 # Cross-platform CLI tools and programs — works on macOS and Linux.
-{ pkgs, inputs, ... }:
+{
+  lib,
+  pkgs,
+  inputs,
+  ...
+}:
 let
   llmAgentPkgs = inputs.opencode.packages.${pkgs.stdenv.hostPlatform.system};
 in
@@ -17,7 +22,6 @@ in
       bash # bash 5.x (macOS ships ancient 3.2)
       btop
       acli
-      bitwarden-cli
       jq # lightweight and flexible command-line JSON processor
       pstree
       pv # monitor data progress through a pipeline
@@ -50,6 +54,9 @@ in
       # productivity
       glow # markdown previewer in terminal
       usage # required for mise task/tab completion
+    ]
+    ++ lib.optionals (pkgs.stdenv.hostPlatform.system != "x86_64-darwin") [
+      pkgs.bitwarden-cli
     ]
     ++ [
       llmAgentPkgs.openspec
