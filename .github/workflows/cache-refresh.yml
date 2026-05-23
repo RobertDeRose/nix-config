@@ -34,7 +34,6 @@ jobs:
             # tasks.install-nix in mise.toml; this workflow needs them before any
             # managed system config is evaluated.
             experimental-features = nix-command flakes
-            access-tokens = github.com=${{ github.token }}
             extra-substituters = https://robertderose.cachix.org https://cache.numtide.com https://cache.nixos.org https://nix-community.cachix.org
             extra-trusted-public-keys = ${{ env.NIXOS_CACHE_KEY }} ${{ env.NIX_COMMUNITY_KEY }} ${{ env.NUMTIDE_KEY }} ${{ env.CACHIX_PUBLIC_KEY }}
 
@@ -88,7 +87,6 @@ jobs:
             # tasks.install-nix in mise.toml; this workflow needs them before any
             # managed system config is evaluated.
             experimental-features = nix-command flakes
-            access-tokens = github.com=${{ github.token }}
             extra-substituters = https://robertderose.cachix.org https://cache.numtide.com https://cache.nixos.org https://nix-community.cachix.org
             extra-trusted-public-keys = ${{ env.NIXOS_CACHE_KEY }} ${{ env.NIX_COMMUNITY_KEY }} ${{ env.NUMTIDE_KEY }} ${{ env.CACHIX_PUBLIC_KEY }}
 
