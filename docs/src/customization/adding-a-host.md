@@ -54,14 +54,17 @@ After creating the host directory:
 
 ```bash
 # macOS -- build without activating
-nix build --accept-flake-config .#darwinConfigurations.<hostname>.system
+nix build --accept-flake-config '.#darwinConfigurations."<hostname>".system'
 
 # Linux system-manager
-nix build --accept-flake-config .#systemConfigs.<hostname>
+nix build --accept-flake-config '.#systemConfigs."<hostname>"'
 
 # Linux home-manager
-nix build --accept-flake-config .#homeConfigurations.<hostname>.activationPackage
+nix build --accept-flake-config '.#homeConfigurations."<hostname>".activationPackage'
 ```
+
+Quote hostnames in flake attribute paths when they contain characters that are
+not valid unquoted Nix identifiers, such as hyphens.
 
 ## Activating
 
@@ -73,7 +76,7 @@ sudo darwin-rebuild switch --flake .
 
 # Linux
 sudo system-manager switch --flake .
-home-manager switch --flake .#<hostname>
+home-manager switch --flake '.#"<hostname>"'
 ```
 
 Or use the mise tasks which handle platform detection:
