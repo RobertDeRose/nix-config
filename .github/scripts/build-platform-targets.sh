@@ -155,7 +155,7 @@ case "$SYSTEM" in
 
     for host in "${hosts[@]}"; do
       prepare_host_user "hosts/$SYSTEM/$host"
-      build_target ".#darwinConfigurations.${host}.system"
+      build_target ".#darwinConfigurations.\"${host}\".system"
     done
     ;;
 
@@ -168,8 +168,8 @@ case "$SYSTEM" in
 
     for host in "${hosts[@]}"; do
       prepare_host_user "systems/$SYSTEM/$host"
-      build_target ".#systemConfigs.${host}"
-      build_target ".#homeConfigurations.${host}.activationPackage"
+      build_target ".#systemConfigs.\"${host}\""
+      build_target ".#homeConfigurations.\"${host}\".activationPackage"
     done
     ;;
 esac
