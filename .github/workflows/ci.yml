@@ -26,6 +26,7 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
+          - ubuntu-24.04-arm
           - macos-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -33,6 +34,9 @@ jobs:
           ref: ${{ inputs.ref != '' && inputs.ref || github.sha }}
       - uses: cachix/install-nix-action@96951a368ba55167b55f1c916f7d416bac6505fe # v31.10.3
         with:
+          # Disable token injection so public flake inputs are fetched anonymously;
+          # stale workflow credentials have caused GitHub API 401s here.
+          github_access_token: ""
           extra_nix_config: |
             experimental-features = nix-command flakes
       - uses: DeterminateSystems/magic-nix-cache-action@1828eb4e5414b8dfe36daae53ea3e4b8c3fdec7a #main
@@ -69,19 +73,40 @@ jobs:
           done
 
       - name: Build Linux system configurations (Linux only)
-        if: matrix.os == 'ubuntu-latest'
+        if: startsWith(matrix.os, 'ubuntu')
         run: |
-          for host in $(nix eval --json '.#systemConfigs' 2>/dev/null | jq -r 'keys[]' 2>/dev/null); do
+          set -o pipefail
+
+          current_system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
+          hosts_json="$(nix eval --json '.#systemConfigs' --apply builtins.attrNames)"
+
+          for host in $(jq -r '.[]' <<< "$hosts_json"); do
+            host_platform_json="$(nix eval --json ".#systemConfigs.\"$host\".config.nixpkgs.hostPlatform")"
+            host_system="$(jq -r 'if type == "string" then . else .system end' <<< "$host_platform_json")"
+            if [ "$host_system" != "$current_system" ]; then
+              echo "==> Skipping systemConfigs.$host ($host_system on $current_system runner)"
+              continue
+            fi
+
             echo "==> Building systemConfigs.$host"
-            nix build ".#systemConfigs.$host" --no-link
+            nix build ".#systemConfigs.\"$host\"" --no-link
           done
 
       - name: Build Linux home-manager configurations (Linux only)
-        if: matrix.os == 'ubuntu-latest'
+        if: startsWith(matrix.os, 'ubuntu')
         run: |
-          for host in $(nix eval --json '.#homeConfigurations' 2>/dev/null | jq -r 'keys[]' 2>/dev/null); do
+          current_system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
+          hosts_json="$(nix eval --json '.#homeConfigurations' --apply builtins.attrNames)"
+
+          for host in $(jq -r '.[]' <<< "$hosts_json"); do
+            host_system="$(nix eval --raw ".#homeConfigurations.\"$host\".pkgs.stdenv.hostPlatform.system")"
+            if [ "$host_system" != "$current_system" ]; then
+              echo "==> Skipping homeConfigurations.$host ($host_system on $current_system runner)"
+              continue
+            fi
+
             echo "==> Building homeConfigurations.$host.activationPackage"
-            nix build ".#homeConfigurations.$host.activationPackage" --no-link
+            nix build ".#homeConfigurations.\"$host\".activationPackage" --no-link
           done
 
   bootstrap-steps:
