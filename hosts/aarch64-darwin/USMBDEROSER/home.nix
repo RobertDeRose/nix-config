@@ -12,11 +12,15 @@
     apollo = "cd ~/workspace/checkpoint/apollo";
   };
 
-  programs.ssh.matchBlocks = {
+  programs.ssh.settings = {
     # Add host-specific SSH aliases here.
     "dev-som" = {
-      hostname = "dev-som.checkpoint-device.com";
-      user = "root";
+      HostName = "dev-som.checkpoint-device.com";
+      User = "root";
+    };
+    "dev-ab" = {
+      HostName = "dev-ab.checkpoint-device.com";
+      User = "root";
     };
   };
 
