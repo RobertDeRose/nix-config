@@ -1,31 +1,84 @@
 #!/bin/bash
+set -euo pipefail
 
 DISTRO=jammy
+ENGINE=container
 WKDIR="/$(basename "$(pwd)")"
-command="container run -it --rm -v $(pwd):"$WKDIR" -w "$WKDIR""
-#command="docker run -it --rm -v $(pwd):"$WKDIR" -w "$WKDIR""
+SHELL_FILE=".rund-shell.$$"
+args=(run -it --rm -v "$(pwd):$WKDIR" -w "$WKDIR")
 
-while getopts "d:e:ph" opt; do
-  case $opt in
-  p) command+=" --privileged" ;;
-  d) DISTRO="${OPTARG}" ;;
-  e) command+=" -e${OPTARG}" ;;
-  h)
+cleanup() {
+  rm -f "$SHELL_FILE"
+}
+trap cleanup EXIT
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+  --engine)
+    if [ $# -lt 2 ]; then
+      echo "Missing value for --engine" >&2
+      exit 1
+    fi
+    ENGINE="$2"
+    shift 2
+    ;;
+  --engine=*)
+    ENGINE="${1#*=}"
+    shift
+    ;;
+  -p)
+    args+=(--privileged)
+    shift
+    ;;
+  -d)
+    if [ $# -lt 2 ]; then
+      echo "Missing value for -d" >&2
+      exit 1
+    fi
+    DISTRO="$2"
+    shift 2
+    ;;
+  -e)
+    if [ $# -lt 2 ]; then
+      echo "Missing value for -e" >&2
+      exit 1
+    fi
+    args+=("-e" "$2")
+    shift 2
+    ;;
+  -h | --help)
     echo "Usage: rund [options] [command]"
     echo "Options:"
     echo "  -d <Ubuntu Codename> Use focal distro (default: jammy)"
     echo "  -e VAR=VALUE         Add an environment variable"
+    echo "  --engine <engine>    Container engine: container or docker (default: container)"
     echo "  -h                   Show this help message"
     exit 0
     ;;
-  \?)
-    echo "Invalid option: -$OPTARG" >&2
+  --)
+    shift
+    break
+    ;;
+  -*)
+    echo "Invalid option: $1" >&2
     exit 1
+    ;;
+  *)
+    break
     ;;
   esac
 done
 
-command+=" buildpack-deps:${DISTRO}-curl /bin/bash .shell"
+case "$ENGINE" in
+container | docker) ;;
+*)
+  echo "Invalid engine: $ENGINE" >&2
+  echo "Expected one of: container, docker" >&2
+  exit 1
+  ;;
+esac
+
+args+=("buildpack-deps:${DISTRO}-curl" /bin/bash "$SHELL_FILE")
 #  command+=" myoung34/github-runner:ubuntu-${DISTRO} /bin/bash .shell"
 # command+=" github-runner:${DISTRO} /bin/bash .shell"
 
@@ -45,8 +98,9 @@ printf '%s\n' \
   "echo \"clear; echo -e 'Welcome to \${VERSION}!\n'\" >> ~/.bashrc" \
   "echo '\"\e[A\": history-search-backward' >> /etc/inputrc" \
   "echo '\"\e[B\": history-search-forward' >> /etc/inputrc" \
-  "/bin/bash" >.shell
+  "/bin/bash" >"$SHELL_FILE"
 
-$command
-rm .shell
-mv .bash_history "${HOME}/.rund_history"
+"$ENGINE" "${args[@]}"
+if [ -e .bash_history ]; then
+  mv .bash_history "${HOME}/.rund_history"
+fi

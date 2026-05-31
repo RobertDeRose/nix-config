@@ -188,17 +188,18 @@ in
     ];
   };
 
-  home.sessionPath =
-    lib.optionals pkgs.stdenv.isLinux [
-      "/run/current-system/sw/bin"
-      "${config.home.homeDirectory}/.nix-profile/bin"
-      "${config.home.homeDirectory}/.local/state/nix/profiles/profile/bin"
-      "${config.home.homeDirectory}/.local/bin"
-    ]
-    ++ lib.optionals pkgs.stdenv.isDarwin [
-      "/opt/homebrew/bin"
-      "/opt/homebrew/sbin"
-    ];
+  home.sessionPath = [
+    "${config.home.homeDirectory}/.local/bin"
+  ]
+  ++ lib.optionals pkgs.stdenv.isLinux [
+    "/run/current-system/sw/bin"
+    "${config.home.homeDirectory}/.nix-profile/bin"
+    "${config.home.homeDirectory}/.local/state/nix/profiles/profile/bin"
+  ]
+  ++ lib.optionals pkgs.stdenv.isDarwin [
+    "/opt/homebrew/bin"
+    "/opt/homebrew/sbin"
+  ];
 
   home.shellAliases = {
     # ── Tool aliases ─────────────────────────────────────────────────
