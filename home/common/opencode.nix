@@ -7,7 +7,7 @@
   ...
 }:
 let
-  opencodePkg = inputs.opencode.packages.${pkgs.stdenv.hostPlatform.system}.opencode;
+  opencodePkg = inputs.llmagents.packages.${pkgs.stdenv.hostPlatform.system}.opencode;
 in
 {
   programs.opencode = {

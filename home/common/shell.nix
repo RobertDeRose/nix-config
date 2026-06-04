@@ -175,6 +175,14 @@ in
       gg() {
         git grep "$@" -- ':!*.svg' ':!*.min.js' ':!*.min.css' ':!*/vendor/*.css' ':!*/vendor/*.js'
       }
+
+      md() {
+        if [[ $# -ne 1 || -z "$1" ]]; then
+          print -u2 "usage: md <markdown-file>"
+          return 2
+        fi
+        omp --no-session -nc -nbt --offline --pager "$1" && clear
+      }
     '';
     plugins = [
       {
