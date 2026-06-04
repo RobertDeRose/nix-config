@@ -7,7 +7,7 @@
   ...
 }:
 let
-  llmAgentPkgs = inputs.opencode.packages.${pkgs.stdenv.hostPlatform.system};
+  llmAgentPkgs = inputs.llmagents.packages.${pkgs.stdenv.hostPlatform.system};
 in
 {
   home.packages =

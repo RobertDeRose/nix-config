@@ -35,7 +35,7 @@
       inputs.darwin.follows = "darwin";
     };
 
-    opencode = {
+    llmagents = {
       url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -186,9 +186,9 @@
             lib.optionalAttrs (builtins.hasAttr system inputs.system-manager.packages) {
               system-manager = inputs.system-manager.packages.${system}.default;
             }
-            // lib.optionalAttrs (builtins.hasAttr system inputs.opencode.packages) {
-              opencode = inputs.opencode.packages.${system}.opencode;
-              openspec = inputs.opencode.packages.${system}.openspec;
+            // lib.optionalAttrs (builtins.hasAttr system inputs.llmagents.packages) {
+              opencode = inputs.llmagents.packages.${system}.opencode;
+              omp = inputs.llmagents.packages.${system}.omp;
             }
             // lib.optionalAttrs (builtins.hasAttr system inputs.worktrunk.packages) {
               worktrunk = inputs.worktrunk.packages.${system}.worktrunk;
