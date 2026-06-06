@@ -37,7 +37,7 @@ in
     onActivation = {
       autoUpdate = false;
       upgrade = false; # only install missing packages, don't upgrade existing ones
-      cleanup = "zap"; # remove anything not listed below
+      cleanup = "none"; # keep manually installed Homebrew apps/casks
     };
 
     taps = [
