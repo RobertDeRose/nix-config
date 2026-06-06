@@ -40,6 +40,7 @@ home/common/helix.nix          Helix editor + LSPs
 home/common/zellij.nix         Zellij multiplexer
 home/common/htop.nix           htop layout
 home/common/opencode.nix       OpenCode AI agent
+home/common/herdr.nix          Herdr terminal multiplexer
 home/common/ghostty.nix        Ghostty terminal (macOS only, imported by home/darwin.nix)
 home/common/zed.nix            Zed editor config (macOS only, imported by home/darwin.nix)
 ```
@@ -58,3 +59,40 @@ homebrew.brews = [ "mosquitto" ];
 ```
 
 and it will be added to the global list -- no need to modify `apps.nix`.
+
+## Adding Packages from Flake Inputs
+
+Some tools are provided by external flake inputs (e.g. `llmagents`) rather than
+nixpkgs. When a tool has a home-manager module (`programs.<name>`), create a
+module like `home/common/opencode.nix`:
+
+```nix
+{ pkgs, inputs, ... }:
+let
+  pkg = inputs.llmagents.packages.${pkgs.stdenv.hostPlatform.system}.opencode;
+in
+{
+  programs.opencode = {
+    enable = true;
+    package = pkg;
+  };
+}
+```
+
+When a tool does **not** have a home-manager module, add it to `home.packages`
+directly instead, like `home/common/herdr.nix`:
+
+```nix
+{ pkgs, inputs, ... }:
+{
+  home.packages = [
+    inputs.llmagents.packages.${pkgs.stdenv.hostPlatform.system}.herdr
+  ];
+}
+```
+
+In both cases, the package must be exposed in `flake.nix` under `perSystem.packages`
+from the appropriate input, and the module must be imported in
+`home/common/default.nix`. The `inputs` special arg is made available to
+home-manager modules via `home-manager.extraSpecialArgs.inputs = inputs` in
+`flake.nix`.

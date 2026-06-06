@@ -7,6 +7,7 @@
     ./direnv.nix
     ./git.nix
     ./helix.nix
+    ./herdr.nix
     ./htop.nix
     ./omp.nix
     ./opencode.nix
