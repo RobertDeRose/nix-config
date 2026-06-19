@@ -29,7 +29,6 @@ in
       rlwrap # readline wrapper for CLI programs lacking line editing
       tmux
       yq-go # yaml processor https://github.com/mikefarah/yq
-      docker-client
 
       socat # replacement of openbsd-netcat
       nmap # utility for network discovery and security auditing
@@ -48,12 +47,9 @@ in
       zstd
 
       # nix
-      nixpkgs-fmt
+      deadnix
+      nixfmt
       nixd
-
-      # productivity
-      glow # markdown previewer in terminal
-      usage # required for mise task/tab completion
     ]
     ++ lib.optionals (pkgs.stdenv.hostPlatform.system != "x86_64-darwin") [
       pkgs.bitwarden-cli

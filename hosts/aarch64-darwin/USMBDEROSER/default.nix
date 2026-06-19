@@ -40,7 +40,6 @@ in
     cpus = 4;
     memory = "8G";
     maxJobs = 4;
-    bridge.enable = true;
     cli.completions.enable = true;
     socktainer.enable = false;
     socktainer.setDockerHost = false;
