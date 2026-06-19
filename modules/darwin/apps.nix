@@ -48,9 +48,6 @@ in
     # brew install — CLI tools that aren't in nixpkgs (or are marked EOL there)
     brews = [
       "worktrunk" # Installed via Homebrew to avoid uncached local Rust builds
-    ]
-    ++ lib.optionals isAarch64 [
-      "container-compose" # Docker Compose-like tool for Apple containers (aarch64 only)
     ];
 
     # brew install --cask ...
@@ -65,7 +62,6 @@ in
       "stats" # System monitor
 
       # Development
-      "atuin-desktop"
       "balenaetcher"
       "claude"
       "cmux" # Ghostty-based terminal for AI coding agents
