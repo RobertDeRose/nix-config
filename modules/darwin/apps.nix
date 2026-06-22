@@ -41,13 +41,24 @@ in
     };
 
     taps = [
-      "manaflow-ai/cmux"
-      "macos-fuse-t/cask"
+      {
+        name = "manaflow-ai/cmux";
+        trusted = true;
+      }
+      {
+        name = "macos-fuse-t/cask";
+        trusted = true;
+      }
+      {
+        name = "modem-dev/tap";
+        trusted = true;
+      }
     ];
 
     # brew install — CLI tools that aren't in nixpkgs (or are marked EOL there)
     brews = [
       "worktrunk" # Installed via Homebrew to avoid uncached local Rust builds
+      "modem-dev/tap/hunk"
     ];
 
     # brew install --cask ...
