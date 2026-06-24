@@ -12,16 +12,24 @@
     apollo = "cd ~/workspace/checkpoint/apollo";
   };
 
-  programs.ssh.settings = {
-    # Add host-specific SSH aliases here.
-    "dev-som" = {
-      HostName = "dev-som.checkpoint-device.com";
-      User = "root";
+  programs.ssh = {
+    enable = true;
+
+    settings = {
+      # Add host-specific SSH aliases here.
+      "dev-som" = {
+        HostName = "dev-som.checkpoint-device.com";
+        User = "root";
+      };
+      "dev-ab" = {
+        HostName = "dev-ab.checkpoint-device.com";
+        User = "root";
+      };
     };
-    "dev-ab" = {
-      HostName = "dev-ab.checkpoint-device.com";
-      User = "root";
-    };
+
+    includes = [
+      ''"/Users/DeRoseR/Library/Application Support/NVIDIA/Sync/config/ssh_config"''
+    ];
   };
 
   # ── Personal git identity for ~/workspace/personal/ repos ───────────────
