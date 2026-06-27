@@ -39,7 +39,7 @@ in
     enable = true;
     cpus = 4;
     memory = "8G";
-    maxJobs = 4;
+    maxJobs = 8;
     cli.completions.enable = true;
     socktainer.enable = false;
     socktainer.setDockerHost = false;
