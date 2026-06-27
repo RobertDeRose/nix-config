@@ -39,7 +39,11 @@
         excludesfile = "~/.config/git/global_gitignore";
       }
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
-        pager = "hunk pager";
+        pager = "bat -l gitlog -p";
+      };
+      pager = lib.optionalAttrs pkgs.stdenv.isDarwin {
+        diff = "hunk pager";
+        show = "hunk pager";
       };
       commit.gpgsign = pkgs.stdenv.isDarwin;
       credential.helper = "cache --timeout=3600";
