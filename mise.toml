@@ -673,10 +673,13 @@ if ! nix eval "${NIX_FLAGS[@]}" --raw "$HOME_ACTIVATION_REF.type" >/dev/null 2>&
 fi
 
 echo "==> Checking Nix on remote host..."
+if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "$TARGET_HOST" true 2>/dev/null; then
+  ssh-copy-id
+fi
+
 if ! ssh "$TARGET_HOST" 'command -v nix >/dev/null 2>&1 && command -v nix-store >/dev/null 2>&1'; then
   echo "==> Nix not found on $TARGET_HOST. Installing Lix..."
-  ssh "$TARGET_HOST" bash -s <<'EOF'
-set -euo pipefail
+  ssh -t "$TARGET_HOST" bash -c 'set -euo pipefail
 
 SUDO=()
 if [ "$(id -u)" -ne 0 ]; then
@@ -685,6 +688,7 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
   fi
   SUDO=(sudo)
+  "${SUDO[@]}" -v
 fi
 
 if ! command -v nix >/dev/null 2>&1; then
@@ -710,7 +714,7 @@ set -u
 
 nix --version >/dev/null
 nix-store --version >/dev/null
-EOF
+'
   echo "==> Nix tooling is ready on $TARGET_HOST."
 fi
 
