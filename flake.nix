@@ -188,7 +188,6 @@
             }
             // lib.optionalAttrs (builtins.hasAttr system inputs.llmagents.packages) {
               opencode = inputs.llmagents.packages.${system}.opencode;
-              omp = inputs.llmagents.packages.${system}.omp;
               herdr = inputs.llmagents.packages.${system}.herdr;
             }
             // lib.optionalAttrs (builtins.hasAttr system inputs.worktrunk.packages) {

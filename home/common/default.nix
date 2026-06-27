@@ -9,8 +9,8 @@
     ./helix.nix
     ./herdr.nix
     ./htop.nix
-    ./omp.nix
     ./opencode.nix
+    ./pi.nix
     ./shell.nix
     ./zellij.nix
   ];

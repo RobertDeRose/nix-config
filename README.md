@@ -113,7 +113,6 @@ Or if you've already cloned the repo:
         ├── git.nix            # git, gh, lazygit
         ├── direnv.nix         # direnv + nix-direnv + mise
         ├── pi.nix             # Pi coding-agent customization
-        ├── omp.nix            # Oh My Posh configuration
         └── *.ts               # Pi UI extension modules
 ```
 
