@@ -674,12 +674,12 @@ fi
 
 echo "==> Checking Nix on remote host..."
 if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "$TARGET_HOST" true 2>/dev/null; then
-  ssh-copy-id
+  ssh-copy-id "$TARGET_HOST"
 fi
 
 if ! ssh "$TARGET_HOST" 'command -v nix >/dev/null 2>&1 && command -v nix-store >/dev/null 2>&1'; then
   echo "==> Nix not found on $TARGET_HOST. Installing Lix..."
-  ssh -t "$TARGET_HOST" bash -c 'set -euo pipefail
+  ssh -t "$TARGET_HOST" "bash -c 'set -euo pipefail
 
 SUDO=()
 if [ "$(id -u)" -ne 0 ]; then
@@ -714,21 +714,67 @@ set -u
 
 nix --version >/dev/null
 nix-store --version >/dev/null
-'
+'"
   echo "==> Nix tooling is ready on $TARGET_HOST."
 fi
+
+SSH_USER="$(ssh -G "$TARGET_HOST" | sed -n 's/^user //p' | head -n 1)"
+
+echo "==> Ensuring remote Nix trusts SSH user '$SSH_USER'..."
+ssh -t "$TARGET_HOST" '
+set -eu
+
+TRUSTED_USER="$(id -un)"
+CONF="/etc/nix/nix.conf"
+
+run_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+  else
+    sudo "$@"
+  fi
+}
+
+if [ "$(id -u)" -ne 0 ]; then
+  if ! command -v sudo >/dev/null 2>&1; then
+    echo "ERROR: Remote Nix trust setup requires root or sudo." >&2
+    exit 1
+  fi
+  sudo -v
+fi
+
+run_root mkdir -p /etc/nix
+run_root touch "$CONF"
+
+if ! grep -qE "^(extra-)?trusted-users[[:space:]]*=.*(^|[[:space:]])${TRUSTED_USER}([[:space:]]|$)" "$CONF" 2>/dev/null; then
+  if grep -qE "^extra-trusted-users[[:space:]]*=" "$CONF" 2>/dev/null; then
+    run_root sed -i "s/^extra-trusted-users[[:space:]]*=.*/& ${TRUSTED_USER}/" "$CONF"
+  else
+    printf "extra-trusted-users = %s\n" "$TRUSTED_USER" | run_root tee -a "$CONF" >/dev/null
+  fi
+fi
+
+if ! grep -q "robertderose.cachix.org" "$CONF" 2>/dev/null; then
+  printf "%s\n%s\n" \
+    "extra-substituters = https://robertderose.cachix.org https://cache.numtide.com https://cache.nixos.org https://nix-community.cachix.org" \
+    "extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g= robertderose.cachix.org-1:LGSby4A1Kg1W19IC5AoB3oGhLSgfg1x3j2GF0Ve2hKM=" \
+    | run_root tee -a "$CONF" >/dev/null
+fi
+
+run_root systemctl restart nix-daemon.socket 2>/dev/null || true
+run_root systemctl restart nix-daemon.service 2>/dev/null || true
+'
 
 echo "==> Building system-manager from flake..."
 nix build "${NIX_FLAGS[@]}" ".#system-manager" --out-link "$REPO_ROOT/result"
 
-SSH_USER="$(ssh -G "$TARGET_HOST" | sed -n 's/^user //p' | head -n 1)"
 SYSTEM_MANAGER_ARGS=(
   --target-host "$TARGET_HOST"
   switch
   --flake "$SYSTEM_FLAKE_REF"
 )
 if [ "$SSH_USER" != "root" ]; then
-  SYSTEM_MANAGER_ARGS+=(--sudo)
+  SYSTEM_MANAGER_ARGS+=(--ask-sudo-password)
 fi
 
 echo "==> Deploying system config '$CONFIG_NAME' to $TARGET_HOST..."
