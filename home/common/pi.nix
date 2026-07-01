@@ -104,6 +104,21 @@ in
   home.file.".pi/agent/extensions/ayu-footer.ts".source = ../../files/pi/extensions/footer.ts;
   home.file.".pi/agent/extensions/markdown-pager.ts".source = ../../files/pi/extensions/pager.ts;
   home.file.".pi/agent/extensions/bookmark.ts".source = ../../files/pi/extensions/bookmark.ts;
+  home.file.".pi/agent/AGENTS.md".text = ''
+    # Token-efficient agent behavior
+
+    Be concise. Avoid filler, repeated summaries, and unnecessary restatement.
+
+    Prefer the smallest correct change:
+
+    1. Skip unnecessary work.
+    2. Reuse existing code.
+    3. Use stdlib/native features.
+    4. Avoid new dependencies.
+    5. Write the minimum working diff.
+
+    Never sacrifice correctness, security, validation, accessibility, data-loss protection, or explicitly requested behavior.
+  '';
 
   home.activation.removeOldPiOverlayExtension = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
     rm -f "$HOME/.pi/agent/extensions/interface-overlays.ts"
@@ -122,6 +137,7 @@ in
 
     tmp_file="$(${pkgs.coreutils}/bin/mktemp)"
     if ${pkgs.jq}/bin/jq '. * {
+      packages: ((.packages // []) + ["git:github.com/DietrichGebert/ponytail"] | unique),
       theme: "ayu-mirage",
       steeringMode: "one-at-a-time",
       transport: "auto",
