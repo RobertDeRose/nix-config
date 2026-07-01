@@ -688,6 +688,10 @@ export default function (pi: ExtensionAPI) {
   let latest = "";
   let pagerOpen = false;
 
+  function restoreCursor() {
+    if (process.stdout.isTTY) process.stdout.write("\x1b[?25h");
+  }
+
   pi.registerFlag("pager", {
     description: "Open a Markdown file directly in the pager on startup",
     type: "string",
@@ -729,8 +733,12 @@ export default function (pi: ExtensionAPI) {
         return pager;
       });
       if (options.shutdownOnClose) {
+        restoreCursor();
         ctx.shutdown();
-        setTimeout(() => process.exit(0), 0);
+        setTimeout(() => {
+          restoreCursor();
+          process.exit(0);
+        }, 0);
       }
     } finally {
       try {
