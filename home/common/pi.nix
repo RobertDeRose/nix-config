@@ -137,12 +137,20 @@ in
 
     tmp_file="$(${pkgs.coreutils}/bin/mktemp)"
     if ${pkgs.jq}/bin/jq '. * {
-      packages: ((.packages // []) + ["git:github.com/DietrichGebert/ponytail"] | unique),
+      packages: ((.packages // []) + [
+        "git:github.com/DietrichGebert/ponytail",
+        "npm:pi-subagents",
+        "npm:pi-intercom",
+        "npm:pi-web-access"
+      ] | unique),
       theme: "ayu-mirage",
       steeringMode: "one-at-a-time",
       transport: "auto",
       defaultProvider: "github-copilot",
       defaultModel: "gpt-5.5",
+      subagents: {
+        defaultModel: "openai-codex/gpt-5.3-codex-spark"
+      },
       defaultThinkingLevel: "low",
       terminal: {
         showTerminalProgress: true
