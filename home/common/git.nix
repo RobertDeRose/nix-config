@@ -30,13 +30,13 @@
       ".jj"
       ".bash_history"
       ".shell"
+      ".pi-subagents"
     ];
     settings = {
       core = {
         autocrlf = "input";
         editor = "hx";
         whitespace = "trailing-space,space-before-tab";
-        excludesfile = "~/.config/git/global_gitignore";
       }
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
         pager = "bat -l gitlog -p";
