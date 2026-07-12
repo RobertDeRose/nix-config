@@ -147,8 +147,7 @@ activate_linux_system() {
 
 activate_linux_home() {
   local root="$1" host="$2" username home group activation_path
-  username="$(inventory_host_user "$root" "$host")"
-  validate_username "$username" || die "invalid managed username '$username' for host '$host'"
+  username="$(require_inventory_user_for_host "$root" "$host")"
   home="$(home_directory_for_user "$username")"
   group="$(id -gn "$username" 2>/dev/null || printf '%s' "$username")"
   activation_path="/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:${PATH:-/usr/bin:/bin}"

@@ -13,9 +13,12 @@ let
       fullName = raw.full_name or (fail "user '${name}' is missing field 'full_name'");
       email = raw.email or (fail "user '${name}' is missing field 'email'");
       github = raw.github or (fail "user '${name}' is missing field 'github'");
+      allowNonportable = raw.allow_nonportable or false;
     in
-    if !validation.validUsername username then
-      fail "user '${name}' has invalid username '${username}'; expected a portable non-root account name"
+    if username == "root" then
+      fail "user '${name}' may not use the root account"
+    else if !validation.validUsername username && !allowNonportable then
+      fail "user '${name}' has invalid username '${username}'; expected a portable non-root account name, or set allow_nonportable = true only for an existing compatibility identity"
     else if !validation.validGithub github then
       fail "user '${name}' has invalid github value '${github}'; expected a 1-39 character GitHub username"
     else if email == "" then
@@ -27,6 +30,7 @@ let
           fullName
           email
           github
+          allowNonportable
           ;
       }
   ) (inventory.users or { });
@@ -46,6 +50,8 @@ let
       fail "host '${name}' has unsupported system '${system}'; allowed values: ${lib.concatStringsSep ", " validation.supportedSystems}"
     else if !(builtins.hasAttr userName users) then
       fail "host '${name}' references missing user '${userName}'"
+    else if users.${userName}.allowNonportable && !(lib.hasSuffix "-darwin" system) then
+      fail "host '${name}' uses nonportable compatibility user '${users.${userName}.username}' on non-Darwin system '${system}'"
     else if profileList == [ ] then
       fail "host '${name}' must select at least one profile"
     else if unknownProfiles != [ ] then

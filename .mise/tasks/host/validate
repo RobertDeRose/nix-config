@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# [MISE] description="Validate users, hosts, systems, profiles, and overrides in inventory.toml"
+
+set -euo pipefail
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/platform.sh"
+source "$REPO_ROOT/.mise/lib/inventory.sh"
+
+file="$REPO_ROOT/inventory.toml"
+[ -f "$file" ] || die "inventory.toml is missing"
+[ "$(inventory_field "$file" '' schema)" = 1 ] || {
+  # Top-level scalar is outside a section; parse it directly.
+  schema="$(sed -n 's/^[[:space:]]*schema[[:space:]]*=[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$file" | head -n1)"
+  [ "$schema" = 1 ] || die "inventory.toml schema must be 1"
+}
+
+users="$(inventory_users "$REPO_ROOT")"
+[ -n "$users" ] || die "inventory.toml defines no users"
+printf '%s\n' "$users" | while IFS= read -r name; do
+  [ -n "$name" ] || continue
+  username="$(inventory_user_field "$REPO_ROOT" "$name" username)"
+  [ -n "$username" ] || username="$name"
+  if ! validate_username "$username"; then
+    allow_nonportable="$(inventory_user_field "$REPO_ROOT" "$name" allow_nonportable)"
+    [ "$username" != root ] || die "user '$name' may not use the root account"
+    [ "$allow_nonportable" = true ] || die "user '$name' has invalid username '$username'; expected a portable account name or an explicit allow_nonportable compatibility exception"
+  fi
+  github="$(inventory_user_field "$REPO_ROOT" "$name" github)"
+  validate_github_username "$github" || die "user '$name' has invalid GitHub username '$github'"
+  [ -n "$(inventory_user_field "$REPO_ROOT" "$name" full_name)" ] || die "user '$name' is missing full_name"
+  [ -n "$(inventory_user_field "$REPO_ROOT" "$name" email)" ] || die "user '$name' is missing email"
+done
+
+hosts="$(inventory_hosts "$REPO_ROOT")"
+[ -n "$hosts" ] || die "inventory.toml defines no hosts"
+printf '%s\n' "$hosts" | while IFS= read -r host; do
+  [ -n "$host" ] || continue
+  validate_hostname "$host" || die "host '$host' is not a valid DNS label"
+  system="$(inventory_host_system "$REPO_ROOT" "$host")"
+  is_supported_system "$system" || die "host '$host' has unsupported system '$system'"
+  user="$(inventory_host_user "$REPO_ROOT" "$host")"
+  inventory_has_user "$REPO_ROOT" "$user" || die "host '$host' references missing user '$user'"
+  username="$(inventory_user_field "$REPO_ROOT" "$user" username)"
+  [ -n "$username" ] || username="$user"
+  inventory_user_allowed_for_system "$REPO_ROOT" "$user" "$system" || die "host '$host' has invalid managed username '$username' for '$system'"
+  profiles="$(inventory_host_profiles "$REPO_ROOT" "$host")"
+  [ -n "$profiles" ] || die "host '$host' has no profiles"
+  printf '%s\n' "$profiles" | while IFS= read -r profile; do
+    case "$profile" in
+      base|developer) ;;
+      mac-desktop) case "$system" in *-darwin) ;; *) die "host '$host' cannot use mac-desktop on '$system'";; esac ;;
+      linux-server) case "$system" in *-linux) ;; *) die "host '$host' cannot use linux-server on '$system'";; esac ;;
+      *) die "host '$host' references unknown profile '$profile'" ;;
+    esac
+  done
+done
+
+if [ -d "$REPO_ROOT/hosts" ]; then
+  find "$REPO_ROOT/hosts" -mindepth 1 -maxdepth 1 -type d -print | while IFS= read -r dir; do
+    host="$(basename "$dir")"
+    inventory_has_host "$REPO_ROOT" "$host" || die "override directory hosts/$host has no inventory entry"
+    find "$dir" -maxdepth 1 -type f ! -name system.nix ! -name home.nix -print | while IFS= read -r unexpected; do
+      die "unexpected host override file: ${unexpected#$REPO_ROOT/}"
+    done
+  done
+fi
+log_info "inventory.toml is valid"

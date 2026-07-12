@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+# [MISE] description="Add a validated host to inventory.toml"
+# [MISE] interactive=true
+#
+#USAGE arg "<hostname>" help="Hostname to add"
+#USAGE arg "[os]" help="Legacy OS class: darwin or linux"
+#USAGE arg "[arch]" help="Legacy architecture: aarch64 or x86_64"
+#USAGE flag "--system <system>" help="Nix system, for example aarch64-darwin"
+#USAGE flag "--user <user>" help="Inventory user (defaults to the current user when already defined)"
+#USAGE flag "--profiles <profiles>" help="Comma-separated profiles"
+#USAGE flag "--fullname <name>" help="Full name when creating a new user"
+#USAGE flag "--email <email>" help="Email when creating a new user"
+#USAGE flag "--github <username>" help="GitHub username when creating a new user"
+#USAGE flag "--overrides" help="Create hosts/<hostname>/system.nix and home.nix stubs"
+#USAGE flag "--commit" help="Stage and commit the inventory change"
+
+set -euo pipefail
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/platform.sh"
+source "$REPO_ROOT/.mise/lib/inventory.sh"
+source "$REPO_ROOT/.mise/lib/git.sh"
+source "$REPO_ROOT/.mise/lib/nix.sh"
+
+host="${usage_hostname}"
+validate_hostname "$host" || die "invalid hostname '$host'; expected one DNS label"
+inventory_has_host "$REPO_ROOT" "$host" && die "host '$host' already exists"
+
+system="${usage_system:-}"
+if [ -z "$system" ] && [ -n "${usage_os:-}" ]; then
+  arch="${usage_arch:-$(current_arch)}"
+  system="$arch-${usage_os}"
+fi
+[ -n "$system" ] || system="$(current_system)"
+is_supported_system "$system" || die "unsupported system '$system'"
+
+user="${usage_user:-$(current_user)}"
+profiles="${usage_profiles:-}"
+if [ -z "$profiles" ]; then
+  case "$system" in
+    *-darwin) profiles=base,developer,mac-desktop ;;
+    *-linux) profiles=base,developer,linux-server ;;
+  esac
+fi
+
+profile_toml=""
+old_ifs="$IFS"; IFS=','
+for profile in $profiles; do
+  profile="$(printf '%s' "$profile" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+  case "$profile" in
+    base|developer) ;;
+    mac-desktop) case "$system" in *-darwin) ;; *) die "profile '$profile' is incompatible with '$system'";; esac ;;
+    linux-server) case "$system" in *-linux) ;; *) die "profile '$profile' is incompatible with '$system'";; esac ;;
+    *) die "unknown profile '$profile'" ;;
+  esac
+  [ -z "$profile_toml" ] || profile_toml="$profile_toml, "
+  profile_toml="$profile_toml\"$profile\""
+done
+IFS="$old_ifs"
+
+inventory_file="$REPO_ROOT/inventory.toml"
+if inventory_has_user "$REPO_ROOT" "$user"; then
+  inventory_user_allowed_for_system "$REPO_ROOT" "$user" "$system" || die "inventory user '$user' is not valid for '$system'"
+else
+  validate_username "$user" || die "invalid new managed username '$user'; new accounts must use a portable lowercase name"
+fi
+
+toml_basic_string() {
+  local value="$1"
+  case "$value" in
+    *$'\n'*|*$'\r'*) die "TOML string values may not contain newlines" ;;
+  esac
+  printf '%s' "$value" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+tmp="$(mktemp "${TMPDIR:-/tmp}/inventory.toml.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+cp "$inventory_file" "$tmp"
+
+if ! inventory_has_user "$REPO_ROOT" "$user"; then
+  fullname="${usage_fullname:-}"
+  email="${usage_email:-}"
+  github="${usage_github:-}"
+  [ -n "$fullname" ] || die "user '$user' is not defined; pass --fullname to create it"
+  [ -n "$email" ] || die "user '$user' is not defined; pass --email to create it"
+  validate_github_username "$github" || die "user '$user' is not defined; pass a valid --github username"
+  escaped_user="$(toml_basic_string "$user")"
+  escaped_fullname="$(toml_basic_string "$fullname")"
+  escaped_email="$(toml_basic_string "$email")"
+  escaped_github="$(toml_basic_string "$github")"
+  cat >> "$tmp" <<USER_ENTRY
+
+[users.$user]
+username = "$escaped_user"
+full_name = "$escaped_fullname"
+email = "$escaped_email"
+github = "$escaped_github"
+USER_ENTRY
+fi
+
+cat >> "$tmp" <<HOST_ENTRY
+
+[hosts.$host]
+system = "$system"
+user = "$user"
+profiles = [$profile_toml]
+HOST_ENTRY
+mv "$tmp" "$inventory_file"
+trap - EXIT
+
+created_paths=(inventory.toml)
+if [ "${usage_overrides:-false}" = true ]; then
+  mkdir -p "hosts/$host"
+  cat > "hosts/$host/system.nix" <<'SYSTEM_OVERRIDE'
+{ ... }:
+{
+  # Host-specific system exceptions only.
+}
+SYSTEM_OVERRIDE
+  cat > "hosts/$host/home.nix" <<'HOME_OVERRIDE'
+{ ... }:
+{
+  # Host-specific Home Manager exceptions only.
+}
+HOME_OVERRIDE
+  created_paths+=("hosts/$host")
+fi
+
+mise run host:validate
+if command -v nix >/dev/null 2>&1; then
+  load_nix_environment
+  configure_github_access_token
+  evaluate_host "$REPO_ROOT" "$host" false
+else
+  log_warn "Nix/Lix is unavailable; evaluation will occur during bootstrap/apply"
+fi
+
+printf '\nConfiguration diff:\n'
+git --no-pager diff -- "${created_paths[@]}"
+if [ "${usage_commit:-false}" = true ]; then
+  git_commit_paths "$REPO_ROOT" "feat: add host $host ($system)" "${created_paths[@]}"
+fi
+printf '\nAdded host %s. Preview it with:\n  mise run plan --host %s\n' "$host" "$host"

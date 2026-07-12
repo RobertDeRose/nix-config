@@ -28,10 +28,10 @@ require_inventory_host "$REPO_ROOT" "$host"
 system="$(inventory_host_system "$REPO_ROOT" "$host")"
 case "$system" in *-linux) ;; *) die "deploy supports Linux hosts only; '$host' is $system" ;; esac
 
-managed_user="$(inventory_host_user "$REPO_ROOT" "$host")"
-github_user="$(inventory_user_field "$REPO_ROOT" "$managed_user" github)"
-validate_username "$managed_user" || die "invalid managed username '$managed_user' for host '$host'"
-validate_github_username "$github_user" || die "invalid GitHub username '$github_user' for user '$managed_user'"
+inventory_user="$(inventory_host_user "$REPO_ROOT" "$host")"
+managed_user="$(require_inventory_user_for_host "$REPO_ROOT" "$host")"
+github_user="$(inventory_user_field "$REPO_ROOT" "$inventory_user" github)"
+validate_github_username "$github_user" || die "invalid GitHub username '$github_user' for user '$inventory_user'"
 
 load_nix_environment
 configure_github_access_token

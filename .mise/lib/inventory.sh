@@ -168,3 +168,63 @@ validate_host_platform() {
     return 1
   fi
 }
+
+inventory_users() {
+  local root="$1" file
+  file="$(inventory_path "$root")"
+  [ -f "$file" ] || return 0
+  awk '
+    /^[[:space:]]*\[users\.[^]]+\][[:space:]]*$/ {
+      line=$0
+      sub(/^[[:space:]]*\[users\./, "", line)
+      sub(/\][[:space:]]*$/, "", line)
+      print line
+    }
+  ' "$file" | sort
+}
+
+inventory_has_user() {
+  local root="$1" user="$2"
+  inventory_users "$root" | grep -Fxq "$user"
+}
+
+inventory_host_username() {
+  local root="$1" host="$2" user username
+  user="$(inventory_host_user "$root" "$host")" || return 1
+  username="$(inventory_user_field "$root" "$user" username)"
+  [ -n "$username" ] || username="$user"
+  printf '%s\n' "$username"
+}
+
+inventory_user_allowed_for_system() {
+  local root="$1" user="$2" system="$3" username allow_nonportable
+  inventory_has_user "$root" "$user" || return 1
+  username="$(inventory_user_field "$root" "$user" username)"
+  [ -n "$username" ] || username="$user"
+  [ "$username" != root ] || return 1
+  if validate_username "$username"; then
+    return 0
+  fi
+  allow_nonportable="$(inventory_user_field "$root" "$user" allow_nonportable)"
+  [ "$allow_nonportable" = true ] || return 1
+  case "$system" in
+    *-darwin) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+require_inventory_user_for_host() {
+  local root="$1" host="$2" user system username
+  user="$(inventory_host_user "$root" "$host")" || return 1
+  system="$(inventory_host_system "$root" "$host")" || return 1
+  if ! inventory_has_user "$root" "$user"; then
+    die "host '$host' references missing user '$user'"
+    return 1
+  fi
+  username="$(inventory_host_username "$root" "$host")" || return 1
+  if ! inventory_user_allowed_for_system "$root" "$user" "$system"; then
+    die "host '$host' has invalid managed username '$username' for system '$system'"
+    return 1
+  fi
+  printf '%s\n' "$username"
+}

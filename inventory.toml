@@ -11,6 +11,7 @@ github = "RobertDeRose"
 
 [users.DeRoseR]
 username = "DeRoseR"
+allow_nonportable = true
 full_name = "Robert DeRose"
 email = "rderose@checkpt.com"
 github = "RobertDeRose"

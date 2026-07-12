@@ -18,3 +18,7 @@ The repository initially used easy-hosts for Darwin discovery, a separate filesy
 ## Phase log
 
 Each refactor phase appends its implementation and validation result here. User-visible behavior is intentionally preserved unless an entry explicitly states otherwise.
+
+## Compatibility exception: existing Darwin username
+
+The existing macOS account name `DeRoseR` contains uppercase characters and therefore is not portable to Linux. To preserve the active macOS identity without renaming the account, `inventory.toml` marks that existing identity with `allow_nonportable = true`. Validation permits the exception only for Darwin hosts; newly scaffolded users must still use portable lowercase account names.
