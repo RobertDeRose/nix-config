@@ -35,17 +35,16 @@ rsync -a --delete \
 git -C "$STAGE_DIR" init -q
 git -C "$STAGE_DIR" add -A
 mise trust "$STAGE_DIR/mise.toml" >/dev/null
-mkdir -p "$STAGE_DIR/systems/aarch64-linux/apple-ssh-test"
-cp "$STAGE_DIR/templates/linux/system.nix" "$STAGE_DIR/systems/aarch64-linux/apple-ssh-test/system.nix"
-cp "$STAGE_DIR/templates/linux/home.nix" "$STAGE_DIR/systems/aarch64-linux/apple-ssh-test/home.nix"
-cat > "$STAGE_DIR/systems/aarch64-linux/apple-ssh-test/user.nix" <<'EOF'
-{
-  username = "tester";
-  fullname = "Container Test User";
-  useremail = "tester@localhost";
-  githubUsername = "RobertDeRose";
-}
-EOF
+(
+  cd "$STAGE_DIR"
+  mise run host:add -- apple-ssh-test \
+    --system aarch64-linux \
+    --user tester \
+    --profiles base,developer,linux-server \
+    --fullname "Container Test User" \
+    --email tester@localhost \
+    --github RobertDeRose
+)
 git -C "$STAGE_DIR" add -A
 
 echo "==> Recreating Apple deploy test container '$NAME'..."
@@ -107,7 +106,7 @@ ssh-keyscan "$IP" >> "$KNOWN_HOSTS"
 echo "==> Running deployment test..."
 (
   cd "$STAGE_DIR"
-  GIT_SSH_COMMAND="ssh -i '$SSH_KEY' -o IdentitiesOnly=yes" mise run nix:deploy "$TARGET@$IP" apple-ssh-test
+  GIT_SSH_COMMAND="ssh -i '$SSH_KEY' -o IdentitiesOnly=yes" mise run deploy -- "$TARGET@$IP" apple-ssh-test
 )
 
 echo ""

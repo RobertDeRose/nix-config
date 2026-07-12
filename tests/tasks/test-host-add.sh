@@ -12,6 +12,9 @@ cat > "$tmp/bin/mise" <<'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail
 [ "$1" = run ] && [ "$2" = host:validate ] || { echo "unexpected mise call: $*" >&2; exit 2; }
+if [ "${MOCK_VALIDATE_FAIL:-false}" = true ]; then
+  exit 9
+fi
 exec bash "$MOCK_ROOT/.mise/tasks/host/validate"
 MOCK
 chmod +x "$tmp/bin/mise"
@@ -41,3 +44,16 @@ if (
   fail 'host:add accepted a platform-incompatible profile'
 fi
 assert_eq "$before" "$(cat "$tmp/inventory.toml")" 'failed host:add changed inventory'
+
+
+before="$(cat "$tmp/inventory.toml")"
+if (
+  cd "$tmp"
+  PATH="$tmp/bin:$PATH" MOCK_ROOT="$tmp" MOCK_VALIDATE_FAIL=true \
+    usage_hostname=validation-fails usage_system=x86_64-linux usage_user=rderose \
+    usage_profiles=base,linux-server \
+    "$tmp/.mise/tasks/host/add"
+) >/dev/null 2>&1; then
+  fail 'host:add accepted a failed post-write validation'
+fi
+assert_eq "$before" "$(cat "$tmp/inventory.toml")" 'host:add did not restore inventory after validation failure'

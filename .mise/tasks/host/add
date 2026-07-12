@@ -75,9 +75,20 @@ toml_basic_string() {
   printf '%s' "$value" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
-tmp="$(mktemp "${TMPDIR:-/tmp}/inventory.toml.XXXXXX")"
-trap 'rm -f "$tmp"' EXIT
-cp "$inventory_file" "$tmp"
+backup="$(mktemp "${TMPDIR:-/tmp}/inventory.backup.XXXXXX")"
+candidate="$(mktemp "${TMPDIR:-/tmp}/inventory.candidate.XXXXXX")"
+cp "$inventory_file" "$backup"
+cp "$inventory_file" "$candidate"
+override_dir="hosts/$host"
+override_created=false
+restore_on_failure() {
+  cp "$backup" "$inventory_file"
+  if [ "$override_created" = true ]; then
+    rm -rf "$override_dir"
+  fi
+  rm -f "$backup" "$candidate"
+}
+trap restore_on_failure ERR INT TERM
 
 if ! inventory_has_user "$REPO_ROOT" "$user"; then
   fullname="${usage_fullname:-}"
@@ -90,7 +101,7 @@ if ! inventory_has_user "$REPO_ROOT" "$user"; then
   escaped_fullname="$(toml_basic_string "$fullname")"
   escaped_email="$(toml_basic_string "$email")"
   escaped_github="$(toml_basic_string "$github")"
-  cat >> "$tmp" <<USER_ENTRY
+  cat >> "$candidate" <<USER_ENTRY
 
 [users.$user]
 username = "$escaped_user"
@@ -100,32 +111,33 @@ github = "$escaped_github"
 USER_ENTRY
 fi
 
-cat >> "$tmp" <<HOST_ENTRY
+cat >> "$candidate" <<HOST_ENTRY
 
 [hosts.$host]
 system = "$system"
 user = "$user"
 profiles = [$profile_toml]
 HOST_ENTRY
-mv "$tmp" "$inventory_file"
-trap - EXIT
+mv "$candidate" "$inventory_file"
 
 created_paths=(inventory.toml)
 if [ "${usage_overrides:-false}" = true ]; then
-  mkdir -p "hosts/$host"
-  cat > "hosts/$host/system.nix" <<'SYSTEM_OVERRIDE'
+  [ ! -e "$override_dir" ] || die "override path '$override_dir' already exists"
+  mkdir -p "$override_dir"
+  override_created=true
+  cat > "$override_dir/system.nix" <<'SYSTEM_OVERRIDE'
 { ... }:
 {
   # Host-specific system exceptions only.
 }
 SYSTEM_OVERRIDE
-  cat > "hosts/$host/home.nix" <<'HOME_OVERRIDE'
+  cat > "$override_dir/home.nix" <<'HOME_OVERRIDE'
 { ... }:
 {
   # Host-specific Home Manager exceptions only.
 }
 HOME_OVERRIDE
-  created_paths+=("hosts/$host")
+  created_paths+=("$override_dir")
 fi
 
 mise run host:validate
@@ -136,6 +148,9 @@ if command -v nix >/dev/null 2>&1; then
 else
   log_warn "Nix/Lix is unavailable; evaluation will occur during bootstrap/apply"
 fi
+
+trap - ERR INT TERM
+rm -f "$backup" "$candidate"
 
 printf '\nConfiguration diff:\n'
 git --no-pager diff -- "${created_paths[@]}"
