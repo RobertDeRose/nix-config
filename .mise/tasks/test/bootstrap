@@ -7,6 +7,10 @@
 
 set -euo pipefail
 
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
 NAME="test-bootstrap"
 HOSTNAME="${usage_hostname:-ci-bootstrap}"
 IMAGE="local/nix-config-test-linux:24.04"

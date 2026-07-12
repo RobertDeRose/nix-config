@@ -1,14 +1,23 @@
 #!/usr/bin/env bash
-# [MISE] description="Search explicit package sources without choosing one"
+# [MISE] description="Search each supported package source without choosing one"
 #
 #USAGE arg "<query>" help="Package or application name"
 
 set -euo pipefail
+
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
 query="${usage_query}"
 
 printf '== Mise ==\n'
 if command -v mise >/dev/null 2>&1; then
-  mise registry 2>/dev/null | grep -i -- "$query" | head -40 || printf 'No registry matches. Try: mise ls-remote %s\n' "$query"
+  matches="$(mise registry 2>/dev/null | grep -i -- "$query" | head -40 || true)"
+  if [ -n "$matches" ]; then
+    printf '%s\n' "$matches"
+  else
+    printf 'No registry matches. Try: mise ls-remote %s\n' "$query"
+  fi
 else
   printf 'mise is unavailable\n'
 fi
@@ -20,9 +29,16 @@ else
   printf 'Nix/Lix is unavailable\n'
 fi
 
-printf '\n== Homebrew formulae and casks ==\n'
+printf '\n== Homebrew formulae ==\n'
 if command -v brew >/dev/null 2>&1; then
-  brew search "$query" 2>&1 | head -80 || true
+  brew search --formula "$query" 2>&1 | head -80 || true
+else
+  printf 'Homebrew is unavailable on this machine\n'
+fi
+
+printf '\n== Homebrew casks ==\n'
+if command -v brew >/dev/null 2>&1; then
+  brew search --cask "$query" 2>&1 | head -80 || true
 else
   printf 'Homebrew is unavailable on this machine\n'
 fi

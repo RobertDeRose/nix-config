@@ -2,6 +2,7 @@
 # [MISE] description="Build and apply the selected host configuration"
 # [MISE] interactive=true
 #
+#USAGE arg "[hostname]" help="Legacy positional host name"
 #USAGE flag "--host <host>" help="Host to apply (defaults to the current hostname)"
 #USAGE flag "-d --debug" help="Show verbose Nix output and traces"
 #USAGE flag "--no-activate" help="Build the complete target without activating it"
@@ -20,7 +21,7 @@ source "$REPO_ROOT/.mise/lib/inventory.sh"
 # shellcheck source=.mise/lib/nix.sh
 source "$REPO_ROOT/.mise/lib/nix.sh"
 
-host="${usage_host:-$(current_hostname)}"
+host="${usage_host:-${usage_hostname:-$(current_hostname)}}"
 debug="${usage_debug:-false}"
 no_activate="${usage_no_activate:-false}"
 

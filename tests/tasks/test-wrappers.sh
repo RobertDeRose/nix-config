@@ -8,8 +8,8 @@ check_wrapper() {
   local file="$1" expected="$2"
   assert_file_contains "$file" '# [MISE] hide=true'
   assert_file_contains "$file" "$expected"
-  lines="$(grep -Ev '^(#!|#|$|set -euo pipefail|exec mise run )' "$file" || true)"
-  [ -z "$lines" ] || fail "compatibility wrapper contains business logic: ${file#$ROOT/}"
+  lines="$(grep -Ev '^(#!|#|$|set -euo pipefail|TASK_FILE=|REPO_ROOT=|cd \"\$REPO_ROOT\"$|exec mise run )' "$file" || true)"
+  [ -z "$lines" ] || fail "compatibility wrapper contains business logic: ${file#$ROOT/}: $lines"
 }
 
 check_wrapper "$ROOT/.mise/tasks/nix/init" 'exec mise run bootstrap -- "$@"'
@@ -19,3 +19,5 @@ check_wrapper "$ROOT/.mise/tasks/nix/dry-run" 'exec mise run plan -- "$@"'
 check_wrapper "$ROOT/.mise/tasks/nix/deploy" 'exec mise run deploy -- "$@"'
 check_wrapper "$ROOT/.mise/tasks/nix/up" 'exec mise run update -- "$@"'
 check_wrapper "$ROOT/.mise/tasks/add-host" 'exec mise run host:add -- "$@"'
+
+check_wrapper "$ROOT/.mise/tasks/activate" 'exec mise run apply -- "$@"'

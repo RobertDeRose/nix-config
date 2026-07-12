@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # [MISE] description="Add a validated host to inventory.toml"
-# [MISE] interactive=true
 #
 #USAGE arg "<hostname>" help="Hostname to add"
 #USAGE arg "[os]" help="Legacy OS class: darwin or linux"

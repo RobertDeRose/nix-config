@@ -4,6 +4,10 @@
 #USAGE arg "<query>" help="Tool name"
 
 set -euo pipefail
+
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
 if mise registry 2>/dev/null | grep -i -- "${usage_query}" | head -80; then
   exit 0
 fi

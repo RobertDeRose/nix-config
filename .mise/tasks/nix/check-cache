@@ -6,6 +6,10 @@
 
 set -euo pipefail
 
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
 STORE_PATH="${usage_path}"
 
 if [[ "$STORE_PATH" == *.drv ]]; then

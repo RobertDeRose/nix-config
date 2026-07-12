@@ -8,6 +8,9 @@ while IFS= read -r task; do
   [ -x "$task" ] || fail "file task is not executable: ${task#$ROOT/}"
   assert_eq '#!/usr/bin/env bash' "$(head -n1 "$task")" "task shebang for ${task#$ROOT/}"
   grep -Eq '^# \[MISE\] description="[^"]+"$' "$task" || fail "missing task description: ${task#$ROOT/}"
+  assert_file_contains "$task" 'TASK_FILE="${BASH_SOURCE[0]}"'
+  assert_file_contains "$task" 'REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"'
+  assert_file_contains "$task" 'cd "$REPO_ROOT"'
   if grep -q 'usage_' "$task"; then
     grep -q '^#USAGE ' "$task" || fail "argument-bearing task lacks #USAGE metadata: ${task#$ROOT/}"
   fi

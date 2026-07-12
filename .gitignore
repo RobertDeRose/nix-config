@@ -12,3 +12,8 @@ book/
 
 # macOS
 .DS_Store
+
+# Local Python and task build artifacts
+__pycache__/
+*.pyc
+.build/

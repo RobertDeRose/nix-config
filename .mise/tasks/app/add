@@ -11,12 +11,21 @@ cd "$REPO_ROOT"
 source "$REPO_ROOT/.mise/lib/common.sh"
 source "$REPO_ROOT/.mise/lib/packages.sh"
 profile="${usage_profile:-mac-desktop}"
+cask="${usage_cask}"
 [ "$profile" = mac-desktop ] || die "Homebrew casks are currently supported only by the mac-desktop profile"
+case "$cask" in
+  ''|*[!A-Za-z0-9@+._-]*) die "invalid Homebrew cask token '$cask'" ;;
+esac
+if command -v brew >/dev/null 2>&1; then
+  brew info --cask "$cask" >/dev/null 2>&1 || die "Homebrew cask '$cask' was not found; run: mise run package:search $cask"
+else
+  log_warn "Homebrew is unavailable; remote cask existence was not checked"
+fi
 backup="$(mktemp "${TMPDIR:-/tmp}/packages.toml.XXXXXX")"
 cp packages.toml "$backup"
 restore() { cp "$backup" packages.toml; rm -f "$backup"; }
 trap restore ERR INT TERM
-config_editor "$REPO_ROOT" array --file packages.toml --section "profiles.$profile.homebrew" --key casks --value "${usage_cask}"
+config_editor "$REPO_ROOT" array --file packages.toml --section "profiles.$profile.homebrew" --key casks --value "$cask"
 validate_package_change "$REPO_ROOT"
 trap - ERR INT TERM
 rm -f "$backup"

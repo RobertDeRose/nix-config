@@ -5,6 +5,10 @@
 
 set -euo pipefail
 
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
 NAME="apple-ssh-test"
 IMAGE="local/nix-config-test-linux:24.04"
 TARGET="tester"
@@ -13,7 +17,6 @@ PUBKEY_FILE="$HOME/.ssh/id_ed25519.pub"
 PUBKEY_DIR="$(dirname "$PUBKEY_FILE")"
 PUBKEY_NAME="$(basename "$PUBKEY_FILE")"
 KNOWN_HOSTS="$HOME/.ssh/known_hosts"
-REPO_ROOT="$PWD"
 STAGE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/nix-config-deploy.XXXXXX")"
 
 cleanup() {

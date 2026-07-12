@@ -6,7 +6,8 @@
 #USAGE flag "-d --debug" help="Show verbose Nix output and traces"
 
 set -euo pipefail
-args=()
-[ -z "${usage_hostname:-}" ] || args+=(--host "${usage_hostname}")
-[ "${usage_debug:-false}" != true ] || args+=(--debug)
-exec mise run apply -- "${args[@]}"
+
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+exec mise run apply -- "$@"

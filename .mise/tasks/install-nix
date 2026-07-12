@@ -6,6 +6,7 @@
 set -euo pipefail
 TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
 source "$REPO_ROOT/.mise/lib/common.sh"
 source "$REPO_ROOT/.mise/lib/platform.sh"
 source "$REPO_ROOT/.mise/lib/bootstrap.sh"

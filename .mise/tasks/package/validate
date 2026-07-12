@@ -4,6 +4,7 @@
 set -euo pipefail
 TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
 source "$REPO_ROOT/.mise/lib/common.sh"
 source "$REPO_ROOT/.mise/lib/packages.sh"
 validate_package_inventory "$REPO_ROOT"

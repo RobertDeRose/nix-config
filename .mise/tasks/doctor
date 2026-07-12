@@ -9,9 +9,13 @@ set -euo pipefail
 TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
+# shellcheck source=.mise/lib/common.sh
 source "$REPO_ROOT/.mise/lib/common.sh"
+# shellcheck source=.mise/lib/platform.sh
 source "$REPO_ROOT/.mise/lib/platform.sh"
+# shellcheck source=.mise/lib/inventory.sh
 source "$REPO_ROOT/.mise/lib/inventory.sh"
+# shellcheck source=.mise/lib/git.sh
 source "$REPO_ROOT/.mise/lib/git.sh"
 
 host="${usage_host:-$(current_hostname)}"
@@ -22,34 +26,95 @@ results=""
 
 record() {
   local level="$1" name="$2" message="$3"
-  case "$level" in error) errors=$((errors + 1));; warning) warnings=$((warnings + 1));; esac
+  case "$level" in
+    error) errors=$((errors + 1)) ;;
+    warning) warnings=$((warnings + 1)) ;;
+  esac
   if [ "$json" = true ]; then
     [ -z "$results" ] || results="$results,"
     results="$results{\"status\":\"$(json_escape "$level")\",\"check\":\"$(json_escape "$name")\",\"message\":\"$(json_escape "$message")\"}"
   else
-    printf '%-7s %-22s %s\n' "[$level]" "$name" "$message"
+    printf '%-9s %-22s %s\n' "[$level]" "$name" "$message"
   fi
 }
 
-[ -d "$REPO_ROOT/.git" ] && record ok repository "$REPO_ROOT" || record error repository "not inside the repository"
-if command -v mise >/dev/null 2>&1; then record ok mise "$(mise --version 2>/dev/null | head -n1)"; else record error mise "command not found"; fi
-if command -v nix >/dev/null 2>&1 || [ -x /nix/var/nix/profiles/default/bin/nix ]; then record ok nix "Nix/Lix is installed"; else record error nix "Nix/Lix is not installed"; fi
-if [ "$(current_os)" = linux ]; then
-  [ -S /nix/var/nix/daemon-socket/socket ] && record ok nix-daemon "daemon socket is available" || record error nix-daemon "daemon socket is unavailable"
+if [ -d "$REPO_ROOT/.git" ]; then
+  record ok repository "$REPO_ROOT"
 else
-  pgrep -q nix-daemon 2>/dev/null && record ok nix-daemon "daemon is running" || record warning nix-daemon "daemon process was not detected"
+  record error repository "not inside the repository"
 fi
+
+if command -v mise >/dev/null 2>&1; then
+  record ok mise "$(mise --version 2>/dev/null | head -n1)"
+  if mise tasks validate >/dev/null 2>&1; then
+    record ok task-metadata "mise tasks validate passed"
+  else
+    record error task-metadata "mise rejected one or more task definitions; run: mise tasks validate"
+  fi
+else
+  record error mise "command not found"
+  record warning task-metadata "not checked because mise is unavailable"
+fi
+
+if command -v nix >/dev/null 2>&1 || [ -x /nix/var/nix/profiles/default/bin/nix ]; then
+  record ok nix "Nix/Lix is installed"
+else
+  record error nix "Nix/Lix is not installed"
+fi
+
+if [ "$(current_os)" = linux ]; then
+  if [ -S /nix/var/nix/daemon-socket/socket ]; then
+    record ok nix-daemon "daemon socket is available"
+  else
+    record error nix-daemon "daemon socket is unavailable"
+  fi
+elif pgrep -q nix-daemon 2>/dev/null; then
+  record ok nix-daemon "daemon is running"
+else
+  record warning nix-daemon "daemon process was not detected"
+fi
+
 if inventory_has_host "$REPO_ROOT" "$host"; then
   record ok host "$host is defined as $(inventory_host_system "$REPO_ROOT" "$host")"
-  if validate_host_platform "$REPO_ROOT" "$host" "$(current_system)" >/dev/null 2>&1; then record ok platform "$(current_system)"; else record error platform "host and current machine systems differ"; fi
+  if validate_host_platform "$REPO_ROOT" "$host" "$(current_system)" >/dev/null 2>&1; then
+    record ok platform "$(current_system)"
+  else
+    record error platform "host and current machine systems differ"
+  fi
 else
-  record error host "$host is not defined"
+  record error host "$host is not defined in inventory.toml"
 fi
-command -v git >/dev/null 2>&1 && record ok git "$(git --version)" || record error git "command not found"
-if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then record ok github "GitHub CLI is authenticated"; else record warning github "GitHub CLI is unavailable or unauthenticated"; fi
+
+if command -v git >/dev/null 2>&1; then
+  record ok git "$(git --version)"
+else
+  record error git "command not found"
+fi
+
+if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+  record ok github "GitHub CLI is authenticated"
+else
+  record warning github "GitHub CLI is unavailable or unauthenticated"
+fi
+
 if [ "$(current_os)" = darwin ]; then
-  command -v brew >/dev/null 2>&1 && record ok homebrew "Homebrew is installed" || record error homebrew "Homebrew is not installed"
+  if command -v brew >/dev/null 2>&1; then
+    record ok homebrew "Homebrew is installed"
+  else
+    record error homebrew "Homebrew is not installed"
+  fi
 fi
+
+if command -v curl >/dev/null 2>&1; then
+  if curl -fsI --connect-timeout 2 --max-time 4 https://cache.nixos.org/nix-cache-info >/dev/null 2>&1; then
+    record ok standard-cache "cache.nixos.org is reachable"
+  else
+    record warning standard-cache "cache.nixos.org is currently unreachable"
+  fi
+else
+  record warning standard-cache "curl is unavailable; cache reachability was not checked"
+fi
+
 personal_cache="$(inventory_host_feature "$REPO_ROOT" "$host" personal_cache 2>/dev/null || true)"
 if [ "$personal_cache" = true ]; then
   if command -v curl >/dev/null 2>&1 && curl -fsI --connect-timeout 2 --max-time 4 https://robertderose.cachix.org/nix-cache-info >/dev/null 2>&1; then
@@ -60,12 +125,50 @@ if [ "$personal_cache" = true ]; then
 else
   record ok personal-cache "not enabled for this host"
 fi
+
 bad_modes="$(find .mise/tasks -type f ! -perm -u+x -print)"
-[ -z "$bad_modes" ] && record ok task-modes "all file tasks are executable" || record error task-modes "non-executable tasks: $(printf '%s' "$bad_modes" | tr '\n' ' ')"
+if [ -z "$bad_modes" ]; then
+  record ok task-modes "all file tasks are executable"
+else
+  record error task-modes "non-executable tasks: $(printf '%s' "$bad_modes" | tr '\n' ' ')"
+fi
+
 bad_headers="$(find .mise/tasks -type f -exec awk 'FNR==1 && $0!="#!/usr/bin/env bash" {print FILENAME}' {} +)"
-[ -z "$bad_headers" ] && record ok task-metadata "task headers are present" || record error task-metadata "invalid task headers detected"
-if git_is_dirty "$REPO_ROOT" 2>/dev/null; then record warning working-tree "uncommitted changes are present"; else record ok working-tree "clean"; fi
-[ ! -e "$HOME/.gitconfig" ] && record ok link-conflicts "no legacy ~/.gitconfig" || record warning link-conflicts "~/.gitconfig may hide the managed XDG Git config"
+if [ -z "$bad_headers" ]; then
+  record ok task-headers "all file tasks use the required Bash shebang"
+else
+  record error task-headers "invalid task headers: $(printf '%s' "$bad_headers" | tr '\n' ' ')"
+fi
+
+if git_is_dirty "$REPO_ROOT" 2>/dev/null; then
+  record warning working-tree "uncommitted changes are present"
+else
+  record ok working-tree "clean"
+fi
+
+conflicts=()
+while IFS= read -r target; do
+  [ -n "$target" ] || continue
+  if { [ -e "$target" ] || [ -L "$target" ]; } && [ ! -L "$target" ]; then
+    conflicts+=("${target#"$HOME"/}")
+  fi
+done <<EOF_CONFLICTS
+$HOME/.gitconfig
+$HOME/.zshrc
+$HOME/.zprofile
+$HOME/.config/git/config
+$HOME/.config/git/ignore
+$HOME/.config/helix/config.toml
+$HOME/.config/helix/languages.toml
+$HOME/.config/starship.toml
+$HOME/.config/zellij/config.kdl
+$HOME/.pi/agent/AGENTS.md
+EOF_CONFLICTS
+if [ "${#conflicts[@]}" -eq 0 ]; then
+  record ok link-conflicts "no obvious unmanaged files overlap Home Manager targets"
+else
+  record warning link-conflicts "possible unmanaged targets: $(printf '%s ' "${conflicts[@]}")"
+fi
 
 if [ "$json" = true ]; then
   printf '{"errors":%d,"warnings":%d,"checks":[%s]}\n' "$errors" "$warnings" "$results"
