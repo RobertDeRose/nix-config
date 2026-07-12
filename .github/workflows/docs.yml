@@ -33,7 +33,7 @@ jobs:
           install: false
 
       - name: Build docs
-        run: mise x mdbook -- mise docs:build
+        run: mise x mdbook -- mise run docs:build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5

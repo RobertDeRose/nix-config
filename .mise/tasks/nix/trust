@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # [MISE] description="Add the current user to nix trusted-users and restart the daemon"
+# [MISE] interactive=true
 # [MISE] quiet=true
 # [MISE] raw=true
 # [MISE] depends=["install-nix"]
@@ -20,7 +21,7 @@ IS_DARWIN=false
 [ "$(uname -s)" = "Darwin" ] && IS_DARWIN=true
 
 # nix-darwin manages trusted-users in nix.conf directly after first activation.
-if $IS_DARWIN && [ -e /run/current-system/darwin-version ]; then
+if [ "$IS_DARWIN" = true ] && [ -e /run/current-system/darwin-version ]; then
   if [ -f /etc/nix/nix.conf ] && grep -qE "^(extra-)?trusted-users[[:space:]]*=[[:space:]]*([^[:space:]]+[[:space:]]+)*${USER_REGEX}([[:space:]]|$)" /etc/nix/nix.conf 2>/dev/null; then
     echo "'$USER' is already a trusted user."
     exit 0

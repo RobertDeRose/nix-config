@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # [MISE] description="Garbage-collect all unused nix store entries (system + user)"
+# [MISE] interactive=true
 # [MISE] quiet=true
 #
 #USAGE arg "[older_than]" help="Retention window (examples: 7d, 30d, 4w)" default="7d"

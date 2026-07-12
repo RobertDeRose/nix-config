@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # [MISE] description="Completely uninstall Nix from this machine"
+# [MISE] interactive=true
 # [MISE] quiet=true
 # [MISE] confirm="This will completely remove Nix, the /nix store, and all managed packages. Continue?"
 

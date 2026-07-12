@@ -11,3 +11,8 @@ find tests/tasks -type f -name '*.sh' | sort | while IFS= read -r test_file; do
   printf '==> %s\n' "$test_file"
   bash "$test_file"
 done
+
+find tests/nix -type f -name '*.py' | sort | while IFS= read -r test_file; do
+  printf '==> %s\n' "$test_file"
+  python3 "$test_file"
+done

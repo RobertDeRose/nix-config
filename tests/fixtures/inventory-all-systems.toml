@@ -1,0 +1,26 @@
+schema = 1
+
+[defaults]
+user = "tester"
+
+[users.tester]
+username = "tester"
+full_name = "Fixture User"
+email = "fixture@example.invalid"
+github = "fixture-user"
+
+[hosts.fixture-aarch64-darwin]
+system = "aarch64-darwin"
+profiles = ["base", "developer", "mac-desktop"]
+
+[hosts.fixture-x86_64-darwin]
+system = "x86_64-darwin"
+profiles = ["base", "developer", "mac-desktop"]
+
+[hosts.fixture-aarch64-linux]
+system = "aarch64-linux"
+profiles = ["base", "developer", "linux-server"]
+
+[hosts.fixture-x86_64-linux]
+system = "x86_64-linux"
+profiles = ["base", "developer", "linux-server"]
