@@ -1,0 +1,43 @@
+# Static Git configuration. Home Manager generates only identity and
+# platform-specific fragments, which are included below.
+[include]
+    path = ~/.config/git/identity
+[include]
+    path = ~/.config/git/platform
+[includeIf "gitdir:~/workspace/personal/"]
+    path = ~/workspace/personal/.gitconfig
+
+[core]
+    autocrlf = input
+    editor = hx
+    whitespace = trailing-space,space-before-tab
+[credential]
+    helper = cache --timeout=3600
+[credential "https://github.com"]
+    helper = !gh auth git-credential
+[credential "https://gist.github.com"]
+    helper = !gh auth git-credential
+[grep]
+    lineNumber = true
+[gpg]
+    format = ssh
+[gpg "ssh"]
+    allowedSignersFile = ~/.config/git/allowed_signers
+[init]
+    defaultBranch = main
+[merge]
+    conflictstyle = zdiff3
+[pull]
+    rebase = true
+    ff = only
+[rebase]
+    autoStash = true
+[push]
+    default = current
+    autoSetupRemote = true
+[user]
+    signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA
+[url "git@github.com:"]
+    insteadOf = https://github.com/
+[tar "tar.xz"]
+    command = xz -c
