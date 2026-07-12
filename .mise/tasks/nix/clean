@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# [MISE] description="Remove system generations older than a retention window"
+# [MISE] quiet=true
+#
+#USAGE arg "[older_than]" help="Retention window (examples: 7d, 30d, 4w)" default="7d"
+
+set -euo pipefail
+
+OLDER_THAN="${usage_older_than:-7d}"
+
+if [ -e /nix/var/nix/profiles/system-manager-profiles/system-manager ]; then
+  PROFILE="/nix/var/nix/profiles/system-manager-profiles/system-manager"
+elif [ -e /nix/var/nix/profiles/system ]; then
+  PROFILE="/nix/var/nix/profiles/system"
+else
+  echo "ERROR: no system profile found under /nix/var/nix/profiles/"
+  exit 1
+fi
+
+echo "==> Removing old system generations..."
+sudo -H nix-env --delete-generations "$OLDER_THAN" --profile "$PROFILE"

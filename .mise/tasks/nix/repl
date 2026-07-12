@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# [MISE] description="Open a nix repl with nixpkgs"
+# [MISE] quiet=true
+
+set -euo pipefail
+
+nix repl --expr 'import (builtins.getFlake "nixpkgs") {}'

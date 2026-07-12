@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# [MISE] description="Update a single flake input, or all inputs if none specified"
+# [MISE] quiet=true
+#
+#USAGE arg "[input]" help="Flake input to update (e.g. nixpkgs, home-manager, darwin). Omit to update all."
+
+set -euo pipefail
+
+if [ -n "${usage_input:-}" ]; then
+  echo "==> Updating flake input: ${usage_input}"
+  nix flake update "${usage_input}" --verbose
+else
+  echo "==> Updating all direct flake inputs..."
+  nix flake update --verbose
+fi

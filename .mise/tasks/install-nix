@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# [MISE] description="Install Nix or Lix if missing"
+# [MISE] hide=true
+# [MISE] quiet=true
+# [MISE] raw=true
+
+set -euo pipefail
+
+# Skip if Nix is already installed
+if [ -e /nix/receipt.json ]; then
+  echo "Nix is already installed, skipping."
+  exit 0
+fi
+
+export NIX_INSTALLER_NO_CONFIRM="true"
+export NIX_INSTALLER_ENABLE_FLAKES="true"
+# This bootstrap task runs before the managed Nix config exists, so keep these
+# installer cache settings in sync with modules/common/cache.nix.
+export NIX_INSTALLER_EXTRA_CONF="trusted-users = root $(whoami)
+extra-substituters = https://robertderose.cachix.org https://cache.numtide.com https://cache.nixos.org https://nix-community.cachix.org
+extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g= robertderose.cachix.org-1:LGSby4A1Kg1W19IC5AoB3oGhLSgfg1x3j2GF0Ve2hKM="
+
+if [[ "${NIX_INSTALLER_NO_SANDBOX:-false}" == "true" ]]; then
+  export NIX_INSTALLER_EXTRA_CONF="$NIX_INSTALLER_EXTRA_CONF
+sandbox = false"
+fi
+
+[ $(uname -s) = 'Darwin' ] && export NIX_INSTALLER_SSL_CERT_FILE='/etc/ssl/cert.pem'
+
+echo "==> Installing Nix..."
+if [ "$(uname -sm)" = "Darwin x86_64" ]; then
+  echo "Detected macOS on x86_64. Using nix instead of lix"
+  curl -sSfL https://artifacts.nixos.org/nix-installer | bash -s -- install
+else
+  # Lix installer self-test may warn about daemon socket not being ready yet;
+  # this is a known race condition — verify nix works after a short wait.
+  lix_rc=0
+  curl -sSfL https://install.lix.systems/lix | bash -s -- install || lix_rc=$?
+  if [ $lix_rc -ne 0 ]; then
+    echo "WARNING: Lix installer exited with code $lix_rc (may be a known race condition — verifying...)"
+  fi
+fi
+
+# Wait for the daemon socket to come up before continuing
+for i in $(seq 1 30); do
+  [ -S /nix/var/nix/daemon-socket/socket ] && break
+  sleep 1
+done
+
+# Source nix and verify it works
+set +u
+source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+set -u
+
+if ! nix --version &>/dev/null; then
+  echo "ERROR: Nix installed but not functional."
+  exit 1
+fi
+echo "Nix $(nix --version) is ready."

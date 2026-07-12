@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# [MISE] description="List all system profile generations"
+# [MISE] quiet=true
+
+set -euo pipefail
+
+if [ -e /nix/var/nix/profiles/system-manager-profiles/system-manager ]; then
+  PROFILE="/nix/var/nix/profiles/system-manager-profiles/system-manager"
+elif [ -e /nix/var/nix/profiles/system ]; then
+  PROFILE="/nix/var/nix/profiles/system"
+else
+  echo "ERROR: no system profile found under /nix/var/nix/profiles/"
+  exit 1
+fi
+
+sudo -H nix-env --list-generations --profile "$PROFILE"

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# [MISE] description="Garbage-collect all unused nix store entries (system + user)"
+# [MISE] quiet=true
+#
+#USAGE arg "[older_than]" help="Retention window (examples: 7d, 30d, 4w)" default="7d"
+
+set -euo pipefail
+
+OLDER_THAN="${usage_older_than:-7d}"
+
+sudo nix-collect-garbage --delete-older-than "$OLDER_THAN"
+nix-collect-garbage --delete-older-than "$OLDER_THAN"

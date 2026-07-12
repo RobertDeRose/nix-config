@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# [MISE] description="Show auto GC roots in the nix store"
+# [MISE] quiet=true
+
+set -euo pipefail
+
+ls -al /nix/var/nix/gcroots/auto/

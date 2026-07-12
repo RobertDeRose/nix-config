@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# [MISE] description="Ensure gh CLI is installed and authenticated"
+# [MISE] hide=true
+# [MISE] quiet=true
+
+set -euo pipefail
+
+# Install gh if not yet available
+mise install gh
+
+# Check if already authenticated
+if mise x gh -- gh auth status &>/dev/null; then
+  echo "GitHub CLI is already authenticated."
+  exit 0
+fi
+
+echo "==> GitHub CLI is not authenticated."
+echo "    Running 'gh auth login' — follow the prompts to authenticate."
+mise x gh -- gh auth login

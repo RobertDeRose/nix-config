@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# [MISE] description="Run Linux bootstrap validation in an Apple container"
+# [MISE] quiet=true
+# [MISE] depends=["test:image"]
+#
+#USAGE arg "[hostname]" help="Test hostname passed to bootstrap" default="ci-bootstrap"
+
+set -euo pipefail
+
+NAME="test-bootstrap"
+HOSTNAME="${usage_hostname:-ci-bootstrap}"
+IMAGE="local/nix-config-test-linux:24.04"
+BRANCH="$(git branch --show-current)"
+ORIGIN_URL="$(git remote get-url origin)"
+
+if [ -z "$BRANCH" ]; then
+  echo "ERROR: test:bootstrap must be run from a named branch."
+  exit 1
+fi
+
+# Validate branch name doesn't contain URL-breaking characters.
+# Note: '/' in branch names is fine — GitHub raw URLs resolve them correctly.
+if [[ "$BRANCH" =~ [[:space:]\?\#] ]]; then
+  echo "ERROR: Branch name '$BRANCH' contains characters that break URL construction."
+  exit 1
+fi
+
+case "$ORIGIN_URL" in
+  git@github.com:*.git)
+    REPO="${ORIGIN_URL#git@github.com:}"
+    REPO="${REPO%.git}"
+    ;;
+  https://github.com/*.git)
+    REPO="${ORIGIN_URL#https://github.com/}"
+    REPO="${REPO%.git}"
+    ;;
+  https://github.com/*)
+    REPO="${ORIGIN_URL#https://github.com/}"
+    ;;
+  *)
+    echo "ERROR: Unsupported origin URL: $ORIGIN_URL"
+    exit 1
+    ;;
+esac
+
+if ! git rev-parse --verify --quiet "origin/$BRANCH" >/dev/null; then
+  echo "WARNING: origin/$BRANCH does not exist yet, so test:bootstrap cannot exercise this branch."
+  echo "         Push this branch first, then rerun test:bootstrap."
+  exit 1
+fi
+
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "WARNING: Local changes are not pushed to origin and will not be tested by test:bootstrap."
+fi
+
+if git rev-parse --verify --quiet "origin/$BRANCH" >/dev/null && [ "$(git rev-list --count "origin/$BRANCH..HEAD")" -gt 0 ]; then
+  echo "WARNING: This branch has local commits not pushed to origin/$BRANCH; they will not be tested."
+fi
+
+BOOTSTRAP_URL="https://raw.githubusercontent.com/$REPO/$BRANCH/bootstrap.sh"
+
+echo "==> Recreating Apple container '$NAME'..."
+container delete --force "$NAME" >/dev/null 2>&1 || true
+container run -d \
+  --name "$NAME" \
+  --memory 4G \
+  --dns 1.1.1.1 \
+  --dns 8.8.8.8 \
+  "$IMAGE" >/dev/null
+
+echo "==> Running bootstrap validation from $BOOTSTRAP_URL..."
+container exec "$NAME" bash -lc "sudo -iu tester bash -lc 'git config --global user.name \"Container Test User\" && git config --global user.email \"tester@localhost\" && export HOME_MANAGER_USER=tester NIX_BUILD_CORES=1 CARGO_BUILD_JOBS=1 NIX_INSTALLER_NO_SANDBOX=true && curl -sSfL \"$BOOTSTRAP_URL\" | bash -s -- \"$HOSTNAME\"'"
+
+echo ""
+echo "Bootstrap test completed in container '$NAME'."

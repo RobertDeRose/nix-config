@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# [MISE] description="Build the Apple Container Linux test image"
+# [MISE] hide=true
+# [MISE] quiet=true
+
+set -euo pipefail
+
+IMAGE="local/nix-config-test-linux:24.04"
+
+echo "==> Building Linux test image $IMAGE..."
+container build -f test/Containerfile -t "$IMAGE" .

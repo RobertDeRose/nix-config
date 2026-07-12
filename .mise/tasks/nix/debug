@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# [MISE] description="Apply config with debug traces"
+# [MISE] quiet=true
+
+set -euo pipefail
+
+mise run nix:switch --debug

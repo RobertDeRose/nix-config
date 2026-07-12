@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# [MISE] description="Format all .nix files in this repo"
+# [MISE] quiet=true
+
+set -euo pipefail
+
+nix fmt

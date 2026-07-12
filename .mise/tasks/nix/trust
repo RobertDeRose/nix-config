@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# [MISE] description="Add the current user to nix trusted-users and restart the daemon"
+# [MISE] quiet=true
+# [MISE] raw=true
+# [MISE] depends=["install-nix"]
+
+set -euo pipefail
+
+# CI runners are already trusted; skip to avoid sudo prompts.
+[[ "${CI:-false}" == "true" ]] && exit 0
+
+USER="$(whoami)"
+CONF="/etc/nix/nix.custom.conf"
+USER_REGEX="$(printf '%s' "$USER" | sed 's/[][(){}.^$*+?|\\-]/\\&/g')"
+IS_DARWIN=false
+[ "$(uname -s)" = "Darwin" ] && IS_DARWIN=true
+
+# nix-darwin manages trusted-users in nix.conf directly after first activation.
+if $IS_DARWIN && [ -e /run/current-system/darwin-version ]; then
+  if [ -f /etc/nix/nix.conf ] && grep -qE "^(extra-)?trusted-users[[:space:]]*=[[:space:]]*([^[:space:]]+[[:space:]]+)*${USER_REGEX}([[:space:]]|$)" /etc/nix/nix.conf 2>/dev/null; then
+    echo "'$USER' is already a trusted user."
+    exit 0
+  fi
+
+  echo "==> nix-darwin is active; trusted-users is managed by the system config."
+  echo "Run 'mise run activate' to apply any pending nix-darwin changes."
+  exit 1
+fi
+
+# Ensure the file exists (nix.conf already includes it via !include)
+if [ ! -f "$CONF" ]; then
+  echo "==> Creating $CONF..."
+  echo "# Custom nix settings" | sudo tee "$CONF" > /dev/null
+fi
+
+# Check if the user is already trusted in any nix config file
+for f in /etc/nix/nix.conf "$CONF"; do
+  if [ -f "$f" ] && grep -qE "^(extra-)?trusted-users[[:space:]]*=[[:space:]]*([^[:space:]]+[[:space:]]+)*${USER_REGEX}([[:space:]]|$)" "$f" 2>/dev/null; then
+    echo "'$USER' is already a trusted user."
+    exit 0
+  fi
+done
+
+# Append to existing extra-trusted-users line, or create one
+if grep -qE "^extra-trusted-users([[:space:]]|=)" "$CONF" 2>/dev/null; then
+  echo "==> Adding '$USER' to existing extra-trusted-users..."
+  tmp_conf="$(mktemp "${TMPDIR:-/tmp}/nix.custom.conf.XXXXXX")"
+  trap 'rm -f "$tmp_conf"' EXIT
+  sudo awk -v user="$USER" '
+    /^extra-trusted-users([[:space:]]*=|[[:space:]]+)/ { print $0 " " user; next }
+    { print }
+  ' "$CONF" > "$tmp_conf"
+  sudo install -m 0644 "$tmp_conf" "$CONF"
+else
+  echo "==> Adding extra-trusted-users line for '$USER'..."
+  echo "extra-trusted-users = ${USER}" | sudo tee -a "$CONF" > /dev/null
+fi
+
+echo "==> Restarting nix daemon..."
+if $IS_DARWIN; then
+  sudo launchctl kickstart -k system/org.nixos.nix-daemon
+else
+  sudo systemctl restart nix-daemon
+fi
+
+echo "Done. '$USER' is now a trusted nix user."

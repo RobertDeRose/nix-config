@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# [MISE] description="Apply the nix config for the current host (auto-detects Darwin or Linux)"
+# [MISE] quiet=true
+#
+#USAGE flag "-d --debug" help="Show verbose output and nix traces for debugging"
+
+set -euo pipefail
+
+HOST="$(hostname -s)"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# Prefer explicit GITHUB_TOKEN, fall back to gh CLI auth if available
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+  if gh_token="$(mise x gh -- gh auth token 2>/dev/null)"; then
+    export GITHUB_TOKEN="$gh_token"
+  fi
+fi
+
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+  export NIX_CONFIG="${NIX_CONFIG:-}"$'\n'"access-tokens = github.com=${GITHUB_TOKEN}"
+fi
+
+# Use an array for optional flags
+NIX_FLAGS=(--accept-flake-config --extra-experimental-features "nix-command flakes")
+REBUILD_FLAGS=()
+if [[ "${usage_debug:-}" == "true" ]]; then
+  NIX_FLAGS+=("--show-trace" "--verbose")
+  REBUILD_FLAGS+=("--show-trace" "--verbose")
+fi
+
+echo ""
+if [ "$(uname -s)" = "Darwin" ]; then
+  sudo darwin-rebuild switch --flake "$REPO_ROOT#$HOST" "${REBUILD_FLAGS[@]}"
+else
+  nix build "${NIX_FLAGS[@]}" --out-link "$REPO_ROOT/result" "$REPO_ROOT#system-manager"
+  "$REPO_ROOT/result/bin/system-manager" switch --flake "$REPO_ROOT#$HOST" --sudo
+  nix build "${NIX_FLAGS[@]}" "$REPO_ROOT#homeConfigurations.$HOST.activationPackage" --out-link "$REPO_ROOT/.hm-result"
+  ACTIVATE_USER="${HOME_MANAGER_USER:-${USER:-$(whoami)}}"
+  ACTIVATE_HOME="$(getent passwd "$ACTIVATE_USER" | cut -d: -f6)"
+  ACTIVATE_PATH="/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:$PATH"
+  if [ -z "$ACTIVATE_HOME" ]; then
+    ACTIVATE_HOME="/home/$ACTIVATE_USER"
+  fi
+  sudo install -d -m755 -o "$ACTIVATE_USER" -g "$(id -gn "$ACTIVATE_USER")" "/nix/var/nix/profiles/per-user/$ACTIVATE_USER"
+  if [ "$(id -un)" = "$ACTIVATE_USER" ]; then
+    USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak "$REPO_ROOT/.hm-result/activate"
+  else
+    sudo -u "$ACTIVATE_USER" env USER="$ACTIVATE_USER" HOME="$ACTIVATE_HOME" PATH="$ACTIVATE_PATH" HOME_MANAGER_BACKUP_EXT=hm_bak "$REPO_ROOT/.hm-result/activate"
+  fi
+fi

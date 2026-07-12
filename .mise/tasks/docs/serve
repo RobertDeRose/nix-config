@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# [MISE] description="Serve the documentation site locally with hot-reload"
+# [MISE] quiet=true
+#
+#USAGE arg "[port]" help="Port to serve on" default="3000"
+
+set -euo pipefail
+
+PORT="${usage_port:-3000}"
+
+cd docs
+
+if command -v mdbook &>/dev/null; then
+  echo "Serving documentation at http://localhost:${PORT}"
+  echo "Press Ctrl+C to stop."
+  echo ""
+  mdbook serve --port "$PORT"
+elif command -v nix &>/dev/null; then
+  echo "Serving documentation at http://localhost:${PORT}"
+  echo "Press Ctrl+C to stop."
+  echo ""
+  nix develop --command mdbook serve --port "$PORT"
+else
+  echo "Error: mdbook not found. Install via 'mise install' or 'cargo install mdbook'." >&2
+  exit 1
+fi
