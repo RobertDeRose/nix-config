@@ -30,11 +30,11 @@ jobs:
       - uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
         with:
           extra_nix_config: |
-            # Keep these cache settings in sync with modules/common/cache.nix and
-            # tasks.install-nix in mise.toml; this workflow needs them before any
+            # Keep these cache settings in sync with nix/modules/common/cache.nix and
+            # .mise/lib/bootstrap.sh; this workflow needs them before any
             # managed system config is evaluated.
             experimental-features = nix-command flakes
-            extra-substituters = https://robertderose.cachix.org https://cache.numtide.com https://cache.nixos.org https://nix-community.cachix.org
+            extra-substituters = https://cache.numtide.com https://cache.nixos.org https://nix-community.cachix.org https://robertderose.cachix.org
             extra-trusted-public-keys = ${{ env.NIXOS_CACHE_KEY }} ${{ env.NIX_COMMUNITY_KEY }} ${{ env.NUMTIDE_KEY }} ${{ env.CACHIX_PUBLIC_KEY }}
 
       - name: Update flake inputs
@@ -83,11 +83,11 @@ jobs:
       - uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
         with:
           extra_nix_config: |
-            # Keep these cache settings in sync with modules/common/cache.nix and
-            # tasks.install-nix in mise.toml; this workflow needs them before any
+            # Keep these cache settings in sync with nix/modules/common/cache.nix and
+            # .mise/lib/bootstrap.sh; this workflow needs them before any
             # managed system config is evaluated.
             experimental-features = nix-command flakes
-            extra-substituters = https://robertderose.cachix.org https://cache.numtide.com https://cache.nixos.org https://nix-community.cachix.org
+            extra-substituters = https://cache.numtide.com https://cache.nixos.org https://nix-community.cachix.org https://robertderose.cachix.org
             extra-trusted-public-keys = ${{ env.NIXOS_CACHE_KEY }} ${{ env.NIX_COMMUNITY_KEY }} ${{ env.NUMTIDE_KEY }} ${{ env.CACHIX_PUBLIC_KEY }}
 
       - uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c # v17

@@ -19,10 +19,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  repository-checks:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.ref != 'automation/refresh-flake-lock'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.sha }}
+      - uses: cachix/install-nix-action@96951a368ba55167b55f1c916f7d416bac6505fe # v31.10.3
+        with:
+          github_access_token: ""
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - uses: DeterminateSystems/magic-nix-cache-action@1828eb4e5414b8dfe36daae53ea3e4b8c3fdec7a # main
+      - uses: jdx/mise-action@4444d8fd7a1b92f1821c12f435db40f58b743d26 # v4.0.1
+        with:
+          install: false
+      - name: Install repository validation tools
+        run: |
+          mise plugin install nix https://github.com/jbadeau/mise-nix.git
+          mise install
+      - name: Run the repository contract
+        run: mise run check
+
+  build-configurations:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.ref != 'automation/refresh-flake-lock'
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
@@ -34,97 +58,39 @@ jobs:
           ref: ${{ inputs.ref != '' && inputs.ref || github.sha }}
       - uses: cachix/install-nix-action@96951a368ba55167b55f1c916f7d416bac6505fe # v31.10.3
         with:
-          # Disable token injection so public flake inputs are fetched anonymously;
-          # stale workflow credentials have caused GitHub API 401s here.
           github_access_token: ""
           extra_nix_config: |
             experimental-features = nix-command flakes
-      - uses: DeterminateSystems/magic-nix-cache-action@1828eb4e5414b8dfe36daae53ea3e4b8c3fdec7a #main
-
-      - name: Check flake evaluates
+      - uses: DeterminateSystems/magic-nix-cache-action@1828eb4e5414b8dfe36daae53ea3e4b8c3fdec7a # main
+      - name: Evaluate and build this runner's targets
         run: |
-          # nix flake check has known issues with easy-hosts readDir in the
-          # nix store. Use targeted eval instead to validate each output.
-          set -x
-
-          # Verify flake metadata parses
-          nix flake show --json | jq -r 'keys[]'
-
-          # Validate darwin configs evaluate (macOS)
-          if [[ "$(uname -s)" == "Darwin" ]]; then
-            nix eval --json '.#darwinConfigurations' --apply builtins.attrNames
-          fi
-
-          # Validate linux configs evaluate (Linux)
-          if [[ "$(uname -s)" == "Linux" ]]; then
-            nix eval --json '.#systemConfigs' --apply builtins.attrNames
-            nix eval --json '.#homeConfigurations' --apply builtins.attrNames
-          fi
-
-          # Validate formatter exists for this system
-          nix eval --raw '.#formatter' 2>/dev/null || true
-
-      - name: Build Darwin configurations (macOS only)
-        if: matrix.os == 'macos-latest'
-        run: |
-          for host in $(nix eval --json '.#darwinConfigurations' 2>/dev/null | jq -r 'keys[]' 2>/dev/null); do
-            echo "==> Building darwinConfigurations.$host"
-            nix build ".#darwinConfigurations.$host.system" --no-link
-          done
-
-      - name: Build Linux system configurations (Linux only)
-        if: startsWith(matrix.os, 'ubuntu')
-        run: |
-          set -o pipefail
-
-          current_system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
-          hosts_json="$(nix eval --json '.#systemConfigs' --apply builtins.attrNames)"
-
-          for host in $(jq -r '.[]' <<< "$hosts_json"); do
-            host_platform_json="$(nix eval --json ".#systemConfigs.\"$host\".config.nixpkgs.hostPlatform")"
-            host_system="$(jq -r 'if type == "string" then . else .system end' <<< "$host_platform_json")"
-            if [ "$host_system" != "$current_system" ]; then
-              echo "==> Skipping systemConfigs.$host ($host_system on $current_system runner)"
-              continue
-            fi
-
-            echo "==> Building systemConfigs.$host"
-            nix build ".#systemConfigs.\"$host\"" --no-link
-          done
-
-      - name: Build Linux home-manager configurations (Linux only)
-        if: startsWith(matrix.os, 'ubuntu')
-        run: |
-          current_system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
-          hosts_json="$(nix eval --json '.#homeConfigurations' --apply builtins.attrNames)"
-
-          for host in $(jq -r '.[]' <<< "$hosts_json"); do
-            host_system="$(nix eval --raw ".#homeConfigurations.\"$host\".pkgs.stdenv.hostPlatform.system")"
-            if [ "$host_system" != "$current_system" ]; then
-              echo "==> Skipping homeConfigurations.$host ($host_system on $current_system runner)"
-              continue
-            fi
-
-            echo "==> Building homeConfigurations.$host.activationPackage"
-            nix build ".#homeConfigurations.\"$host\".activationPackage" --no-link
-          done
+          kernel="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          arch="$(uname -m)"
+          case "$arch" in
+            arm64 | aarch64) arch=aarch64 ;;
+            x86_64 | amd64) arch=x86_64 ;;
+            *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+          esac
+          bash .github/scripts/build-platform-targets.sh "$arch-$kernel"
 
   bootstrap-steps:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.ref != 'automation/refresh-flake-lock'
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
           - macos-latest
     env:
+      CI: "true"
       GITHUB_TOKEN: ${{ github.token }}
-
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ inputs.ref != '' && inputs.ref || github.sha }}
-
-      - name: Validate flake evaluates after install
+      - name: Exercise the pre-mise bootstrap boundary
         run: |
-          ./bootstrap.sh ci-bootstrap
+          git config user.name "CI Bootstrap User"
+          git config user.email "ci-bootstrap@example.invalid"
+          ./bootstrap.sh --host ci-bootstrap
