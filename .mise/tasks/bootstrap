@@ -2,6 +2,7 @@
 # [MISE] description="Install Nix or Lix and apply a host after mise is available"
 # [MISE] interactive=true
 #
+#USAGE arg "[hostname]" help="Legacy positional host name"
 #USAGE flag "--host <host>" help="Host to bootstrap (defaults to the current hostname)"
 #USAGE flag "--system <system>" help="System for a host that is not yet in inventory"
 #USAGE flag "--user <user>" help="Inventory user for a host that is not yet in inventory"
@@ -22,7 +23,7 @@ source "$REPO_ROOT/.mise/lib/platform.sh"
 source "$REPO_ROOT/.mise/lib/inventory.sh"
 source "$REPO_ROOT/.mise/lib/bootstrap.sh"
 
-host="${usage_host:-$(current_hostname)}"
+host="${usage_host:-${usage_hostname:-$(current_hostname)}}"
 system="${usage_system:-$(current_system)}"
 user="${usage_user:-$(current_user)}"
 non_interactive="${usage_non_interactive:-false}"

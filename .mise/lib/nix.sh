@@ -45,15 +45,15 @@ nix_command() {
 }
 
 darwin_target_for_host() {
-  printf '%s#darwinConfigurations.%s.system\n' "$1" "$2"
+  printf '%s#darwinConfigurations.\"%s\".system\n' "$1" "$2"
 }
 
 linux_system_target_for_host() {
-  printf '%s#systemConfigs.%s\n' "$1" "$2"
+  printf '%s#systemConfigs.\"%s\"\n' "$1" "$2"
 }
 
 linux_home_target_for_host() {
-  printf '%s#homeConfigurations.%s.activationPackage\n' "$1" "$2"
+  printf '%s#homeConfigurations.\"%s\".activationPackage\n' "$1" "$2"
 }
 
 resolved_target_for_host() {

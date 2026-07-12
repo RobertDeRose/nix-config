@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+source "$ROOT/tests/tasks/_testlib.bash"
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+mkdir -p "$tmp/bin" "$tmp/work"
+real_git="$(command -v git)"
+cat > "$tmp/bin/git" <<'MOCK'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "$MOCK_LOG/git"
+case "$1" in
+  rev-parse) exit 1 ;;
+  clone)
+    destination="${@: -1}"
+    mkdir -p "$destination/.git"
+    printf '[tools]\n' > "$destination/mise.toml"
+    printf '{}\n' > "$destination/flake.nix"
+    ;;
+  *) exec "$REAL_GIT" "$@" ;;
+esac
+MOCK
+cat > "$tmp/bin/mise" <<'MOCK'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "$MOCK_LOG/mise"
+exit 0
+MOCK
+cat > "$tmp/bin/uname" <<'MOCK'
+#!/usr/bin/env bash
+[ "$1" = -s ] && printf 'Linux\n' || /usr/bin/uname "$@"
+MOCK
+chmod +x "$tmp/bin/"*
+mkdir -p "$tmp/log"
+(
+  cd "$tmp/work"
+  PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" REAL_GIT="$real_git" \
+    REPO=environment/repo REF=environment-ref \
+    bash "$ROOT/bootstrap.sh" --host cli-host --repo cli/repo --ref cli-ref
+)
+assert_file_contains "$tmp/log/git" 'clone --branch cli-ref --single-branch https://github.com/cli/repo.git'
+assert_file_contains "$tmp/log/mise" 'trust'
+assert_file_contains "$tmp/log/mise" 'run bootstrap -- --host cli-host'

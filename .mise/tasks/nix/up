@@ -5,6 +5,4 @@
 #USAGE arg "[input]" help="Optional flake input to update"
 
 set -euo pipefail
-args=()
-[ -z "${usage_input:-}" ] || args+=("${usage_input}")
-exec mise run update -- "${args[@]}"
+exec mise run update -- "$@"

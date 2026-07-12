@@ -7,7 +7,4 @@
 #USAGE flag "-d --debug" help="Show verbose Nix output and traces"
 
 set -euo pipefail
-args=("${usage_destination}")
-[ -z "${usage_host:-}" ] || args+=("${usage_host}")
-[ "${usage_debug:-false}" != true ] || args+=(--debug)
-exec mise run deploy -- "${args[@]}"
+exec mise run deploy -- "$@"

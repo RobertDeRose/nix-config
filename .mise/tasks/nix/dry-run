@@ -7,8 +7,4 @@
 #USAGE flag "-d --debug" help="Show verbose Nix output and traces"
 
 set -euo pipefail
-args=()
-[ -z "${usage_target:-}" ] || args+=("${usage_target}")
-[ "${usage_debug:-false}" != true ] || args+=(--debug)
-[ -z "${usage_host:-}" ] || args+=(--host "${usage_host}")
-exec mise run plan -- "${args[@]}"
+exec mise run plan -- "$@"

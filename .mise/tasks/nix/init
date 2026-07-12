@@ -6,7 +6,4 @@
 #USAGE flag "--non-interactive" help="Disable interactive authentication"
 
 set -euo pipefail
-args=()
-[ -z "${usage_hostname:-}" ] || args+=(--host "${usage_hostname}")
-[ "${usage_non_interactive:-false}" != true ] || args+=(--non-interactive)
-exec mise run bootstrap -- "${args[@]}"
+exec mise run bootstrap -- "$@"
