@@ -5,6 +5,15 @@ inventory_path() {
   printf '%s/inventory.toml\n' "$root"
 }
 
+require_inventory_file() {
+  local root="$1" file
+  file="$(inventory_path "$root")"
+  if [ ! -f "$file" ]; then
+    printf 'inventory.toml is missing at %s\n' "$file" >&2
+    return 1
+  fi
+}
+
 validate_hostname() {
   printf '%s' "$1" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$'
 }
@@ -41,21 +50,16 @@ inventory_field() {
 
 inventory_hosts() {
   local root="$1" file
+  require_inventory_file "$root" || return 1
   file="$(inventory_path "$root")"
-  if [ -f "$file" ]; then
-    awk '
-      /^[[:space:]]*\[hosts\.[A-Za-z0-9][A-Za-z0-9-]*\][[:space:]]*$/ {
-        line=$0
-        sub(/^[[:space:]]*\[hosts\./, "", line)
-        sub(/\][[:space:]]*$/, "", line)
-        print line
-      }
-    ' "$file" | sort
-    return
-  fi
-
-  find "$root/hosts" "$root/systems" -mindepth 2 -maxdepth 2 -type d 2>/dev/null \
-    | awk -F/ '{ print $NF }' | sort -u
+  awk '
+    /^[[:space:]]*\[hosts\.[A-Za-z0-9][A-Za-z0-9-]*\][[:space:]]*$/ {
+      line=$0
+      sub(/^[[:space:]]*\[hosts\./, "", line)
+      sub(/\][[:space:]]*$/, "", line)
+      print line
+    }
+  ' "$file" | sort
 }
 
 inventory_has_host() {
@@ -63,77 +67,42 @@ inventory_has_host() {
   inventory_hosts "$root" | grep -Fxq "$host"
 }
 
-legacy_host_dir() {
-  local root="$1" host="$2" match="" count=0 path
-  for path in "$root"/hosts/*-darwin/"$host" "$root"/systems/*-linux/"$host"; do
-    [ -d "$path" ] || continue
-    match="$path"
-    count=$((count + 1))
-  done
-  [ "$count" -eq 1 ] || return 1
-  printf '%s\n' "$match"
-}
-
 inventory_host_system() {
-  local root="$1" host="$2" file dir parent
+  local root="$1" host="$2" file
+  require_inventory_file "$root" || return 1
   file="$(inventory_path "$root")"
-  if [ -f "$file" ]; then
-    inventory_field "$file" "hosts.$host" system
-    return
-  fi
-  dir="$(legacy_host_dir "$root" "$host")" || return 1
-  parent="$(basename "$(dirname "$dir")")"
-  printf '%s\n' "$parent"
+  inventory_field "$file" "hosts.$host" system
 }
 
 inventory_host_user() {
-  local root="$1" host="$2" file dir user_file user
+  local root="$1" host="$2" file user
+  require_inventory_file "$root" || return 1
   file="$(inventory_path "$root")"
-  if [ -f "$file" ]; then
-    user="$(inventory_field "$file" "hosts.$host" user)"
-    if [ -z "$user" ]; then
-      user="$(inventory_field "$file" defaults user)"
-    fi
-    printf '%s\n' "$user"
-    return
+  user="$(inventory_field "$file" "hosts.$host" user)"
+  if [ -z "$user" ]; then
+    user="$(inventory_field "$file" defaults user)"
   fi
-  dir="$(legacy_host_dir "$root" "$host")" || return 1
-  user_file="$dir/user.nix"
-  [ -f "$user_file" ] || return 1
-  sed -n 's/^[[:space:]]*username[[:space:]]*=[[:space:]]*"\([^"]*\)";.*/\1/p' "$user_file" | head -n 1
+  [ -n "$user" ] || return 1
+  printf '%s\n' "$user"
 }
 
 inventory_host_profiles() {
   local root="$1" host="$2" file value
+  require_inventory_file "$root" || return 1
   file="$(inventory_path "$root")"
-  [ -f "$file" ] || return 0
   value="$(inventory_field "$file" "hosts.$host" profiles)"
-  printf '%s' "$value" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
+  printf '%s' "$value" \
+    | tr -d '[]"' \
+    | tr ',' '\n' \
+    | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+    | sed '/^$/d'
 }
 
 inventory_user_field() {
-  local root="$1" username="$2" field="$3" file dir user_file nix_field
+  local root="$1" username="$2" field="$3" file
+  require_inventory_file "$root" || return 1
   file="$(inventory_path "$root")"
-  if [ -f "$file" ]; then
-    inventory_field "$file" "users.$username" "$field"
-    return
-  fi
-  for dir in "$root"/hosts/*-darwin/* "$root"/systems/*-linux/*; do
-    [ -f "$dir/user.nix" ] || continue
-    if [ "$(sed -n 's/^[[:space:]]*username[[:space:]]*=[[:space:]]*"\([^"]*\)";.*/\1/p' "$dir/user.nix" | head -n1)" = "$username" ]; then
-      user_file="$dir/user.nix"
-      case "$field" in
-        username) nix_field=username ;;
-        full_name) nix_field=fullname ;;
-        email) nix_field=useremail ;;
-        github) nix_field=githubUsername ;;
-        *) return 1 ;;
-      esac
-      sed -n "s/^[[:space:]]*$nix_field[[:space:]]*=[[:space:]]*\"\\([^\"]*\\)\";.*/\\1/p" "$user_file" | head -n1
-      return
-    fi
-  done
-  return 1
+  inventory_field "$file" "users.$username" "$field"
 }
 
 host_platform_class() {
@@ -171,8 +140,8 @@ validate_host_platform() {
 
 inventory_users() {
   local root="$1" file
+  require_inventory_file "$root" || return 1
   file="$(inventory_path "$root")"
-  [ -f "$file" ] || return 0
   awk '
     /^[[:space:]]*\[users\.[^]]+\][[:space:]]*$/ {
       line=$0
@@ -231,7 +200,7 @@ require_inventory_user_for_host() {
 
 inventory_host_feature() {
   local root="$1" host="$2" feature="$3" file
+  require_inventory_file "$root" || return 1
   file="$(inventory_path "$root")"
-  [ -f "$file" ] || return 0
   inventory_field "$file" "hosts.$host.features" "$feature"
 }
