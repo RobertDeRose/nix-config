@@ -1,0 +1,26 @@
+schema = 1
+
+[defaults]
+user = "rderose"
+
+[users.rderose]
+username = "rderose"
+full_name = "Robert DeRose"
+email = "rderose@checkpt.com"
+github = "RobertDeRose"
+
+[users.DeRoseR]
+username = "DeRoseR"
+full_name = "Robert DeRose"
+email = "rderose@checkpt.com"
+github = "RobertDeRose"
+
+[hosts.USMBDEROSER]
+system = "aarch64-darwin"
+user = "DeRoseR"
+profiles = ["base", "developer", "mac-desktop"]
+
+[hosts.dev-som]
+system = "aarch64-linux"
+user = "rderose"
+profiles = ["base", "developer", "linux-server"]
