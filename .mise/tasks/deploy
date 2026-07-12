@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+# [MISE] description="Build locally and deploy a Linux host over SSH"
+# [MISE] interactive=true
+#
+#USAGE arg "<destination>" help="SSH destination such as user@host or an SSH config alias"
+#USAGE arg "[host]" help="Inventory host name (defaults to the remote hostname)"
+#USAGE flag "-d --debug" help="Show verbose Nix output and traces"
+
+set -euo pipefail
+
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/platform.sh"
+source "$REPO_ROOT/.mise/lib/inventory.sh"
+source "$REPO_ROOT/.mise/lib/nix.sh"
+
+destination="${usage_destination}"
+host="${usage_host:-}"
+debug="${usage_debug:-false}"
+if [ -z "$host" ]; then
+  host="$(ssh "$destination" hostname -s)"
+  log_info "Detected remote hostname: $host"
+fi
+validate_hostname "$host" || die "invalid host name '$host'"
+require_inventory_host "$REPO_ROOT" "$host"
+system="$(inventory_host_system "$REPO_ROOT" "$host")"
+case "$system" in *-linux) ;; *) die "deploy supports Linux hosts only; '$host' is $system" ;; esac
+
+managed_user="$(inventory_host_user "$REPO_ROOT" "$host")"
+github_user="$(inventory_user_field "$REPO_ROOT" "$managed_user" github)"
+validate_username "$managed_user" || die "invalid managed username '$managed_user' for host '$host'"
+validate_github_username "$github_user" || die "invalid GitHub username '$github_user' for user '$managed_user'"
+
+load_nix_environment
+configure_github_access_token
+log_info "Building all deployment outputs before modifying the remote host"
+build_host "$REPO_ROOT" "$host" "$debug"
+
+log_info "Checking published GitHub SSH keys for $github_user"
+keys="$(curl -fsSL --connect-timeout 5 --max-time 10 "https://github.com/$github_user.keys")" || die "failed to fetch GitHub SSH keys for '$github_user'"
+[ -n "$keys" ] || die "GitHub user '$github_user' has no published SSH keys"
+
+if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "$destination" true 2>/dev/null; then
+  require_command ssh-copy-id
+  ssh-copy-id "$destination"
+fi
+
+if ! ssh "$destination" 'command -v nix >/dev/null 2>&1 && command -v nix-store >/dev/null 2>&1'; then
+  log_info "Installing Lix on $destination"
+  ssh -t "$destination" 'bash -s' <<'REMOTE_BOOTSTRAP'
+set -euo pipefail
+sudo_cmd=()
+if [ "$(id -u)" -ne 0 ]; then
+  command -v sudo >/dev/null 2>&1 || { echo "remote bootstrap requires root or sudo" >&2; exit 1; }
+  sudo_cmd=(sudo)
+  sudo -v
+fi
+if ! command -v nix >/dev/null 2>&1; then
+  export NIX_INSTALLER_NO_CONFIRM=true
+  export NIX_INSTALLER_ENABLE_FLAKES=true
+  curl -sSfL https://install.lix.systems/lix | sh -s -- install
+fi
+"${sudo_cmd[@]}" mkdir -p /usr/local/bin
+"${sudo_cmd[@]}" ln -sf /nix/var/nix/profiles/default/bin/nix /usr/local/bin/nix
+"${sudo_cmd[@]}" ln -sf /nix/var/nix/profiles/default/bin/nix-store /usr/local/bin/nix-store
+"${sudo_cmd[@]}" systemctl restart nix-daemon.socket 2>/dev/null || true
+"${sudo_cmd[@]}" systemctl restart nix-daemon.service 2>/dev/null || true
+for _ in $(seq 1 30); do
+  [ -S /nix/var/nix/daemon-socket/socket ] && break
+  sleep 1
+done
+. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+nix --version >/dev/null
+REMOTE_BOOTSTRAP
+fi
+
+ssh_user="$(ssh -G "$destination" | sed -n 's/^user //p' | head -n1)"
+[ -n "$ssh_user" ] || ssh_user="$(printf '%s' "$destination" | sed -n 's/@.*//p')"
+log_info "Ensuring remote Nix trusts SSH user ${ssh_user:-unknown}"
+ssh -t "$destination" 'bash -s' <<'REMOTE_TRUST'
+set -euo pipefail
+trusted_user="$(id -un)"
+conf=/etc/nix/nix.conf
+run_root() { if [ "$(id -u)" -eq 0 ]; then "$@"; else sudo "$@"; fi; }
+if [ "$(id -u)" -ne 0 ]; then
+  command -v sudo >/dev/null 2>&1 || { echo "remote trust setup requires root or sudo" >&2; exit 1; }
+  sudo -v
+fi
+run_root mkdir -p /etc/nix
+run_root touch "$conf"
+if ! grep -qE "^(extra-)?trusted-users[[:space:]]*=.*(^|[[:space:]])${trusted_user}([[:space:]]|$)" "$conf" 2>/dev/null; then
+  printf 'extra-trusted-users = %s\n' "$trusted_user" | run_root tee -a "$conf" >/dev/null
+fi
+run_root systemctl restart nix-daemon.socket 2>/dev/null || true
+run_root systemctl restart nix-daemon.service 2>/dev/null || true
+REMOTE_TRUST
+
+system_ref="$REPO_ROOT#systemConfigs.$host"
+home_ref="$REPO_ROOT#homeConfigurations.$host.activationPackage"
+manager_args=(--target-host "$destination" switch --flake "$system_ref")
+if [ "$ssh_user" != root ]; then manager_args+=(--ask-sudo-password); fi
+log_info "Activating system configuration for $host"
+"$REPO_ROOT/.build/system-manager/bin/system-manager" "${manager_args[@]}"
+
+home_store_path="$(nix_command "$debug" path-info "$home_ref")"
+log_info "Copying Home Manager activation closure"
+nix_command "$debug" copy --to "ssh://$destination" "$home_store_path"
+log_info "Activating Home Manager for $managed_user"
+ssh "$destination" sh -s -- "$managed_user" "$home_store_path/activate" <<'REMOTE_HOME'
+set -eu
+activate_user="$1"
+hm_activate="$2"
+current_user="$(id -un)"
+activate_home="$(getent passwd "$activate_user" | cut -d: -f6)"
+[ -n "$activate_home" ] || activate_home="/home/$activate_user"
+activate_path="/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:$PATH"
+if [ "$current_user" = root ]; then
+  install -d -m755 -o "$activate_user" -g "$(id -gn "$activate_user")" "/nix/var/nix/profiles/per-user/$activate_user"
+elif [ "$current_user" != "$activate_user" ]; then
+  sudo install -d -m755 -o "$activate_user" -g "$(id -gn "$activate_user")" "/nix/var/nix/profiles/per-user/$activate_user"
+fi
+if [ "$current_user" = "$activate_user" ]; then
+  env USER="$activate_user" HOME="$activate_home" PATH="$activate_path" HOME_MANAGER_BACKUP_EXT=hm_bak "$hm_activate"
+elif [ "$current_user" = root ] && command -v runuser >/dev/null 2>&1; then
+  runuser -u "$activate_user" -- env USER="$activate_user" HOME="$activate_home" PATH="$activate_path" HOME_MANAGER_BACKUP_EXT=hm_bak "$hm_activate"
+elif [ "$current_user" = root ]; then
+  su -s /bin/sh "$activate_user" -c "USER='$activate_user' HOME='$activate_home' PATH='$activate_path' HOME_MANAGER_BACKUP_EXT=hm_bak '$hm_activate'"
+else
+  sudo -u "$activate_user" env USER="$activate_user" HOME="$activate_home" PATH="$activate_path" HOME_MANAGER_BACKUP_EXT=hm_bak "$hm_activate"
+fi
+REMOTE_HOME
