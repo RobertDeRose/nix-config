@@ -1,48 +1,7 @@
-# Nix Toolchain
+# Nix toolchain
 
-## Lix vs CppNix
+The existing platform policy is preserved: Intel macOS uses upstream Nix, while Apple Silicon macOS and Linux use Lix. Darwin selection is implemented in `nix/modules/darwin/config.nix`; fresh-machine installation is implemented once in `.mise/lib/bootstrap.sh`.
 
-This repo uses [Lix](https://lix.systems) (a Nix fork) on most platforms for
-its improved error messages and performance. The exception is **x86_64-darwin**
-(Intel Macs), where Lix dropped support -- those machines use the upstream
-CppNix package instead.
+All command paths enable `nix-command` and `flakes`. Standard NixOS, nix-community, and Numtide caches are configured for normal operation. The personal cache is an explicit host feature and optional acceleration only.
 
-The selection logic lives in `modules/darwin/config.nix`:
-
-```nix
-nix.package =
-  if pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.hostPlatform.isx86_64
-  then pkgs.nix
-  else pkgs.lixPackageSets.latest.lix;
-```
-
-## Experimental Features
-
-The flake enables `nix-command` and `flakes` experimental features globally.
-These are required for `nix build`, `nix develop`, and flake-based workflows.
-
-## Binary Caches
-
-Four substituters are configured to speed up builds:
-
-| Cache | Purpose |
-|-------|---------|
-| `cache.nixos.org` | Official NixOS cache |
-| `nix-community.cachix.org` | Community packages (home-manager, etc.) |
-| `cache.numtide.com` | numtide packages (system-manager) |
-| `robertderose.cachix.org` | Personal cache (pre-built config derivations) |
-
-## Garbage Collection
-
-Automatic weekly GC deletes store paths older than 7 days:
-
-```nix
-nix.gc = {
-  automatic = true;
-  options = "--delete-older-than 7d";
-};
-```
-
-Manual cleanup is available via `mise run nix:clean [window]` (prune old
-system generations for this config) and `mise run nix:gc` (aggressive
-store-wide garbage collection).
+`mise run nix:clean` prunes old system generations, while `mise run nix:gc` performs broader store garbage collection. `mise run doctor` reports daemon and cache state without changing the host.

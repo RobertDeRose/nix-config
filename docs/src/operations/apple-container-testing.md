@@ -1,30 +1,10 @@
-# Apple Container Testing
+# Apple Container testing
 
-[Apple Container](https://developer.apple.com/documentation/containerization)
-provides a way to test Linux configurations from macOS before deploying to
-real servers.
-
-## Tasks
+On supported macOS hosts:
 
 ```bash
-# Run the Linux bootstrap flow in a clean Apple container
 mise run test:bootstrap
+mise run test:deploy
 ```
 
-## How It Works
-
-The bootstrap test recreates a systemd-capable Ubuntu Apple container,
-configures a disposable `tester` account, and runs the pushed branch through
-the real bootstrap entrypoint:
-
-```bash
-curl -sSfL https://raw.githubusercontent.com/<owner>/<repo>/<branch>/bootstrap.sh | bash -s -- <test-hostname>
-```
-
-Uncommitted changes and local commits that have not been pushed to `origin` are
-warned about and are not exercised by `test:bootstrap`.
-
-## When to Use
-
-- Testing changes to `modules/linux/system.nix` before deploying to production
-- Verifying the bootstrap script works on a clean Ubuntu installation
+`test:bootstrap` exercises the pushed branch through the real root bootstrap boundary in a disposable Linux container. `test:deploy` creates a staged inventory host with `host:add`, installs Nix in a disposable SSH target, and runs the canonical `deploy` task. Local uncommitted or unpushed changes are not included in the bootstrap URL test.

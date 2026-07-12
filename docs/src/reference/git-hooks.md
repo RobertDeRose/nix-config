@@ -35,7 +35,7 @@ hk fix -a
 | `actionlint` | `.github/workflows/*.yml` | Lint GitHub Actions |
 | `shellcheck` | `**/*.sh` | Lint shell scripts |
 | `mise-fmt` | `mise.toml` | Format the mise config |
-| `mise` | `mise.toml` | Validate mise task definitions |
+| `mise` | `mise.toml` and `.mise/tasks/` | Validate mise settings and file-task metadata |
 
 ### Security & Hygiene
 
