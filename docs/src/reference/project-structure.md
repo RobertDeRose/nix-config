@@ -1,86 +1,16 @@
-# Project Structure
+# Project structure
 
-```
-.
-├── flake.nix                  # Entry point — flake-parts + easy-hosts
-├── flake.lock                 # Pinned input revisions
-├── mise.toml                  # Task runner (25 tasks)
-├── bootstrap.sh               # One-liner bootstrap (curl | bash)
-├── hk.pkl                     # Pre-commit hook config (Pkl language)
-│
-├── hosts/                     # macOS hosts (auto-discovered by easy-hosts)
-│   ├── aarch64-darwin/
-│   │   └── <hostname>/
-│   │       ├── default.nix    # System config (required)
-│   │       ├── user.nix       # Username, name, email, GitHub username
-│   │       └── home.nix       # Per-host HM overrides (optional)
-│   └── x86_64-darwin/
-│       └── <hostname>/...
-│
-├── systems/                   # Linux hosts (custom discovery in flake.nix)
-│   ├── x86_64-linux/
-│   │   └── <hostname>/
-│   │       ├── system.nix     # system-manager config
-│   │       ├── user.nix       # Username, name, email, GitHub username
-│   │       └── home.nix       # Per-host HM overrides (optional)
-│   └── aarch64-linux/
-│       └── <hostname>/...
-│
-├── templates/                 # Host templates (copied by add-host task)
-│   ├── darwin/
-│   │   ├── default.nix
-│   │   └── home.nix
-│   └── linux/
-│       ├── system.nix
-│       └── home.nix
-│
-├── modules/                   # System-level configuration modules
-│   ├── common/
-│   │   └── cache.nix          # Shared binary cache URLs and public keys
-│   ├── darwin/
-│   │   ├── config.nix         # nix-darwin Nix daemon settings
-│   │   ├── fonts.nix          # Darwin-only system fonts
-│   │   ├── system.nix         # macOS defaults (Dock, Finder, trackpad...)
-│   │   ├── apps.nix           # Homebrew + nix system packages
-│   │   └── iterm2.nix         # iTerm2 plist management
-│   └── linux/
-│       └── system.nix         # system-manager: SSH, users, packages
-│
-├── home/                      # Home-manager (user-level) configuration
-│   ├── darwin.nix             # macOS entry point
-│   ├── linux.nix              # Linux entry point
-│   ├── common/
-│   │   ├── default.nix        # Aggregator: imports all shared modules
-│   │   ├── core.nix           # CLI tools
-│   │   ├── shell.nix          # zsh + starship
-│   │   ├── git.nix            # git, gh, lazygit
-│   │   ├── direnv.nix         # direnv + nix-direnv + mise
-│   │   ├── helix.nix          # Helix editor
-│   │   ├── zellij.nix         # Zellij multiplexer
-│   │   ├── ghostty.nix        # Ghostty terminal (macOS)
-│   │   ├── zed.nix            # Zed editor (macOS)
-│   │   ├── htop.nix           # htop config
-│   │   └── opencode.nix       # OpenCode AI agent
-│   └── darwin/
-│       └── ssh.nix            # Bitwarden Desktop SSH agent config
-│
-├── config/
-│   └── iterm2/
-│       └── com.googlecode.iterm2.plist  # Exported iTerm2 preferences
-│
-├── files/
-│   ├── scripts/
-│   │   └── rund               # Run in disposable Ubuntu container
-│   └── workflows/             # macOS Finder Quick Actions
-│
-├── docs/                      # mdBook documentation (this site)
-│   ├── book.toml
-│   ├── theme/
-│   └── src/
-│
-└── .github/workflows/
-    ├── ci.yml                 # Validate: config eval and build checks
-    ├── cache-refresh.yml      # Refresh flake.lock, warm caches, auto-merge
-    ├── hk.yml                 # Lint: hk checks on PRs
-    └── docs.yml               # Deploy: mdBook to GitHub Pages
+```text
+flake.nix                 Inputs and output delegation
+inventory.toml            Users, hosts, systems, profiles, features
+packages.toml             Data-driven package ownership
+mise.toml                 Tool versions and `.mise/tasks` discovery
+.mise/tasks/              Executable task interface
+.mise/lib/                Shared implementation
+nix/lib/                  Inventory, validation, profiles, constructors
+nix/profiles/             Intent-oriented composition
+nix/modules/              Low-level platform and Home Manager modules
+hosts/<hostname>/         Optional exceptions only
+dotfiles/                 Native application configuration
+tests/tasks/              Task/library regression tests
 ```

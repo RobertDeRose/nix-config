@@ -1,227 +1,138 @@
 # nix-config
 
-My reproducible system configuration using [Nix flakes](https://nixos.wiki/wiki/Flakes),
-[nix-darwin](https://github.com/LnL7/nix-darwin), [system-manager](https://github.com/numtide/system-manager),
-and [home-manager](https://github.com/nix-community/home-manager).
-
-Built on [flake-parts](https://flake.parts) with [easy-hosts](https://github.com/tgirlcloud/easy-hosts)
-for macOS host discovery. Non-NixOS Linux hosts are managed separately with `system-manager`.
-
-Works on **macOS (Apple Silicon & Intel)** and **Ubuntu Linux (headless servers)**.
-Tasks are managed with [mise](https://mise.jdx.dev). The bootstrap script installs prerequisites,
-then delegates to mise for host creation, Nix installation, and activation.
-
----
-
-## Bootstrapping a New Machine
-
-Run this on a fresh machine — it handles prerequisites, cloning, host scaffolding, Nix installation,
-and config activation:
+Nix-backed system management with a small mise command interface. The repository supports Apple Silicon and Intel macOS through nix-darwin, ARM64 and x86_64 non-NixOS Linux through system-manager, and user configuration through Home Manager.
 
 ```bash
-sh -c 'curl -sSfL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh | bash -s -- <hostname>'
+mise tasks
+mise run doctor
+mise run plan
+mise run apply
+mise run check
+mise run update
 ```
 
-Or if you've already cloned the repo:
+Routine use should not require knowing flake output names or platform-specific activation commands.
+
+## Common changes
+
+| Change | Source of truth | Command |
+| --- | --- | --- |
+| Standalone developer tool | `mise.toml` `[tools]` | `mise run tool:add <tool>` |
+| Nix-managed package | `packages.toml` | `mise run package:add <package> --profile <profile>` |
+| macOS GUI application | `packages.toml` Homebrew casks | `mise run app:add <cask>` |
+| Git, Helix, Starship, Zsh, Zellij, Pi, or OpenCode settings | `dotfiles/<application>/` | Edit the native file, then `mise run plan` |
+| Host, system, user, or profiles | `inventory.toml` | `mise run host:add <hostname> ...` |
+| Host-specific exception | `hosts/<hostname>/system.nix` or `home.nix` | Create only when an exception is required |
+
+Package-source selection is documented in [`docs/package-policy.md`](docs/package-policy.md).
+
+## Public machine-management commands
 
 ```bash
-./bootstrap.sh <hostname>
+mise run doctor                         # Read-only machine diagnostics
+mise run plan [--host <hostname>]       # Read-only build preview
+mise run apply [--host <hostname>]      # Build the complete target, then activate
+mise run apply --no-activate            # Build without activation
+mise run check                          # Validate tasks, data, Nix, hosts, and tests
+mise run update [input]                 # Update the lockfile and validate hosts
+mise run rollback [--yes]               # Platform-aware rollback
+mise run deploy <destination> [host]    # Remote Linux deployment
 ```
 
-### What it does
+The former `nix:init`, `nix:switch`, `nix:debug`, `nix:dry-run`, `nix:deploy`, `nix:up`, and `add-host` names remain as hidden compatibility wrappers.
 
-**macOS:**
+## Fresh-machine bootstrap
 
-1. Installs Xcode Command Line Tools (if missing)
-2. Clones this repo (if not already inside it)
-3. Creates `hosts/<arch>-darwin/<hostname>/` from the Darwin template
-4. Installs Homebrew (if missing)
-5. Installs Nix/Lix (if missing; CppNix is used on Intel macOS)
-6. Builds and activates the nix-darwin configuration
+The root script performs only work required before mise is available. After installing and trusting mise, it delegates Nix/Lix installation, host validation, building, and activation to `mise run bootstrap`.
 
-**Ubuntu / Linux (headless):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh \
+  | bash -s -- --host my-host --repo RobertDeRose/nix-config --ref main
+```
 
-1. Clones this repo (if not already inside it)
-2. Creates `systems/<arch>-linux/<hostname>/` from the Linux template
-3. Installs Nix/Lix (if missing)
-4. Builds and activates the system-manager configuration
-5. Builds and activates the Linux home-manager configuration
+From an existing clone:
 
----
+```bash
+./bootstrap.sh --host my-host
+```
 
-## Repository Structure
+Re-running bootstrap is safe. Existing hosts are validated rather than recreated. New hosts are added to `inventory.toml` without creating a branch, staging files, committing, or pushing.
+
+## Adding configuration
+
+```bash
+# A standalone developer tool managed by mise
+mise run tool:add usage --version latest
+
+# A Nix package in an intent-oriented profile
+mise run package:add ripgrep --profile developer
+
+# A macOS Homebrew cask
+mise run app:add firefox
+
+# A host
+mise run host:add build-server \
+  --system x86_64-linux \
+  --user rderose \
+  --profiles base,developer,linux-server
+```
+
+Each mutation command validates the result and displays a Git diff. `host:add` commits only when `--commit` is explicitly supplied.
+
+## Architecture
+
+```text
+inventory.toml
+      │
+      ▼
+host constructor ──► profiles ──► platform modules
+      │
+      ├────────────► Home Manager
+      ├────────────► nix-darwin
+      └────────────► system-manager
+```
+
+`inventory.toml` declares all users, hosts, systems, profiles, and optional feature flags. `packages.toml` declares ordinary profile and host package ownership. `mise.toml` contains only settings, tool versions, environment, hooks, and file-task discovery.
 
 ```text
 .
-├── flake.nix                  # Entry point — flake-parts, easy-hosts, Linux discovery
-├── mise.toml                  # Task runner (init, switch, deploy, tests, docs)
-├── bootstrap.sh               # One-liner bootstrap entry point
-│
-├── hosts/                     # Darwin hosts only; auto-discovered by easy-hosts
-│   ├── aarch64-darwin/        # macOS Apple Silicon hosts
-│   │   └── <hostname>/
-│   │       ├── default.nix
-│   │       ├── user.nix       # Host user metadata
-│   │       └── home.nix       # Optional per-host macOS HM overrides
-│   └── x86_64-darwin/         # macOS Intel hosts
-│       └── <hostname>/
-│           ├── default.nix
-│           ├── user.nix
-│           └── home.nix
-│
-├── systems/                   # Non-NixOS Linux hosts; consumed by flake.nix
-│   ├── aarch64-linux/
-│   │   └── <hostname>/
-│   │       ├── system.nix     # Optional per-host system-manager overrides
-│   │       ├── user.nix       # Host user metadata
-│   │       └── home.nix       # Optional per-host Linux HM overrides
-│   └── x86_64-linux/
-│       └── <hostname>/
-│           ├── system.nix
-│           ├── user.nix
-│           └── home.nix
-│
-├── templates/                 # Host templates copied by add-host
-│   ├── darwin/
-│   │   ├── default.nix
-│   │   └── home.nix
-│   └── linux/
-│       ├── system.nix
-│       └── home.nix
-│
-├── modules/
-│   ├── common/
-│   │   └── cache.nix          # Shared binary cache endpoints and trusted keys
-│   ├── darwin/
-│   │   ├── config.nix         # nix-darwin and Home Manager wiring
-│   │   ├── system.nix         # macOS system settings (Dock, Finder, trackpad…)
-│   │   ├── apps.nix           # Homebrew casks, MAS apps, and system packages
-│   │   ├── fonts.nix          # macOS fonts
-│   │   ├── homebrew-mas-fix.nix
-│   │   └── iterm2.nix
-│   └── linux/
-│       └── system.nix         # Shared system-manager config (SSH, users, packages…)
-│
-└── home/
-    ├── darwin.nix             # macOS home-manager entry point
-    ├── linux.nix              # Linux home-manager entry point
-    ├── darwin/                # macOS-specific HM modules
-    └── common/
-        ├── default.nix        # Imports all shared home modules
-        ├── core.nix           # Cross-platform CLI tools
-        ├── shell.nix          # zsh, Starship, aliases, PATH, shell integration
-        ├── git.nix            # git, gh, lazygit
-        ├── direnv.nix         # direnv + nix-direnv + mise
-        ├── pi.nix             # Pi coding-agent customization
-        └── *.ts               # Pi UI extension modules
+├── flake.nix                 # Inputs and delegation only
+├── inventory.toml            # Users, hosts, systems, profiles, features
+├── packages.toml             # Package ownership and data-driven lists
+├── mise.toml                 # Mise settings/tools; no substantial task bodies
+├── bootstrap.sh              # Pre-mise bootstrap boundary
+├── .mise/tasks/              # Executable user-facing tasks
+├── .mise/lib/                # Shared shell implementation, never exposed as tasks
+├── nix/outputs.nix           # Flake output construction
+├── nix/lib/                  # Inventory, validation, profiles, constructors
+├── nix/profiles/             # base, developer, mac-desktop, linux-server
+├── nix/modules/              # Low-level Darwin, Linux, and Home Manager modules
+├── nix/checks/               # Inventory, ownership, and host checks
+├── hosts/<hostname>/         # Optional host exceptions only
+├── dotfiles/                 # Native application configuration
+├── tests/tasks/              # Mocked task and library regression tests
+└── docs/                     # Architecture, workflows, policy, and recovery
 ```
 
----
+The stable flake outputs remain:
 
-## Day-to-Day Commands
+- `darwinConfigurations.<host>` for macOS.
+- `systemConfigs.<host>` for non-NixOS Linux system state.
+- `homeConfigurations.<host>` for Linux Home Manager state.
 
-Use `mise run <task>`; `mise.toml` is the source of truth.
+`flake-parts` is retained only for concise per-system formatter, package, and check wiring. Host discovery and construction no longer depend on it.
 
-```bash
-# List all available tasks
-mise tasks
+## Validation and recovery
 
-# Apply config on the current machine (auto-detects hostname + platform)
-mise run nix:switch
+`mise run check` is read-only and runs task metadata validation, Bash/Python checks, ShellCheck, shell formatting, Nix formatting and flake checks, TOML/inventory/ownership validation, every host evaluation, and regression tests. CI runs the same contract and builds same-system outputs.
 
-# Debug a failing activation with verbose output and Nix traces
-mise run nix:debug
+`mise run doctor` reports missing prerequisites, host/platform mismatches, daemon state, optional cache availability, task modes, repository dirtiness, and likely Home Manager link conflicts.
 
-# Dry-run the current host build, or a specific flake target
-mise run nix:dry-run
-mise run nix:dry-run .#systemConfigs.<host>
+See:
 
-# Install and use hk hooks/checks
-hk install --mise
-hk check -a
-
-# Update all flake inputs, or one input
-mise run nix:up
-mise run nix:up nixpkgs
-
-# Garbage-collect old generations/store paths
-mise run nix:gc
-mise run nix:clean
-
-# Format Nix files
-mise run nix:fmt
-
-# Build docs
-mise run docs:build
-```
-
----
-
-## Adding a New Host
-
-Adding a host requires **no flake.nix editing**. Darwin hosts are auto-discovered from `hosts/` by
-easy-hosts. Linux hosts are discovered by the custom flake logic from `systems/*-linux/` so they do
-not get interpreted as NixOS hosts by easy-hosts.
-
-### Quick way (from any machine with mise)
-
-```bash
-mise run add-host <hostname> [os] [arch] \
-  --user <username> \
-  --fullname "Full Name" \
-  --email user@example.com \
-  --github githubUsername
-```
-
-`os` accepts `darwin|linux`; `arch` accepts `aarch64|x86_64`. Omitted values default to the current
-machine. Missing user metadata is inferred from the current user/git config or prompted for.
-
-### Manual way
-
-1. Copy a template directory:
-   ```bash
-   # macOS Apple Silicon
-   mkdir -p hosts/aarch64-darwin/<hostname>
-   cp templates/darwin/* hosts/aarch64-darwin/<hostname>/
-
-   # Ubuntu ARM
-   mkdir -p systems/aarch64-linux/<hostname>
-   cp templates/linux/* systems/aarch64-linux/<hostname>/
-   ```
-2. Add `user.nix` in the host directory with `username`, `fullname`, `useremail`, and `githubUsername`.
-3. `git add -A && git commit`
-4. Run `./bootstrap.sh <hostname>` on the target machine.
-
----
-
-## Notes
-
-- **`flake.lock` is committed** — this pins all inputs for reproducible builds. Run `mise run nix:up` to update.
-- **Homebrew** is macOS-only. The init path installs it automatically on a fresh machine.
-- **Linux system config** is managed via [system-manager](https://github.com/numtide/system-manager) — packages, services, users, SSH, sudoers, hostname, locale, and timezone.
-- **Linux user config** is managed via home-manager in `home/linux.nix`.
-- Darwin host directories live under `hosts/<arch>-darwin/<hostname>/`.
-- Linux host directories live under `systems/<arch>-linux/<hostname>/`.
-- Optional per-host home-manager overrides can be added as `home.nix` inside a host directory.
-- Cross-platform CLI tools live in `home/common/core.nix`.
-- Platform-specific shell behavior in `home/common/shell.nix` is guarded with `pkgs.stdenv.isDarwin` or `pkgs.stdenv.isLinux`.
-
-### Git Hooks (hk)
-
-- This repo uses [`hk`](https://hk.jdx.dev/) for pre-commit and pre-push checks.
-- `mise.toml` is the source of truth for hk tooling and environment (`HK_MISE=1`).
-- Hooks auto-install via mise postinstall (`hk install --mise`).
-- You can also install manually once per clone: `hk install --mise`.
-- `hk` configuration lives in `hk.pkl` and uses builtins for formatting, shell/yaml/workflow checks, and security checks.
-
----
-
-## Learning Resources
-
-- [NixOS & Flakes Book](https://github.com/ryan4yin/nixos-and-flakes-book)
-- [flake-parts](https://flake.parts)
-- [easy-hosts](https://flake.parts/options/easy-hosts.html)
-- [nix-darwin options](https://daiderd.com/nix-darwin/manual/index.html)
-- [home-manager options](https://nix-community.github.io/home-manager/options.html)
-- [system-manager docs](https://system-manager.net/)
-- [mise tasks docs](https://mise.jdx.dev/tasks/)
+- [`docs/architecture.md`](docs/architecture.md)
+- [`docs/task-reference.md`](docs/task-reference.md)
+- [`docs/add-a-host.md`](docs/add-a-host.md)
+- [`docs/add-a-tool.md`](docs/add-a-tool.md)
+- [`docs/add-an-app.md`](docs/add-an-app.md)
+- [`docs/recovery.md`](docs/recovery.md)

@@ -8,7 +8,7 @@
 
 - [Overview](./architecture/overview.md)
   - [Module Composition](./architecture/module-composition.md)
-  - [Host Discovery](./architecture/host-discovery.md)
+  - [Host Inventory](./architecture/host-discovery.md)
   - [Nix Toolchain](./architecture/nix-toolchain.md)
 
 ## Customization
