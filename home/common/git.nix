@@ -2,15 +2,14 @@
 {
   lib,
   pkgs,
-  useremail,
-  fullname,
+  user,
   ...
 }:
 let
   identity = lib.generators.toGitINI {
     user = {
-      name = fullname;
-      email = useremail;
+      name = user.fullName;
+      email = user.email;
     };
   };
   platform = lib.generators.toGitINI (
@@ -49,7 +48,7 @@ in
   xdg.configFile."git/identity".text = identity;
   xdg.configFile."git/platform".text = platform;
   xdg.configFile."git/allowed_signers".text =
-    "${useremail} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA\n";
+    "${user.email} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA\n";
 
   programs.difftastic = {
     enable = !pkgs.stdenv.isDarwin;

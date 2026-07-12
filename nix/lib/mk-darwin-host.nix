@@ -14,11 +14,6 @@ let
   homeOverride = hostDir + "/home.nix";
   specialArgs = {
     inherit inputs host user;
-    hostname = host.name;
-    username = user.username;
-    fullname = user.fullName;
-    useremail = user.email;
-    githubUsername = user.github;
   };
 in
 inputs.darwin.lib.darwinSystem {

@@ -4,7 +4,7 @@
 {
   pkgs,
   lib,
-  username,
+  user,
   ...
 }:
 let
@@ -26,7 +26,7 @@ in
         "nix-command"
         "flakes"
       ];
-      trusted-users = [ username ];
+      trusted-users = [ user.username ];
 
       # Bake extra caches into nix.conf so darwin-rebuild can use them without
       # relying on flake-level accept-flake-config behavior.

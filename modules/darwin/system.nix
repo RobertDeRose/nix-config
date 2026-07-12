@@ -3,8 +3,7 @@
 # All options: https://daiderd.com/nix-darwin/manual/index.html#sec-options
 {
   pkgs,
-  username,
-  fullname,
+  user,
   ...
 }:
 {
@@ -12,10 +11,10 @@
 
   # Declare the primary user — nix-darwin needs this for system features,
   # and home-manager reads users.users.<name>.home for homeDirectory.
-  system.primaryUser = username;
-  users.users.${username} = {
-    home = "/Users/${username}";
-    description = fullname;
+  system.primaryUser = user.username;
+  users.users.${user.username} = {
+    home = "/Users/${user.username}";
+    description = user.fullName;
   };
 
   documentation = {

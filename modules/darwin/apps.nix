@@ -5,7 +5,7 @@
 {
   pkgs,
   lib,
-  username,
+  user,
   ...
 }:
 let
@@ -26,7 +26,7 @@ in
   # On a fresh machine, nix-darwin will install Homebrew automatically.
   nix-homebrew = {
     enable = true;
-    user = username;
+    user = user.username;
     autoMigrate = true; # migrate existing manual Homebrew installs
     extraEnv.HOMEBREW_NO_ENV_HINTS = "1";
   };

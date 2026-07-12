@@ -7,9 +7,9 @@
 #
 # To re-export after changing settings in iTerm2:
 #   mise run iterm:export
-{ username, ... }:
+{ user, ... }:
 let
-  prefsDir = "/Users/${username}/Library/Application Support/iTerm2/nix-managed";
+  prefsDir = "/Users/${user.username}/Library/Application Support/iTerm2/nix-managed";
   plistSrc = ../../config/iterm2/com.googlecode.iterm2.plist;
 in
 {

@@ -4,29 +4,28 @@
 {
   lib,
   pkgs,
-  username,
-  githubUsername,
-  hostname,
+  user,
+  host,
   ...
 }:
 let
   cache = import ../common/cache.nix;
-  validUsername = builtins.match "[a-z_][a-z0-9_-]*" username != null && username != "root";
+  validUsername = builtins.match "[a-z_][a-z0-9_-]*" user.username != null && user.username != "root";
   validGithubUsername =
-    builtins.match "[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?" githubUsername != null;
-  githubUsernameFile = pkgs.writeText "github-username" githubUsername;
+    builtins.match "[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?" user.github != null;
+  githubUsernameFile = pkgs.writeText "github-username" user.github;
   githubAuthorizedKeysScript = pkgs.writeShellScript "github-authorized-keys" ''
     set -euo pipefail
 
     requested_user="''${1:-}"
-    if [ "$requested_user" != "${username}" ]; then
+    if [ "$requested_user" != "${user.username}" ]; then
       exit 0
     fi
 
     github_username="$(${pkgs.coreutils}/bin/cat ${githubUsernameFile})"
 
-    target_file="/etc/ssh/authorized_keys.d/${username}"
-    tmp_file="$(${pkgs.coreutils}/bin/mktemp "$(dirname "$target_file")/${username}.XXXXXX")"
+    target_file="/etc/ssh/authorized_keys.d/${user.username}"
+    tmp_file="$(${pkgs.coreutils}/bin/mktemp "$(dirname "$target_file")/${user.username}.XXXXXX")"
     trap '${pkgs.coreutils}/bin/rm -f "$tmp_file"' EXIT
 
     # Refresh the configured user's authorized keys from GitHub.
@@ -53,11 +52,11 @@ in
   assertions = [
     {
       assertion = validUsername;
-      message = "username '${username}' is not a valid managed non-root Linux username.";
+      message = "user.username '${user.username}' is not a valid managed non-root Linux username.";
     }
     {
       assertion = validGithubUsername;
-      message = "githubUsername '${githubUsername}' is not a valid GitHub username.";
+      message = "user.github '${user.github}' is not a valid GitHub username.";
     }
   ];
 
@@ -66,7 +65,7 @@ in
       experimental-features = nix-command flakes
       extra-substituters = ${builtins.concatStringsSep " " cache.substituters}
       extra-trusted-public-keys = ${builtins.concatStringsSep " " cache.trustedPublicKeys}
-      extra-trusted-users = root ${username}
+      extra-trusted-users = root ${user.username}
     '';
     replaceExisting = true;
   };
@@ -76,7 +75,7 @@ in
   # ------------------------------------------------------------------ #
   environment.etc = {
     "hostname" = {
-      text = "${hostname}\n";
+      text = "${host.name}\n";
       replaceExisting = true;
     };
     "timezone" = {
@@ -102,7 +101,7 @@ in
 
   environment.etc."sudoers.d/90-system-manager-wheel" = {
     text = ''
-      ${username} ALL=(ALL:ALL) NOPASSWD: ALL
+      ${user.username} ALL=(ALL:ALL) NOPASSWD: ALL
     '';
     mode = "0440";
     replaceExisting = true;
@@ -150,8 +149,8 @@ in
     script = ''
       set -euo pipefail
       install -d -m 0755 /etc/ssh/authorized_keys.d
-      if ! ${githubAuthorizedKeysScript} ${username}; then
-        echo "Failed to prefill authorized keys for ${username}" >&2
+      if ! ${githubAuthorizedKeysScript} ${user.username}; then
+        echo "Failed to prefill authorized keys for ${user.username}" >&2
         exit 1
       fi
 
@@ -172,9 +171,9 @@ in
   # Users
   # ------------------------------------------------------------------ #
 
-  users.users."${username}" = {
+  users.users."${user.username}" = {
     isNormalUser = true;
-    home = "/home/${username}";
+    home = "/home/${user.username}";
     shell = pkgs.zsh;
     ignoreShellProgramCheck = true;
     extraGroups = [
