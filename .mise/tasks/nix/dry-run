@@ -1,22 +1,14 @@
 #!/usr/bin/env bash
-# [MISE] description="Dry-run a nix build target or the current host config"
-# [MISE] quiet=true
+# [MISE] description="Deprecated: forward to plan"
+# [MISE] hide=true
 #
-#USAGE arg "[target]" help="Flake target to dry-run (example: .#packages.aarch64-darwin.default). Defaults to the current host system target."
+#USAGE arg "[target]" help="Optional explicit flake target"
+#USAGE flag "--host <host>" help="Host to preview"
+#USAGE flag "-d --debug" help="Show verbose Nix output and traces"
 
 set -euo pipefail
-
-TARGET="${usage_target:-}"
-NIX_FLAGS=(--accept-flake-config --extra-experimental-features "nix-command flakes")
-
-if [ -z "$TARGET" ]; then
-  HOST="$(hostname -s)"
-  if [ "$(uname -s)" = "Darwin" ]; then
-    TARGET=".#darwinConfigurations.${HOST}.system"
-  else
-    TARGET=".#systemConfigs.${HOST}"
-  fi
-fi
-
-echo "==> Dry-running $TARGET"
-nix build "${NIX_FLAGS[@]}" --dry-run -L "$TARGET"
+args=()
+[ -z "${usage_target:-}" ] || args+=("${usage_target}")
+[ "${usage_debug:-false}" != true ] || args+=(--debug)
+[ -z "${usage_host:-}" ] || args+=(--host "${usage_host}")
+exec mise run plan -- "${args[@]}"

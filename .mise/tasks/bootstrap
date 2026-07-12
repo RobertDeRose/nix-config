@@ -3,7 +3,14 @@
 # [MISE] interactive=true
 #
 #USAGE flag "--host <host>" help="Host to bootstrap (defaults to the current hostname)"
-#USAGE flag "--non-interactive" help="Do not start interactive authentication"
+#USAGE flag "--system <system>" help="System for a host that is not yet in inventory"
+#USAGE flag "--user <user>" help="Inventory user for a host that is not yet in inventory"
+#USAGE flag "--profiles <profiles>" help="Comma-separated profiles for a new host"
+#USAGE flag "--fullname <name>" help="Full name when creating a new inventory user"
+#USAGE flag "--email <email>" help="Email when creating a new inventory user"
+#USAGE flag "--github <username>" help="GitHub username when creating a new inventory user"
+#USAGE flag "--non-interactive" help="Do not prompt for metadata or authentication"
+#USAGE flag "--no-activate" help="Build the host without activating it"
 
 set -euo pipefail
 
@@ -16,12 +23,49 @@ source "$REPO_ROOT/.mise/lib/inventory.sh"
 source "$REPO_ROOT/.mise/lib/bootstrap.sh"
 
 host="${usage_host:-$(current_hostname)}"
+system="${usage_system:-$(current_system)}"
+user="${usage_user:-$(current_user)}"
 non_interactive="${usage_non_interactive:-false}"
+
+read_required() {
+  local label="$1" value="$2" reply
+  if [ -n "$value" ]; then
+    printf '%s\n' "$value"
+    return 0
+  fi
+  if [ "$non_interactive" = true ] || is_ci || [ ! -r /dev/tty ]; then
+    die "$label is required to create host '$host' non-interactively"
+    return 1
+  fi
+  while [ -z "$value" ]; do
+    printf '%s: ' "$label" >&2
+    IFS= read -r reply </dev/tty
+    value="$reply"
+  done
+  printf '%s\n' "$value"
+}
+
 if ! inventory_has_host "$REPO_ROOT" "$host"; then
-  die "host '$host' is not configured; add it with 'mise run host:add $host --system $(current_system) --user $(current_user)'"
+  log_info "Host '$host' is not in inventory; creating a configuration-only entry"
+  args=("$host" --system "$system" --user "$user")
+  [ -z "${usage_profiles:-}" ] || args+=(--profiles "${usage_profiles}")
+  if ! inventory_has_user "$REPO_ROOT" "$user"; then
+    fullname="$(read_required 'Full name' "${usage_fullname:-$(git config user.name 2>/dev/null || true)}")"
+    email="$(read_required 'Email' "${usage_email:-$(git config user.email 2>/dev/null || true)}")"
+    detected_github="$(git remote get-url origin 2>/dev/null | sed -n 's|.*github.com[:/]\([^/]*\)/.*|\1|p' | head -n1 || true)"
+    github="$(read_required 'GitHub username' "${usage_github:-$detected_github}")"
+    args+=(--fullname "$fullname" --email "$email" --github "$github")
+  fi
+  mise run host:add -- "${args[@]}"
 fi
+
+require_inventory_host "$REPO_ROOT" "$host"
+validate_host_platform "$REPO_ROOT" "$host" "$(current_system)"
 install_nix_or_lix_if_missing
 if [ "$non_interactive" != true ] && ! is_ci; then
   ensure_github_auth
 fi
-mise run apply -- --host "$host"
+
+apply_args=(--host "$host")
+[ "${usage_no_activate:-false}" != true ] || apply_args+=(--no-activate)
+exec mise run apply -- "${apply_args[@]}"

@@ -1,19 +1,11 @@
 #!/usr/bin/env bash
-# [MISE] description="Ensure gh CLI is installed and authenticated"
+# [MISE] description="Ensure GitHub CLI authentication is available"
 # [MISE] hide=true
-# [MISE] quiet=true
+# [MISE] interactive=true
 
 set -euo pipefail
-
-# Install gh if not yet available
-mise install gh
-
-# Check if already authenticated
-if mise x gh -- gh auth status &>/dev/null; then
-  echo "GitHub CLI is already authenticated."
-  exit 0
-fi
-
-echo "==> GitHub CLI is not authenticated."
-echo "    Running 'gh auth login' — follow the prompts to authenticate."
-mise x gh -- gh auth login
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/bootstrap.sh"
+ensure_github_auth

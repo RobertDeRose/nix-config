@@ -1,134 +1,134 @@
 #!/usr/bin/env bash
-# bootstrap.sh — Bootstrap a new machine from scratch.
+# Bootstrap this repository far enough to hand machine setup to `mise run bootstrap`.
+#
 # Usage:
-#   ./bootstrap.sh [hostname]
-# or, for a one-liner from the web:
-#   sh -c 'curl -sSfL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh | bash -s -- [hostname]'
-# To test a branch or fork before merging:
-#   sh -c 'curl -sSfL https://raw.githubusercontent.com/RobertDeRose/nix-config/fix/fresh-bootstrap/bootstrap.sh | bash -s -- [hostname]'
-#   sh -c 'curl -sSfL https://raw.githubusercontent.com/SomeoneElse/nix-config/main/bootstrap.sh | bash -s -- [hostname]'
-# The repo and branch are auto-detected from the curl URL visible in ps;
-# BRANCH and REPO env vars are still supported as overrides.
+#   ./bootstrap.sh [--host HOST] [--repo OWNER/REPO|URL] [--ref REF]
+#   curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh \
+#     | bash -s -- --host HOST --repo RobertDeRose/nix-config --ref main
 
 set -euo pipefail
 
-# ------------------------------------------------------------------ #
-# Auto-detect repo and branch from the parent sh -c + curl process
-# ------------------------------------------------------------------ #
-_detect_from_curl() {
-  # When invoked via sh -c 'curl URL | bash', the sh process stays alive
-  # and ps -ef shows the full command line including the URL.
-  local url
-  # shellcheck disable=SC2009 # we need the full command args, not just PIDs
-  url=$(ps -ef 2> /dev/null |
-    grep -F 'raw.githubusercontent.com' |
-    grep -F 'bootstrap.sh' |
-    grep -v grep |
-    head -n1 |
-    grep -oE 'https://raw\.githubusercontent\.com/[^[:space:]]+' |
-    head -n1) || true
+log() { printf '==> %s\n' "$*"; }
+die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
-  # Strip shell quoting/trailing pipeline text and keep only the bootstrap URL.
-  url=$(printf '%s\n' "$url" | sed -E "s#(/bootstrap\.sh).*#\1#; s/[\"'[:space:]].*$//")
+host="$(hostname -s)"
+repo="${REPO:-RobertDeRose/nix-config}"
+ref="${REF:-${BRANCH:-main}}"
 
-  if [[ -n ${url:-} ]]; then
-    # URL: https://raw.githubusercontent.com/<owner>/<repo>/<branch>/bootstrap.sh
-    local path="${url#https://raw.githubusercontent.com/}"
-    local owner="${path%%/*}"
-    path="${path#*/}"
-    local repo="${path%%/*}"
-    path="${path#*/}"
-    local branch="${path%/bootstrap.sh}"
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --host)
+      [ "$#" -ge 2 ] || die "--host requires a value"
+      host="$2"; shift 2 ;;
+    --repo)
+      [ "$#" -ge 2 ] || die "--repo requires a value"
+      repo="$2"; shift 2 ;;
+    --ref)
+      [ "$#" -ge 2 ] || die "--ref requires a value"
+      ref="$2"; shift 2 ;;
+    -h|--help)
+      sed -n '2,8p' "${BASH_SOURCE[0]:-/dev/stdin}" 2>/dev/null || true
+      exit 0 ;;
+    --) shift; break ;;
+    -*) die "unknown option: $1" ;;
+    *)
+      # Preserve the original positional hostname interface.
+      host="$1"; shift ;;
+  esac
+done
+[ "$#" -eq 0 ] || die "unexpected argument: $1"
 
-    if [[ -n $owner && -n $repo && -n $branch ]]; then
-      echo "${owner}/${repo}" "$branch"
-    fi
+run_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+  else
+    command -v sudo >/dev/null 2>&1 || die "sudo is required to install platform prerequisites"
+    sudo "$@"
   fi
 }
 
-HOSTNAME="${1:-$(hostname -s)}"
-
-# Auto-detect repo/branch from curl URL, with env var overrides
-if [[ -z ${REPO:-} || -z ${BRANCH:-} ]]; then
-  IFS=' ' read -r -a _detected <<< "$(_detect_from_curl)" || true
-  REPO="${REPO:-${_detected[0]:-RobertDeRose/nix-config}}"
-  BRANCH="${BRANCH:-${_detected[1]:-main}}"
-  unset _detected
-else
-  REPO="${REPO:-RobertDeRose/nix-config}"
-  BRANCH="${BRANCH:-main}"
-fi
-
-if [[ $REPO != "RobertDeRose/nix-config" || $BRANCH != "main" ]]; then
-  echo "==> Using repo=$REPO branch=$BRANCH"
-fi
-REPO_URL="https://github.com/${REPO}.git"
-REPO_DIR="$(basename "$REPO")"
-MISE_CEILING_PATHS="$(realpath "$(pwd)/..")"
-
-# ------------------------------------------------------------------ #
-# macOS: install Xcode Command Line Tools if missing
-# ------------------------------------------------------------------ #
-if [[ "$(uname -s)" == "Darwin" ]] && ! xcode-select -p &> /dev/null; then
-  echo "==> Installing Xcode Command Line Tools..."
-  touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
-
-  PROD=$(softwareupdate -l 2> /dev/null | grep "\*.*Command Line" | tail -n 1 | sed 's/^[^C]* //')
-
-  if [[ -n $PROD ]]; then
-    softwareupdate -i "$PROD" --verbose
-    rm -f /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
-    echo "    Xcode Command Line Tools installed."
+install_linux_prerequisites() {
+  command -v git >/dev/null 2>&1 && command -v curl >/dev/null 2>&1 && return 0
+  log "Installing git and curl"
+  if command -v apt-get >/dev/null 2>&1; then
+    run_root apt-get update -qq
+    run_root apt-get install -y -qq git curl ca-certificates
+  elif command -v dnf >/dev/null 2>&1; then
+    run_root dnf install -y git curl ca-certificates
+  elif command -v yum >/dev/null 2>&1; then
+    run_root yum install -y git curl ca-certificates
+  elif command -v pacman >/dev/null 2>&1; then
+    run_root pacman -Sy --needed --noconfirm git curl ca-certificates
+  elif command -v zypper >/dev/null 2>&1; then
+    run_root zypper --non-interactive install git curl ca-certificates
   else
-    rm -f /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
-    echo "ERROR: No Command Line Tools update found via softwareupdate."
-    echo "       Install manually: xcode-select --install"
-    exit 1
+    die "install git and curl, then rerun bootstrap.sh"
   fi
+}
+
+install_macos_prerequisites() {
+  command -v xcode-select >/dev/null 2>&1 || die "xcode-select is unavailable"
+  if xcode-select -p >/dev/null 2>&1; then
+    return 0
+  fi
+  log "Installing Xcode Command Line Tools"
+  marker=/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
+  touch "$marker"
+  product="$(softwareupdate -l 2>/dev/null | awk '/\*.*Command Line/ { sub(/^[^C]*/, ""); value=$0 } END { print value }')"
+  rm -f "$marker"
+  [ -n "$product" ] || die "no Command Line Tools update was found; run 'xcode-select --install'"
+  run_root softwareupdate -i "$product" --verbose
+}
+
+case "$(uname -s)" in
+  Darwin) install_macos_prerequisites ;;
+  Linux) install_linux_prerequisites ;;
+  *) die "unsupported operating system: $(uname -s)" ;;
+esac
+command -v git >/dev/null 2>&1 || die "git is unavailable"
+command -v curl >/dev/null 2>&1 || die "curl is unavailable"
+
+case "$repo" in
+  http://*|https://*|ssh://*|git@*) repo_url="$repo" ;;
+  *) repo_url="https://github.com/${repo%.git}.git" ;;
+esac
+repo_name="$(basename "${repo_url%.git}")"
+
+repo_root=""
+if git_root="$(git rev-parse --show-toplevel 2>/dev/null)" \
+  && [ -f "$git_root/mise.toml" ] \
+  && [ -f "$git_root/flake.nix" ]; then
+  repo_root="$git_root"
+elif [ -n "${NIX_CONFIG_DIR:-}" ]; then
+  repo_root="$NIX_CONFIG_DIR"
+else
+  repo_root="$PWD/$repo_name"
 fi
 
-# ------------------------------------------------------------------ #
-# Linux: install git if missing
-# ------------------------------------------------------------------ #
-if [[ "$(uname -s)" == "Linux" ]] && ! command -v git &> /dev/null; then
-  echo "==> Installing git..."
-  command=("apt-get")
-  [[ $(id -u) -ne 0 ]] && command=("sudo" "${command[@]}")
-  "${command[@]}" update -qq && "${command[@]}" install -yqq git
+if [ ! -d "$repo_root/.git" ]; then
+  [ ! -e "$repo_root" ] || die "$repo_root exists but is not a Git repository"
+  log "Cloning $repo_url at $ref into $repo_root"
+  git clone --branch "$ref" --single-branch "$repo_url" "$repo_root"
+elif [ ! -f "$repo_root/mise.toml" ] || [ ! -f "$repo_root/flake.nix" ]; then
+  die "$repo_root does not look like nix-config"
+else
+  log "Using repository at $repo_root"
 fi
 
-# ------------------------------------------------------------------ #
-# Ensure we're inside the nix-config repo
-# ------------------------------------------------------------------ #
-if ! git rev-parse --is-inside-work-tree &> /dev/null; then
-  echo "==> Cloning nix-config into ./$REPO_DIR (branch: $BRANCH)..."
-  git clone -b "$BRANCH" "$REPO_URL"
-  cd "$REPO_DIR"
-fi
+cd "$repo_root"
+export MISE_TRUSTED_CONFIG_PATHS="$repo_root${MISE_TRUSTED_CONFIG_PATHS:+:$MISE_TRUSTED_CONFIG_PATHS}"
 
-export MISE_TRUSTED_CONFIG_PATHS="${PWD}"
-
-# ------------------------------------------------------------------ #
-# Install mise if missing
-# ------------------------------------------------------------------ #
-if ! command -v mise &> /dev/null; then
-  if [[ ! -e "$HOME/.local/bin/mise" ]]; then
-    echo "==> Installing mise..."
-    curl https://mise.run | sh
+if ! command -v mise >/dev/null 2>&1; then
+  if [ ! -x "$HOME/.local/bin/mise" ]; then
+    log "Installing mise"
+    curl -fsSL https://mise.run | sh
   fi
   export PATH="$HOME/.local/bin:$PATH"
-  echo
 fi
+command -v mise >/dev/null 2>&1 || die "mise installation did not place the executable on PATH"
 
-# ------------------------------------------------------------------ #
-# Install mise-nix plugin if missing
-# ------------------------------------------------------------------ #
-if ! mise plugin ls 2> /dev/null | grep -q '^nix$'; then
-  echo "==> Installing mise-nix plugin..."
-  mise plugin install nix https://github.com/jbadeau/mise-nix.git
-fi
+log "Trusting repository configuration"
+mise trust "$repo_root/mise.toml" >/dev/null
 
-echo "==> Handing off to mise..."
-export MISE_CEILING_PATHS
-export MISE_AUTO_INSTALL=false
-mise run nix:init "$HOSTNAME"
+log "Handing off to mise for host $host"
+exec mise run bootstrap -- --host "$host"

@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
-# [MISE] description="Full init for a new machine: install Nix/Lix, then apply config"
-# [MISE] quiet=true
-# [MISE] raw=true
-# [MISE] depends=["nix:trust"]
+# [MISE] description="Deprecated: forward to bootstrap"
+# [MISE] hide=true
 #
-#USAGE arg "<hostname>" help="Hostname to assign" long_help="The hostname used as the nix config identifier. Delegates to add-host to create the host directory, then installs Nix/Lix and builds/activates the configuration. On Darwin, Homebrew is managed during nix-darwin activation."
+#USAGE arg "[hostname]" help="Inventory host to bootstrap"
+#USAGE flag "--non-interactive" help="Disable interactive authentication"
 
 set -euo pipefail
-
-mise run add-host "${usage_hostname}"
-mise run activate "${usage_hostname}"
-
-echo ""
-echo "Done! Open a new shell to pick up all changes."
+args=()
+[ -z "${usage_hostname:-}" ] || args+=(--host "${usage_hostname}")
+[ "${usage_non_interactive:-false}" != true ] || args+=(--non-interactive)
+exec mise run bootstrap -- "${args[@]}"

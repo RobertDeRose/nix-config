@@ -1,15 +1,10 @@
 #!/usr/bin/env bash
-# [MISE] description="Update a single flake input, or all inputs if none specified"
-# [MISE] quiet=true
+# [MISE] description="Deprecated: forward to update"
+# [MISE] hide=true
 #
-#USAGE arg "[input]" help="Flake input to update (e.g. nixpkgs, home-manager, darwin). Omit to update all."
+#USAGE arg "[input]" help="Optional flake input to update"
 
 set -euo pipefail
-
-if [ -n "${usage_input:-}" ]; then
-  echo "==> Updating flake input: ${usage_input}"
-  nix flake update "${usage_input}" --verbose
-else
-  echo "==> Updating all direct flake inputs..."
-  nix flake update --verbose
-fi
+args=()
+[ -z "${usage_input:-}" ] || args+=("${usage_input}")
+exec mise run update -- "${args[@]}"

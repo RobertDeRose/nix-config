@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# [MISE] description="Apply config with debug traces"
-# [MISE] quiet=true
+# [MISE] description="Deprecated: forward to apply --debug"
+# [MISE] hide=true
 
 set -euo pipefail
-
-mise run nix:switch --debug
+exec mise run apply -- --debug "$@"
