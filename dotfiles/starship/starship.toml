@@ -1,0 +1,129 @@
+continuation_prompt = '[ ▶▶](fg:lightgreen) '
+format = '[╭──](fg:current_line)$os$directory$git_branch$fill$nodejs$rust$python$c$cmd_duration$shell$time$username$line_break[╰─](fg:current_line)$character'
+palette = "ayu_mirage"
+
+[palettes.ayu_mirage]
+background = "#1F2430"
+black = "#191E2A"
+blue = "#73D0FF"
+box = "#44475A"
+brightblue = "#59C2FF"
+current_line = "#44475A"
+cyan = "#95E6CB"
+foreground = "#CBCCC6"
+green = "#AAD94C"
+lavender = "#D4BFFF"
+lightgreen = "#D5FF80"
+maroon = "#F28779"
+orange = "#FFAD66"
+orangeyellow = "#FFD173"
+peach = "#FFCC66"
+pink = "#F29E74"
+primary = "#1F2430"
+purple = "#D4BFFF"
+red = "#F28779"
+sapphire = "#5CCFE6"
+sky = "#73D0FF"
+teal = "#95E6CB"
+white = "#FFFFFF"
+yellow = "#FFD173"
+
+[os]
+disabled = false
+format = '(fg:current_line)[](fg:foreground)[$symbol](fg:primary bg:foreground)[](fg:foreground)'
+
+[os.symbols]
+Alpine = ""
+Amazon = ""
+Android = ""
+Arch = ""
+CentOS = ""
+Debian = ""
+EndeavourOS = ""
+Fedora = ""
+FreeBSD = ""
+Garuda = ""
+Gentoo = ""
+Linux = ""
+Macos = ""
+Manjaro = ""
+Mariner = ""
+Mint = ""
+NetBSD = ""
+NixOS = ""
+OpenBSD = ""
+OpenCloudOS = ""
+openEuler = ""
+openSUSE = ""
+OracleLinux = "⊂⊃"
+Pop = ""
+Raspbian = ""
+Redhat = ""
+RedHatEnterprise = ""
+Solus = ""
+SUSE = ""
+Ubuntu = ""
+Unknown = ""
+Windows = ""
+
+[directory]
+format = '[─](fg:current_line)[](fg:blue)[󰷏](fg:primary bg:blue)[](fg:blue bg:box)[ $read_only$truncation_symbol$path](fg:foreground bg:box)[](fg:box)'
+home_symbol = " "
+read_only = "󱧵 "
+read_only_style = ""
+truncation_length = 2
+truncation_symbol = " "
+
+[character]
+format = '[$symbol](fg:current_line) '
+error_symbol = "[!](fg:bold red)"
+success_symbol = '[\$](fg:lightgreen)'
+
+[fill]
+style = "fg:current_line"
+symbol = "─"
+
+[sudo]
+disabled = true
+format = '[$symbol](yellow)'
+symbol = ""
+
+[c]
+format = '[─](fg:current_line)[](fg:blue)[$symbol](fg:primary bg:blue)[](fg:blue bg:box)[ $version](fg:foreground bg:box)[](fg:box)'
+symbol = " C"
+
+[cmd_duration]
+format = '[─](fg:current_line)[](fg:orange)[](fg:primary bg:orange)[](fg:orange bg:box)[ $duration ](fg:foreground bg:box)[](fg:box)'
+min_time = 500
+
+[git_branch]
+format = '[─](fg:current_line)[](fg:green)[$symbol](fg:primary bg:green)[](fg:green bg:box)[ $branch](fg:foreground bg:box)[](fg:box)'
+symbol = " "
+
+[nodejs]
+format = '[─](fg:current_line)[](fg:green)[$symbol](fg:primary bg:green)[](fg:green bg:box)[ $version](fg:foreground bg:box)[](fg:box)'
+symbol = "󰎙 Node.js"
+
+[python]
+format = '[─](fg:current_line)[](fg:brightblue)[$symbol](fg:primary bg:brightblue)[](fg:brightblue bg:box)[ $version](fg:foreground bg:box)[](fg:box)'
+symbol = ""
+
+[rust]
+format = '[─](fg:current_line)[](fg:red)[$symbol](fg:primary bg:red)[](fg:red bg:box)[ $version](fg:foreground bg:box)[](fg:box)'
+symbol = ""
+
+[shell]
+disabled = false
+fish_indicator = "fish"
+format = '[─](fg:current_line)[](fg:blue)[](fg:primary bg:blue)[](fg:blue bg:box)[ $indicator](fg:foreground bg:box)[](fg:box)'
+powershell_indicator = "powershell"
+unknown_indicator = "shell"
+
+[time]
+disabled = false
+format = '[─](fg:current_line)[](fg:purple)[󰦖](fg:primary bg:purple)[](fg:purple bg:box)[ $time](fg:foreground bg:box)[](fg:box)'
+time_format = "%H:%M"
+
+[username]
+format = '[─](fg:current_line)[](fg:sapphire)[](fg:primary bg:sapphire)[](fg:sapphire bg:box)[ $user](fg:foreground bg:box)[](fg:box)'
+show_always = true
