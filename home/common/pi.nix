@@ -149,7 +149,21 @@ in
       defaultProvider: "github-copilot",
       defaultModel: "gpt-5.5",
       subagents: {
-        defaultModel: "openai-codex/gpt-5.3-codex-spark"
+        defaultModel: "openai-codex/gpt-5.6-terra",
+        agentOverrides: {
+          scout: { model: "openai-codex/gpt-5.6-terra", thinking: "medium" },
+          researcher: { model: "openai-codex/gpt-5.6-sol", thinking: "high" },
+          "context-builder": { model: "openai-codex/gpt-5.6-terra", thinking: "medium" },
+          planner: { model: "openai-codex/gpt-5.6-sol", thinking: "high" },
+          worker: { model: "openai-codex/gpt-5.6-terra", thinking: "high" },
+          reviewer: { model: "openai-codex/gpt-5.6-sol", thinking: "high" },
+          oracle: { model: "openai-codex/gpt-5.6-sol", thinking: "xhigh" },
+          delegate: { model: "openai-codex/gpt-5.6-terra", thinking: "medium" }
+        },
+        watchdog: {
+          enabled: true,
+          main: { model: "openai-codex/gpt-5.6-sol", thinking: "high" }
+        }
       },
       defaultThinkingLevel: "low",
       terminal: {
