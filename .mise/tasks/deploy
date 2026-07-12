@@ -97,8 +97,8 @@ run_root systemctl restart nix-daemon.socket 2>/dev/null || true
 run_root systemctl restart nix-daemon.service 2>/dev/null || true
 REMOTE_TRUST
 
-system_ref="$REPO_ROOT#systemConfigs.$host"
-home_ref="$REPO_ROOT#homeConfigurations.$host.activationPackage"
+system_ref="$(linux_system_target_for_host "$REPO_ROOT" "$host")"
+home_ref="$(linux_home_target_for_host "$REPO_ROOT" "$host")"
 manager_args=(--target-host "$destination" switch --flake "$system_ref")
 if [ "$ssh_user" != root ]; then manager_args+=(--ask-sudo-password); fi
 log_info "Activating system configuration for $host"

@@ -76,5 +76,26 @@ inputs.flake-parts.lib.mkFlake { inherit inputs; } {
         // lib.optionalAttrs (builtins.hasAttr system inputs.worktrunk.packages) {
           worktrunk = inputs.worktrunk.packages.${system}.worktrunk;
         };
+
+      checks =
+        {
+          inventory = import ./checks/inventory.nix {
+            inherit pkgs inventoryData;
+          };
+          package-ownership = import ./checks/package-ownership.nix {
+            inherit pkgs;
+            root = ../.;
+          };
+        }
+        // import ./checks/hosts.nix {
+          inherit
+            lib
+            system
+            inventoryData
+            darwinConfigurations
+            systemConfigs
+            homeConfigurations
+            ;
+        };
     };
 }
