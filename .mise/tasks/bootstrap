@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# [MISE] description="Install Nix or Lix and apply a host after mise is available"
+# [MISE] interactive=true
+#
+#USAGE flag "--host <host>" help="Host to bootstrap (defaults to the current hostname)"
+#USAGE flag "--non-interactive" help="Do not start interactive authentication"
+
+set -euo pipefail
+
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/platform.sh"
+source "$REPO_ROOT/.mise/lib/inventory.sh"
+source "$REPO_ROOT/.mise/lib/bootstrap.sh"
+
+host="${usage_host:-$(current_hostname)}"
+non_interactive="${usage_non_interactive:-false}"
+if ! inventory_has_host "$REPO_ROOT" "$host"; then
+  die "host '$host' is not configured; add it with 'mise run host:add $host --system $(current_system) --user $(current_user)'"
+fi
+install_nix_or_lix_if_missing
+if [ "$non_interactive" != true ] && ! is_ci; then
+  ensure_github_auth
+fi
+mise run apply -- --host "$host"

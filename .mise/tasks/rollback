@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# [MISE] description="Roll back the active system configuration"
+# [MISE] interactive=true
+#
+#USAGE flag "-y --yes" help="Skip the confirmation prompt"
+
+set -euo pipefail
+
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/platform.sh"
+
+yes="${usage_yes:-false}"
+os="$(current_os)"
+if [ "$os" = darwin ]; then
+  printf 'Rollback target: previous nix-darwin system generation\n'
+else
+  printf 'Rollback target: deactivate the current system-manager generation\n'
+  printf 'Note: system-manager does not provide exact nix-darwin generation parity; Home Manager is not automatically rolled back.\n'
+fi
+if [ "$yes" != true ] && ! confirm "Proceed with rollback?"; then
+  die "rollback cancelled"
+fi
+if [ "$os" = darwin ]; then
+  require_command darwin-rebuild
+  sudo darwin-rebuild --rollback
+else
+  require_command system-manager
+  system-manager deactivate --sudo
+fi

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# [MISE] description="Validate Nix formatting and flake metadata"
+
+set -euo pipefail
+
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/nix.sh"
+load_nix_environment
+nix_command false flake metadata >/dev/null
+nix_command false fmt -- --check .

@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# [MISE] description="Update flake inputs and validate every host"
+#
+#USAGE arg "[input]" help="One input to update; omit to update all inputs"
+
+set -euo pipefail
+
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/nix.sh"
+load_nix_environment
+before="$(mktemp)"
+trap 'rm -f "$before"' EXIT
+cp flake.lock "$before"
+if [ -n "${usage_input:-}" ]; then
+  log_info "Updating flake input: ${usage_input}"
+  nix_command false flake update "${usage_input}"
+else
+  log_info "Updating all direct flake inputs"
+  nix_command false flake update
+fi
+printf '\nLockfile diff:\n'
+git --no-pager diff -- flake.lock
+mise run check:hosts

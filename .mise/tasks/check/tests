@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# [MISE] description="Run task and library regression tests"
+
+set -euo pipefail
+
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+find tests/tasks -type f -name '*.sh' | sort | while IFS= read -r test_file; do
+  printf '==> %s\n' "$test_file"
+  bash "$test_file"
+done

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# [MISE] description="Run every repository validation check"
+
+set -euo pipefail
+
+for task in shell nix inventory packages hosts tests; do
+  mise run "check:$task"
+done

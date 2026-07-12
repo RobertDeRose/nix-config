@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# [MISE] description="Validate package inventory and ownership"
+
+set -euo pipefail
+
+mise run package:validate

@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# [MISE] description="Preview the selected host configuration without activation"
+#
+#USAGE arg "[target]" help="Optional explicit flake target; defaults to the selected host output"
+#USAGE flag "--host <host>" help="Host to preview (defaults to the current hostname)"
+#USAGE flag "-d --debug" help="Show verbose Nix output and traces"
+
+set -euo pipefail
+
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/platform.sh"
+source "$REPO_ROOT/.mise/lib/inventory.sh"
+source "$REPO_ROOT/.mise/lib/nix.sh"
+
+host="${usage_host:-$(current_hostname)}"
+debug="${usage_debug:-false}"
+target="${usage_target:-}"
+
+load_nix_environment
+configure_github_access_token
+
+if [ -n "$target" ]; then
+  log_info "Explicit target: $target"
+  nix_command "$debug" build --dry-run -L "$target"
+  exit 0
+fi
+
+require_inventory_host "$REPO_ROOT" "$host"
+validate_host_platform "$REPO_ROOT" "$host" "$(current_system)"
+system="$(inventory_host_system "$REPO_ROOT" "$host")"
+log_info "Host: $host"
+case "$system" in
+  *-darwin) printf 'Output: %s\n' "$(darwin_target_for_host "$REPO_ROOT" "$host")" ;;
+  *-linux)
+    printf 'System output: %s\n' "$(linux_system_target_for_host "$REPO_ROOT" "$host")"
+    printf 'Home output:   %s\n' "$(linux_home_target_for_host "$REPO_ROOT" "$host")"
+    ;;
+esac
+dry_run_host "$REPO_ROOT" "$host" "$debug"

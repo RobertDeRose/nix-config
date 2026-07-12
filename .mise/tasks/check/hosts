@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# [MISE] description="Evaluate every configured host output"
+
+set -euo pipefail
+
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/inventory.sh"
+source "$REPO_ROOT/.mise/lib/nix.sh"
+load_nix_environment
+configure_github_access_token
+inventory_hosts "$REPO_ROOT" | while IFS= read -r host; do
+  [ -n "$host" ] || continue
+  log_info "Evaluating $host"
+  evaluate_host "$REPO_ROOT" "$host" false
+done

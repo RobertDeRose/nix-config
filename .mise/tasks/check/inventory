@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# [MISE] description="Validate host inventory data"
+
+set -euo pipefail
+
+mise run host:validate
