@@ -50,7 +50,16 @@ if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then record 
 if [ "$(current_os)" = darwin ]; then
   command -v brew >/dev/null 2>&1 && record ok homebrew "Homebrew is installed" || record error homebrew "Homebrew is not installed"
 fi
-if grep -Rqs 'robertderose.cachix.org' modules nix 2>/dev/null; then record ok personal-cache "configured as optional acceleration"; else record warning personal-cache "not configured; correctness must not depend on it"; fi
+personal_cache="$(inventory_host_feature "$REPO_ROOT" "$host" personal_cache 2>/dev/null || true)"
+if [ "$personal_cache" = true ]; then
+  if command -v curl >/dev/null 2>&1 && curl -fsI --connect-timeout 2 --max-time 4 https://robertderose.cachix.org/nix-cache-info >/dev/null 2>&1; then
+    record ok personal-cache "opted in and reachable"
+  else
+    record warning personal-cache "opted in but unavailable; standard caches and local builds remain usable"
+  fi
+else
+  record ok personal-cache "not enabled for this host"
+fi
 bad_modes="$(find .mise/tasks -type f ! -perm -u+x -print)"
 [ -z "$bad_modes" ] && record ok task-modes "all file tasks are executable" || record error task-modes "non-executable tasks: $(printf '%s' "$bad_modes" | tr '\n' ' ')"
 bad_headers="$(find .mise/tasks -type f -exec awk 'FNR==1 && $0!="#!/usr/bin/env bash" {print FILENAME}' {} +)"

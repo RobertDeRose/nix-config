@@ -6,7 +6,10 @@
   ...
 }:
 let
-  piPackage = inputs.llmagents.packages.${pkgs.stdenv.hostPlatform.system}.pi;
+  piPackage = import ../../nix/packages/custom/llmagents.nix {
+    inherit inputs pkgs;
+    name = "pi";
+  };
   settingsDefaults = ../../dotfiles/pi/settings.defaults.json;
 in
 {

@@ -1,33 +1,32 @@
-# modules/darwin/apps.nix
-# macOS-only: system-wide nix packages + Homebrew casks/formulae.
-# GUI apps and anything macOS-specific live here.
-# Cross-platform CLI tools belong in home/common/core.nix instead.
+# macOS package and application ownership.
 {
   pkgs,
   lib,
   user,
+  host,
+  packageData,
   ...
 }:
 let
-  isAarch64 = pkgs.stdenv.hostPlatform.isAarch64;
+  profileBrew = packageData.profileHomebrew {
+    profile = "mac-desktop";
+    system = host.system;
+  };
+  hostBrew = packageData.hostHomebrew { host = host.name; };
+  taps = lib.unique (profileBrew.taps ++ hostBrew.taps);
+  brews = lib.unique (profileBrew.brews ++ hostBrew.brews);
+  casks = lib.unique (profileBrew.casks ++ hostBrew.casks);
 in
 {
-  # System-wide packages available to all users.
-  # Prefer home-manager's home.packages for user-level tools.
-  environment.systemPackages = with pkgs; [
-    bat
-    devenv
-    eza
-    git
-    fastfetch
-  ];
+  environment.systemPackages = packageData.profileSystemPackages {
+    inherit pkgs;
+    profile = "mac-desktop";
+  };
 
-  # Homebrew installation managed declaratively via nix-homebrew.
-  # On a fresh machine, nix-darwin will install Homebrew automatically.
   nix-homebrew = {
     enable = true;
     user = user.username;
-    autoMigrate = true; # migrate existing manual Homebrew installs
+    autoMigrate = true;
     extraEnv.HOMEBREW_NO_ENV_HINTS = "1";
   };
 
@@ -36,76 +35,16 @@ in
 
     onActivation = {
       autoUpdate = false;
-      upgrade = false; # only install missing packages, don't upgrade existing ones
-      cleanup = "none"; # keep manually installed Homebrew apps/casks
+      upgrade = false;
+      cleanup = "none";
     };
 
-    taps = [
-      {
-        name = "manaflow-ai/cmux";
-        trusted = true;
-      }
-      {
-        name = "macos-fuse-t/cask";
-        trusted = true;
-      }
-      {
-        name = "modem-dev/tap";
-        trusted = true;
-      }
-    ];
+    taps = map (name: {
+      inherit name;
+      trusted = true;
+    }) taps;
 
-    # brew install — CLI tools that aren't in nixpkgs (or are marked EOL there)
-    brews = [
-      "worktrunk" # Installed via Homebrew to avoid uncached local Rust builds
-      "modem-dev/tap/hunk"
-    ];
-
-    # brew install --cask ...
-    casks = [
-      "dropbox"
-      "google-chrome"
-      "maccy"
-
-      "anki" # Memory training
-      "iina" # Video player
-      "raycast" # Launcher (alt/option + space)
-      "stats" # System monitor
-
-      # Development
-      "balenaetcher"
-      "claude"
-      "cmux" # Ghostty-based terminal for AI coding agents
-      "docker-desktop"
-      "imageoptim"
-      "insomnia" # REST client
-      "ghostty"
-      "iterm2"
-      "macos-fuse-t/cask/fuse-t"
-      "macos-fuse-t/cask/fuse-t-sshfs"
-      "obsidian"
-      "pearcleaner"
-      "rectangle"
-      "zed"
-    ]
-    ++ lib.optionals isAarch64 [
-      "chatgpt" # aarch64 only
-    ];
-
-    # App Store apps via mas.
-    # KNOWN ISSUE: mas 6.0.1 `mas get` (used by brew bundle) bypasses the real
-    # App Store flow and doesn't write com.apple.appstore.metadata xattrs, so
-    # Spotlight never indexes the ADAM ID. Apps first-installed via `mas get`
-    # will harmlessly re-download on every switch. Apps installed manually
-    # through the App Store first (e.g. Amphetamine, Windows App) are fine.
-    # iOS-on-Mac apps (e.g. Kasa Smart) are also invisible — manage manually.
-    masApps = {
-      Amphetamine = 937984704;
-      Bitwarden = 1352778147;
-      "Keynote: Design Presentations" = 361285480;
-      "Numbers: Make Spreadsheets" = 361304891;
-      "Pages: Create Documents" = 361309726;
-      "Windows App" = 1295203466;
-    };
+    inherit brews casks;
+    masApps = packageData.profileMas { profile = "mac-desktop"; };
   };
 }

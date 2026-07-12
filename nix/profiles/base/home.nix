@@ -1,5 +1,8 @@
 {
   user,
+  host,
+  pkgs,
+  packageData,
   ...
 }:
 {
@@ -10,6 +13,11 @@
     ../../../home/common/shell.nix
     ../../../home/common/zellij.nix
   ];
+
+  home.packages = packageData.hostNixPackages {
+    inherit pkgs;
+    host = host.name;
+  };
 
   home = {
     username = user.username;

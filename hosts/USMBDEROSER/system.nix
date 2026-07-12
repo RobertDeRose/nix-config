@@ -3,8 +3,6 @@
   networking.computerName = config.networking.hostName;
   system.defaults.smb.NetBIOSName = config.networking.hostName;
 
-  homebrew.brews = [ "mosquitto" ];
-
   services.container-builder = {
     enable = true;
     cpus = 4;

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# [MISE] description="Search the mise tool registry"
+#
+#USAGE arg "<query>" help="Tool name"
+
+set -euo pipefail
+if mise registry 2>/dev/null | grep -i -- "${usage_query}" | head -80; then
+  exit 0
+fi
+printf 'No mise registry matches for %s. Try:\n  mise ls-remote %s\n' "${usage_query}" "${usage_query}"

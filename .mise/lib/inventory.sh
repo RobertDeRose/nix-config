@@ -44,7 +44,7 @@ inventory_hosts() {
   file="$(inventory_path "$root")"
   if [ -f "$file" ]; then
     awk '
-      /^[[:space:]]*\[hosts\.[^]]+\][[:space:]]*$/ {
+      /^[[:space:]]*\[hosts\.[A-Za-z0-9][A-Za-z0-9-]*\][[:space:]]*$/ {
         line=$0
         sub(/^[[:space:]]*\[hosts\./, "", line)
         sub(/\][[:space:]]*$/, "", line)
@@ -227,4 +227,11 @@ require_inventory_user_for_host() {
     return 1
   fi
   printf '%s\n' "$username"
+}
+
+inventory_host_feature() {
+  local root="$1" host="$2" feature="$3" file
+  file="$(inventory_path "$root")"
+  [ -f "$file" ] || return 0
+  inventory_field "$file" "hosts.$host.features" "$feature"
 }

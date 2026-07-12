@@ -2,6 +2,7 @@
   inputs,
   lib,
   profileRegistry,
+  packageData,
   host,
 }:
 let
@@ -13,7 +14,7 @@ let
   systemOverride = hostDir + "/system.nix";
   homeOverride = hostDir + "/home.nix";
   specialArgs = {
-    inherit inputs host user;
+    inherit inputs host user packageData;
   };
 in
 {

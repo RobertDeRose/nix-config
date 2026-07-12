@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# [MISE] description="Check standard and optional binary-cache availability"
+#
+#USAGE flag "--host <host>" help="Inventory host (defaults to current hostname)"
+
+set -euo pipefail
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/platform.sh"
+source "$REPO_ROOT/.mise/lib/inventory.sh"
+host="${usage_host:-$(current_hostname)}"
+require_inventory_host "$REPO_ROOT" "$host"
+
+status=0
+for cache in https://cache.nixos.org https://nix-community.cachix.org https://cache.numtide.com; do
+  if curl -fsI --connect-timeout 2 --max-time 4 "$cache/nix-cache-info" >/dev/null 2>&1; then
+    printf 'OK       %s\n' "$cache"
+  else
+    printf 'UNREACH  %s\n' "$cache"
+    status=1
+  fi
+done
+if [ "$(inventory_host_feature "$REPO_ROOT" "$host" personal_cache)" = true ]; then
+  if curl -fsI --connect-timeout 2 --max-time 4 https://robertderose.cachix.org/nix-cache-info >/dev/null 2>&1; then
+    printf 'OK       %s\n' https://robertderose.cachix.org
+  else
+    printf 'OPTIONAL %s (unavailable)\n' https://robertderose.cachix.org
+  fi
+fi
+exit "$status"

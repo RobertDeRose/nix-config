@@ -1,0 +1,170 @@
+schema = 1
+
+# User-scoped Nix packages shared by the base profile.
+[profiles.base.nix]
+packages = [
+  "acli",
+  "bash",
+  "btop",
+  "deadnix",
+  "gawk",
+  "git-absorb",
+  "git-filter-repo",
+  "git-town",
+  "git-trim",
+  "gnused",
+  "gnutar",
+  "nixd",
+  "nmap",
+  "pstree",
+  "pv",
+  "ripgrep",
+  "rlwrap",
+  "snitch",
+  "socat",
+  "tmux",
+  "unzip",
+  "xz",
+  "yq-go",
+  "zip",
+  "zstd",
+]
+
+[profiles.base.nix.systems]
+aarch64-darwin = ["bitwarden-cli"]
+aarch64-linux = ["bitwarden-cli"]
+x86_64-linux = ["bitwarden-cli"]
+
+[profiles.developer.nix]
+packages = []
+
+[profiles.mac-desktop.nix]
+packages = []
+
+[profiles.linux-server.nix]
+packages = []
+
+# System-wide Nix packages required by the platform profiles.
+[profiles.mac-desktop.system]
+packages = [
+  "bat",
+  "devenv",
+  "eza",
+  "fastfetch",
+  "git",
+]
+
+[profiles.linux-server.system]
+packages = [
+  "bat",
+  "curl",
+  "eza",
+  "gitMinimal",
+  "wget",
+]
+
+[profiles.mac-desktop.homebrew]
+taps = [
+  "macos-fuse-t/cask",
+  "manaflow-ai/cmux",
+  "modem-dev/tap",
+]
+brews = [
+  "modem-dev/tap/hunk",
+  "worktrunk",
+]
+casks = [
+  "anki",
+  "balenaetcher",
+  "claude",
+  "cmux",
+  "docker-desktop",
+  "dropbox",
+  "ghostty",
+  "google-chrome",
+  "iina",
+  "imageoptim",
+  "insomnia",
+  "iterm2",
+  "maccy",
+  "macos-fuse-t/cask/fuse-t",
+  "macos-fuse-t/cask/fuse-t-sshfs",
+  "obsidian",
+  "pearcleaner",
+  "raycast",
+  "rectangle",
+  "stats",
+  "zed",
+]
+
+[profiles.mac-desktop.homebrew.systems]
+aarch64-darwin = ["chatgpt"]
+
+[profiles.mac-desktop.mas]
+Amphetamine = 937984704
+Bitwarden = 1352778147
+"Keynote: Design Presentations" = 361285480
+"Numbers: Make Spreadsheets" = 361304891
+"Pages: Create Documents" = 361309726
+"Windows App" = 1295203466
+
+# Host-only package exceptions. Ordinary hosts should not need these sections.
+[hosts.USMBDEROSER.nix]
+packages = ["azure-cli"]
+
+[hosts.USMBDEROSER.homebrew]
+brews = ["mosquitto"]
+
+# Packages selected implicitly by Home Manager programs or tightly coupled
+# modules. Listing them here makes ownership auditable without duplicating the
+# actual module declarations.
+[module_owned.nix]
+packages = [
+  "difftastic",
+  "direnv",
+  "eza",
+  "font-awesome",
+  "fzf",
+  "gh",
+  "git",
+  "harper",
+  "helix",
+  "htop",
+  "jq",
+  "lazygit",
+  "markdown-oxide",
+  "marksman",
+  "material-design-icons",
+  "montserrat",
+  "nerd-fonts.dejavu-sans-mono",
+  "nerd-fonts.fira-code",
+  "nerd-fonts.meslo-lg",
+  "nerd-fonts.symbols-only",
+  "nix-direnv",
+  "rumdl",
+  "starship",
+  "worktrunk",
+  "yazi",
+  "zellij",
+  "zsh",
+  "zsh-autosuggestions",
+  "zsh-syntax-highlighting",
+]
+
+[module_owned.custom_nix]
+packages = [
+  "herdr",
+  "opencode",
+  "openspec",
+  "pi",
+]
+
+[[ownership.exceptions]]
+package = "jq"
+owners = ["mise", "nix"]
+reason = "mise supplies the user-facing CLI and CI helper; the Pi Home Manager activation embeds pkgs.jq in its closure."
+
+[[ownership.exceptions]]
+package = "worktrunk"
+owners = ["homebrew", "nix"]
+reason = "Homebrew supplies the macOS binary to avoid uncached Rust builds; the worktrunk Home Manager module and Linux package remain Nix-managed."

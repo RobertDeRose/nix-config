@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# [MISE] description="Validate package inventory structure and ownership"
+
+set -euo pipefail
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/packages.sh"
+validate_package_inventory "$REPO_ROOT"
+log_info "packages.toml ownership is valid"

@@ -1,8 +1,15 @@
 {
   inputs,
+  pkgs,
+  packageData,
   ...
 }:
 {
+  home.packages = packageData.profileNixPackages {
+    inherit pkgs;
+    profile = "developer";
+  };
+
   imports = [
     inputs.worktrunk.homeModules.default
     ../../../home/common/direnv.nix

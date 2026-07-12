@@ -5,10 +5,13 @@
   pkgs,
   lib,
   user,
+  host,
   ...
 }:
 let
-  cache = import ../common/cache.nix;
+  cache = import ../common/cache.nix {
+    personal = host.features.personalCache;
+  };
   useCppNix = pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.hostPlatform.isx86_64;
 in
 {

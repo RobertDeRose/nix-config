@@ -7,7 +7,10 @@
   ...
 }:
 let
-  opencodePkg = inputs.llmagents.packages.${pkgs.stdenv.hostPlatform.system}.opencode;
+  opencodePkg = import ../../nix/packages/custom/llmagents.nix {
+    inherit inputs pkgs;
+    name = "opencode";
+  };
 in
 {
   programs.opencode = {

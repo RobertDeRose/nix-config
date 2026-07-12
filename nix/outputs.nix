@@ -1,6 +1,7 @@
 {
   inputs,
   inventory,
+  packageInventory,
 }:
 let
   lib = inputs.nixpkgs.lib;
@@ -8,6 +9,9 @@ let
     inherit lib inventory;
   };
   profileRegistry = import ./lib/profiles.nix;
+  packageData = import ./lib/packages.nix {
+    inherit lib packageInventory;
+  };
 
   darwinHosts = lib.filterAttrs (_: host: lib.hasSuffix "-darwin" host.system) inventoryData.hosts;
   linuxHosts = lib.filterAttrs (_: host: lib.hasSuffix "-linux" host.system) inventoryData.hosts;
@@ -19,6 +23,7 @@ let
         inputs
         lib
         profileRegistry
+        packageData
         host
         ;
     }
@@ -31,6 +36,7 @@ let
         inputs
         lib
         profileRegistry
+        packageData
         host
         ;
     }

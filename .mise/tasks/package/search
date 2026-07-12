@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# [MISE] description="Search explicit package sources without choosing one"
+#
+#USAGE arg "<query>" help="Package or application name"
+
+set -euo pipefail
+query="${usage_query}"
+
+printf '== Mise ==\n'
+if command -v mise >/dev/null 2>&1; then
+  mise registry 2>/dev/null | grep -i -- "$query" | head -40 || printf 'No registry matches. Try: mise ls-remote %s\n' "$query"
+else
+  printf 'mise is unavailable\n'
+fi
+
+printf '\n== nixpkgs ==\n'
+if command -v nix >/dev/null 2>&1; then
+  nix search nixpkgs "$query" 2>&1 | head -80 || true
+else
+  printf 'Nix/Lix is unavailable\n'
+fi
+
+printf '\n== Homebrew formulae and casks ==\n'
+if command -v brew >/dev/null 2>&1; then
+  brew search "$query" 2>&1 | head -80 || true
+else
+  printf 'Homebrew is unavailable on this machine\n'
+fi

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# [MISE] description="Remove a standalone developer tool from mise"
+#
+#USAGE arg "<tool>" help="Configured mise tool name"
+
+set -euo pipefail
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/packages.sh"
+
+backup="$(mktemp "${TMPDIR:-/tmp}/mise.toml.XXXXXX")"
+cp mise.toml "$backup"
+restore() { cp "$backup" mise.toml; rm -f "$backup"; }
+trap restore ERR INT TERM
+config_editor "$REPO_ROOT" tool "${usage_tool}" --remove
+validate_package_inventory "$REPO_ROOT"
+trap - ERR INT TERM
+rm -f "$backup"
+printf '\nConfiguration diff:\n'
+git --no-pager diff -- mise.toml

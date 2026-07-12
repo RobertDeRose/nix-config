@@ -47,5 +47,6 @@
     import ./nix/outputs.nix {
       inherit inputs;
       inventory = builtins.fromTOML (builtins.readFile ./inventory.toml);
+      packageInventory = builtins.fromTOML (builtins.readFile ./packages.toml);
     };
 }

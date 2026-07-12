@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# [MISE] description="Add a Nix package to an intent-oriented profile"
+#
+#USAGE arg "<package>" help="nixpkgs attribute path"
+#USAGE flag "--profile <profile>" help="Profile that should receive the package" required=true
+
+set -euo pipefail
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/packages.sh"
+
+package="${usage_package}"
+profile="${usage_profile}"
+package_profile_exists "$REPO_ROOT" "$profile" || die "profile '$profile' does not exist; available profiles: base, developer, mac-desktop, linux-server"
+backup="$(mktemp "${TMPDIR:-/tmp}/packages.toml.XXXXXX")"
+cp packages.toml "$backup"
+restore() { cp "$backup" packages.toml; rm -f "$backup"; }
+trap restore ERR INT TERM
+config_editor "$REPO_ROOT" array --file packages.toml --section "profiles.$profile.nix" --key packages --value "$package"
+validate_package_change "$REPO_ROOT"
+trap - ERR INT TERM
+rm -f "$backup"
+printf '\nConfiguration diff:\n'
+git --no-pager diff -- packages.toml

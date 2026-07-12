@@ -6,10 +6,13 @@
   pkgs,
   user,
   host,
+  packageData,
   ...
 }:
 let
-  cache = import ../common/cache.nix;
+  cache = import ../common/cache.nix {
+    personal = host.features.personalCache;
+  };
   validUsername = builtins.match "[a-z_][a-z0-9_-]*" user.username != null && user.username != "root";
   validGithubUsername =
     builtins.match "[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?" user.github != null;
@@ -91,13 +94,10 @@ in
   # ------------------------------------------------------------------ #
   # Common system packages
   # ------------------------------------------------------------------ #
-  environment.systemPackages = with pkgs; [
-    bat
-    eza
-    gitMinimal
-    curl
-    wget
-  ];
+  environment.systemPackages = packageData.profileSystemPackages {
+    inherit pkgs;
+    profile = "linux-server";
+  };
 
   environment.etc."sudoers.d/90-system-manager-wheel" = {
     text = ''

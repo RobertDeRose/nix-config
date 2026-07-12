@@ -43,6 +43,10 @@ let
       profileList = raw.profiles or (fail "host '${name}' is missing field 'profiles'");
       unknownProfiles = lib.filter (profile: !(builtins.elem profile validation.profileNames)) profileList;
       incompatibleProfiles = lib.filter (profile: !validation.compatibleProfile system profile) profileList;
+      rawFeatures = raw.features or { };
+      features = {
+        personalCache = rawFeatures.personal_cache or false;
+      };
     in
     if !validation.validHostname name then
       fail "host '${name}' has an invalid hostname; expected one DNS label"
@@ -60,7 +64,7 @@ let
       fail "host '${name}' uses platform-incompatible profiles for '${system}': ${lib.concatStringsSep ", " incompatibleProfiles}"
     else
       {
-        inherit name system profileList userName;
+        inherit name system profileList userName features;
         profiles = profileList;
         user = users.${userName};
       }

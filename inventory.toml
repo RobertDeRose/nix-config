@@ -21,7 +21,13 @@ system = "aarch64-darwin"
 user = "DeRoseR"
 profiles = ["base", "developer", "mac-desktop"]
 
+[hosts.USMBDEROSER.features]
+personal_cache = true
+
 [hosts.dev-som]
 system = "aarch64-linux"
 user = "rderose"
 profiles = ["base", "developer", "linux-server"]
+
+[hosts.dev-som.features]
+personal_cache = true

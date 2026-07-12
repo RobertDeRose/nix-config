@@ -1,9 +1,15 @@
 {
   user,
   pkgs,
+  packageData,
   ...
 }:
 {
+  home.packages = packageData.profileNixPackages {
+    inherit pkgs;
+    profile = "mac-desktop";
+  };
+
   imports = [
     ../../../home/common/ghostty.nix
     ../../../home/common/zed.nix

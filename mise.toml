@@ -4,7 +4,8 @@ experimental = true
 env_shell_expand = true
 
 [tools]
-hk = { version = "1.41", arch = "aarch64" }
+python = "3.13"
+hk = "1.41"
 actionlint = "1.7.12"
 jq = "latest"
 mdbook = "0.5.2"
