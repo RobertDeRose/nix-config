@@ -1,4 +1,4 @@
 { ... }:
 {
-  imports = [ ../../../modules/linux/system.nix ];
+  imports = [ ../../modules/linux/system.nix ];
 }

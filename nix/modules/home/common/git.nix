@@ -43,8 +43,8 @@ in
   '';
 
   home.packages = [ pkgs.git ];
-  xdg.configFile."git/config".source = ../../dotfiles/git/config;
-  xdg.configFile."git/ignore".source = ../../dotfiles/git/ignore;
+  xdg.configFile."git/config".source = ../../../../dotfiles/git/config;
+  xdg.configFile."git/ignore".source = ../../../../dotfiles/git/ignore;
   xdg.configFile."git/identity".text = identity;
   xdg.configFile."git/platform".text = platform;
   xdg.configFile."git/allowed_signers".text =

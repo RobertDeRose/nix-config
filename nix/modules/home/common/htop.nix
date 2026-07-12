@@ -1,4 +1,4 @@
-# home/common/htop.nix
+# nix/modules/home/common/htop.nix
 # Cross-platform htop configuration.
 { config, ... }:
 {

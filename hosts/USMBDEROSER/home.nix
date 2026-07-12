@@ -31,7 +31,7 @@
   };
 
   # ── Personal git identity for ~/workspace/personal/ repos ───────────────
-  # The conditional include is in home/common/git.nix; this just creates the file.
+  # The conditional include is in nix/modules/home/common/git.nix; this just creates the file.
   home.file."workspace/personal/.gitconfig".text = ''
     [user]
         email = RobertDeRose@users.noreply.github.com

@@ -1,4 +1,4 @@
-# modules/darwin/iterm2.nix
+# nix/modules/darwin/iterm2.nix
 # Manage iTerm2 settings declaratively.
 #
 # Strategy: store the exported plist in config/iterm2/ and tell iTerm2 to load
@@ -10,7 +10,7 @@
 { user, ... }:
 let
   prefsDir = "/Users/${user.username}/Library/Application Support/iTerm2/nix-managed";
-  plistSrc = ../../config/iterm2/com.googlecode.iterm2.plist;
+  plistSrc = ../../../config/iterm2/com.googlecode.iterm2.plist;
 in
 {
   # Point iTerm2 at the nix-managed prefs folder

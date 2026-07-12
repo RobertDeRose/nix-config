@@ -1,4 +1,4 @@
-# home/common/direnv.nix
+# nix/modules/home/common/direnv.nix
 # direnv + nix-direnv + mise integration — works on macOS and Linux.
 # mise itself is installed by the bootstrap script (not via nix), so we
 # provide the direnv hook manually to avoid pulling pkgs.mise into the closure.

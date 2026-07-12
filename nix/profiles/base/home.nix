@@ -7,11 +7,11 @@
 }:
 {
   imports = [
-    ../../../home/common/core.nix
-    ../../../home/common/git.nix
-    ../../../home/common/htop.nix
-    ../../../home/common/shell.nix
-    ../../../home/common/zellij.nix
+    ../../modules/home/common/core.nix
+    ../../modules/home/common/git.nix
+    ../../modules/home/common/htop.nix
+    ../../modules/home/common/shell.nix
+    ../../modules/home/common/zellij.nix
   ];
 
   home.packages = packageData.hostNixPackages {

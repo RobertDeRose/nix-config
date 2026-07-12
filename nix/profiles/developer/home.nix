@@ -12,11 +12,11 @@
 
   imports = [
     inputs.worktrunk.homeModules.default
-    ../../../home/common/direnv.nix
-    ../../../home/common/helix.nix
-    ../../../home/common/herdr.nix
-    ../../../home/common/opencode.nix
-    ../../../home/common/pi.nix
+    ../../modules/home/common/direnv.nix
+    ../../modules/home/common/helix.nix
+    ../../modules/home/common/herdr.nix
+    ../../modules/home/common/opencode.nix
+    ../../modules/home/common/pi.nix
   ];
 
   programs.worktrunk = {

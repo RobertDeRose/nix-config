@@ -1,4 +1,4 @@
-# modules/linux/system.nix
+# nix/modules/linux/system.nix
 # Shared system-manager config for headless Ubuntu servers.
 # Uses NixOS-style module options, applied via system-manager.
 {

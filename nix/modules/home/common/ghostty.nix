@@ -1,4 +1,4 @@
-# home/common/ghostty.nix
+# nix/modules/home/common/ghostty.nix
 # Ghostty terminal emulator — declarative config via home-manager.
 # macOS only: imported from home/darwin.nix. Ghostty is installed as a
 # native .app via Homebrew cask, so package = null.

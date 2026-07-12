@@ -6,7 +6,7 @@
 }:
 {
   home.packages = [
-    (import ../../nix/packages/custom/llmagents.nix {
+    (import ../../../packages/custom/llmagents.nix {
       inherit inputs pkgs;
       name = "herdr";
     })

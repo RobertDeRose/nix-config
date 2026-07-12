@@ -11,10 +11,10 @@
     enableCompletion = true;
     dotDir = config.home.homeDirectory;
     initContent = ''
-      source ${../../dotfiles/zsh/functions.zsh}
-      source ${../../dotfiles/zsh/aliases.zsh}
-      source ${../../dotfiles/zsh/interactive.zsh}
-      source ${../../dotfiles/zsh/integrations.zsh}
+      source ${../../../../dotfiles/zsh/functions.zsh}
+      source ${../../../../dotfiles/zsh/aliases.zsh}
+      source ${../../../../dotfiles/zsh/interactive.zsh}
+      source ${../../../../dotfiles/zsh/integrations.zsh}
     '';
     plugins = [
       {
@@ -45,6 +45,6 @@
     enable = true;
     enableBashIntegration = true;
     enableZshIntegration = true;
-    settings = builtins.fromTOML (builtins.readFile ../../dotfiles/starship/starship.toml);
+    settings = builtins.fromTOML (builtins.readFile ../../../../dotfiles/starship/starship.toml);
   };
 }

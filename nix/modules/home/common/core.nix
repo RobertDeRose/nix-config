@@ -6,7 +6,7 @@
   ...
 }:
 let
-  customAgent = name: import ../../nix/packages/custom/llmagents.nix {
+  customAgent = name: import ../../../packages/custom/llmagents.nix {
     inherit inputs pkgs name;
   };
 in
@@ -50,7 +50,7 @@ in
   };
 
   home.file.".local/bin/rund" = {
-    source = ../../files/scripts/rund;
+    source = ../../../../files/scripts/rund;
     executable = true;
   };
 }

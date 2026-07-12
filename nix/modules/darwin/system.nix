@@ -1,4 +1,4 @@
-# modules/darwin/system.nix
+# nix/modules/darwin/system.nix
 # macOS-only system configuration (Dock, Finder, trackpad, fonts, etc.)
 # All options: https://daiderd.com/nix-darwin/manual/index.html#sec-options
 {

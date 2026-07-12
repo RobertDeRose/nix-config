@@ -1,4 +1,4 @@
-# home/common/opencode.nix
+# nix/modules/home/common/opencode.nix
 # OpenCode AI coding agent configuration.
 # See https://opencode.ai/docs/config/ for available settings.
 {
@@ -7,7 +7,7 @@
   ...
 }:
 let
-  opencodePkg = import ../../nix/packages/custom/llmagents.nix {
+  opencodePkg = import ../../../packages/custom/llmagents.nix {
     inherit inputs pkgs;
     name = "opencode";
   };

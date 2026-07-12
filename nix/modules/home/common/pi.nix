@@ -6,20 +6,20 @@
   ...
 }:
 let
-  piPackage = import ../../nix/packages/custom/llmagents.nix {
+  piPackage = import ../../../packages/custom/llmagents.nix {
     inherit inputs pkgs;
     name = "pi";
   };
-  settingsDefaults = ../../dotfiles/pi/settings.defaults.json;
+  settingsDefaults = ../../../../dotfiles/pi/settings.defaults.json;
 in
 {
   home.packages = [ piPackage ];
 
-  home.file.".pi/agent/themes/ayu-mirage.json".source = ../../dotfiles/pi/themes/ayu-mirage.json;
-  home.file.".pi/agent/extensions/ayu-footer.ts".source = ../../dotfiles/pi/extensions/footer.ts;
-  home.file.".pi/agent/extensions/markdown-pager.ts".source = ../../dotfiles/pi/extensions/pager.ts;
-  home.file.".pi/agent/extensions/bookmark.ts".source = ../../dotfiles/pi/extensions/bookmark.ts;
-  home.file.".pi/agent/AGENTS.md".source = ../../dotfiles/pi/AGENTS.md;
+  home.file.".pi/agent/themes/ayu-mirage.json".source = ../../../../dotfiles/pi/themes/ayu-mirage.json;
+  home.file.".pi/agent/extensions/ayu-footer.ts".source = ../../../../dotfiles/pi/extensions/footer.ts;
+  home.file.".pi/agent/extensions/markdown-pager.ts".source = ../../../../dotfiles/pi/extensions/pager.ts;
+  home.file.".pi/agent/extensions/bookmark.ts".source = ../../../../dotfiles/pi/extensions/bookmark.ts;
+  home.file.".pi/agent/AGENTS.md".source = ../../../../dotfiles/pi/AGENTS.md;
 
   home.activation.backupOldPiOverlayExtension = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
     old_extension="$HOME/.pi/agent/extensions/interface-overlays.ts"

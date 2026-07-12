@@ -1,4 +1,4 @@
-# modules/darwin/config.nix
+# nix/modules/darwin/config.nix
 # nix-darwin-specific Nix daemon settings: caches, GC, trusted users,
 # experimental features, and Lix/CppNix selection.
 {

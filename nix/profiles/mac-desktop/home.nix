@@ -11,9 +11,9 @@
   };
 
   imports = [
-    ../../../home/common/ghostty.nix
-    ../../../home/common/zed.nix
-    ../../../home/darwin/ssh.nix
+    ../../modules/home/common/ghostty.nix
+    ../../modules/home/common/zed.nix
+    ../../modules/home/darwin/ssh.nix
   ];
 
   home.homeDirectory = "/Users/${user.username}";

@@ -1,4 +1,4 @@
-# modules/darwin/fonts.nix
+# nix/modules/darwin/fonts.nix
 # System-wide font packages installed via nix-darwin.
 { pkgs, ... }:
 {
