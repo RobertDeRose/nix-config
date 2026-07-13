@@ -32,7 +32,7 @@ Run `mise tasks` for live discovery and `mise run <task> --help` for generated u
 | `tool:add <tool> [--version]` | Add/update a mise-owned standalone tool | `.mise/tasks/tool/add` |
 | `tool:remove <tool>` | Remove a mise-owned tool | `.mise/tasks/tool/remove` |
 | `tool:search <query>` | Search the mise registry | `.mise/tasks/tool/search` |
-| `package:add <package> --profile <profile>` | Add a nixpkgs attribute to a profile | `.mise/tasks/package/add` |
+| `package:add <package> [--profile <profile>]` | Add a nixpkgs attribute to a profile; defaults to `base` | `.mise/tasks/package/add` |
 | `package:remove <package> --profile <profile>` | Remove a profile Nix package | `.mise/tasks/package/remove` |
 | `package:search <query>` | Show mise, nixpkgs, and Homebrew results without selecting an owner | `.mise/tasks/package/search` |
 | `package:validate` | Validate TOML structure, sorting, ownership, and exceptions | `.mise/tasks/package/validate` |

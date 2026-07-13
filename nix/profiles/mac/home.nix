@@ -7,7 +7,7 @@
 {
   home.packages = packageData.profileNixPackages {
     inherit pkgs;
-    profile = "mac-desktop";
+    profile = "mac";
   };
 
   imports = [

@@ -22,6 +22,6 @@ github = "alice"
 [hosts.build-server]
 system = "x86_64-linux"
 user = "alice"
-profiles = ["base", "linux-server"]
+profiles = ["base", "linux"]
 TOML
 assert_eq "$tmp#systemConfigs.\"build-server\"" "$(resolved_target_for_host "$tmp" build-server)" 'resolved Linux target'

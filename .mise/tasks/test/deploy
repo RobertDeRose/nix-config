@@ -43,7 +43,7 @@ mise trust "$STAGE_DIR/mise.toml" > /dev/null
   mise run host:add -- apple-ssh-test \
     --system aarch64-linux \
     --user tester \
-    --profiles base,developer,linux-server \
+    --profiles base,dev,linux \
     --fullname "Container Test User" \
     --email tester@localhost \
     --github RobertDeRose

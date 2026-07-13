@@ -9,7 +9,7 @@
 }:
 let
   profileBrew = packageData.profileHomebrew {
-    profile = "mac-desktop";
+    profile = "mac";
     system = host.system;
   };
   hostBrew = packageData.hostHomebrew { host = host.name; };
@@ -20,7 +20,7 @@ in
 {
   environment.systemPackages = packageData.profileSystemPackages {
     inherit pkgs;
-    profile = "mac-desktop";
+    profile = "mac";
   };
 
   nix-homebrew = {
@@ -45,6 +45,6 @@ in
     }) taps;
 
     inherit brews casks;
-    masApps = packageData.profileMas { profile = "mac-desktop"; };
+    masApps = packageData.profileMas { profile = "mac"; };
   };
 }

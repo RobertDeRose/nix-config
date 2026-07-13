@@ -6,7 +6,7 @@ Hosts are not discovered from directory names. `inventory.toml` is the sole host
 [hosts.example]
 system = "aarch64-darwin"
 user = "rderose"
-profiles = ["base", "developer", "mac-desktop"]
+profiles = ["base", "dev", "mac"]
 ```
 
 Optional exceptions live in `hosts/<hostname>/system.nix` and `hosts/<hostname>/home.nix`. The constructors in `nix/lib/` preserve `darwinConfigurations.<host>`, `systemConfigs.<host>`, and `homeConfigurations.<host>`.

@@ -5,21 +5,21 @@
     homeModules = [ ../profiles/base/home.nix ];
   };
 
-  developer = {
+  dev = {
     darwinModules = [ ];
     linuxModules = [ ];
-    homeModules = [ ../profiles/developer/home.nix ];
+    homeModules = [ ../profiles/dev/home.nix ];
   };
 
-  mac-desktop = {
-    darwinModules = [ ../profiles/mac-desktop/system.nix ];
+  mac = {
+    darwinModules = [ ../profiles/mac/system.nix ];
     linuxModules = [ ];
-    homeModules = [ ../profiles/mac-desktop/home.nix ];
+    homeModules = [ ../profiles/mac/home.nix ];
   };
 
-  linux-server = {
+  linux = {
     darwinModules = [ ];
-    linuxModules = [ ../profiles/linux-server/system.nix ];
-    homeModules = [ ../profiles/linux-server/home.nix ];
+    linuxModules = [ ../profiles/linux/system.nix ];
+    homeModules = [ ../profiles/linux/home.nix ];
   };
 }

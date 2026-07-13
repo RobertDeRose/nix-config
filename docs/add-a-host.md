@@ -13,9 +13,9 @@ x86_64-linux
 
 Profiles:
 
-- `base` and `developer` are cross-platform.
-- `mac-desktop` is Darwin-only.
-- `linux-server` is Linux-only.
+- `base` and `dev` are cross-platform.
+- `mac` is Darwin-only.
+- `linux` is Linux-only.
 
 ## 2. Ensure the user exists
 
@@ -37,7 +37,7 @@ Do not place secrets in the inventory. New usernames must be portable lowercase,
 mise run host:add build-server \
   --system x86_64-linux \
   --user rderose \
-  --profiles base,developer,linux-server
+  --profiles base,dev,linux
 ```
 
 For a new user, also provide `--fullname`, `--email`, and `--github`.
@@ -54,7 +54,7 @@ Most hosts need only the inventory entry. When a real exception exists:
 mise run host:add special-mac \
   --system aarch64-darwin \
   --user rderose \
-  --profiles base,developer,mac-desktop \
+  --profiles base,dev,mac \
   --overrides
 ```
 

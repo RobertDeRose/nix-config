@@ -25,7 +25,7 @@ commits_before="$(git -C "$tmp" rev-list --count HEAD)"
   cd "$tmp/subdir" 2> /dev/null || mkdir -p "$tmp/subdir" && cd "$tmp/subdir"
   PATH="$tmp/bin:$PATH" MOCK_ROOT="$tmp" \
     usage_hostname=build-server usage_system=x86_64-linux usage_user=rderose \
-    usage_profiles=base,developer,linux-server \
+    usage_profiles=base,dev,linux \
     "$tmp/.mise/tasks/host/add"
 )
 assert_file_contains "$tmp/inventory.toml" '[hosts.build-server]'
@@ -38,7 +38,7 @@ if (
   cd "$tmp"
   PATH="$tmp/bin:$PATH" MOCK_ROOT="$tmp" \
     usage_hostname=bad-profile usage_system=x86_64-linux usage_user=rderose \
-    usage_profiles=base,mac-desktop \
+    usage_profiles=base,mac \
     "$tmp/.mise/tasks/host/add"
 ) > /dev/null 2>&1; then
   fail 'host:add accepted a platform-incompatible profile'
@@ -50,7 +50,7 @@ if (
   cd "$tmp"
   PATH="$tmp/bin:$PATH" MOCK_ROOT="$tmp" MOCK_VALIDATE_FAIL=true \
     usage_hostname=validation-fails usage_system=x86_64-linux usage_user=rderose \
-    usage_profiles=base,linux-server \
+    usage_profiles=base,linux \
     "$tmp/.mise/tasks/host/add"
 ) > /dev/null 2>&1; then
   fail 'host:add accepted a failed post-write validation'

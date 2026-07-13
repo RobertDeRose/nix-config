@@ -2,7 +2,18 @@
 # [MISE] description="Add a Nix package to an intent-oriented profile"
 #
 #USAGE arg "<package>" help="nixpkgs attribute path"
-#USAGE flag "--profile <profile>" help="Profile that should receive the package" required=#true
+#USAGE flag "--profile <profile>" default="base" {
+#USAGE   choices "base" "dev" "mac" "linux"
+#USAGE   help "Intent-oriented profile that should own the package"
+#USAGE   long_help """
+#USAGE   Select the profile based on where the package is needed:
+#USAGE
+#USAGE     Used everywhere                 → base (default)
+#USAGE     Developer tooling               → dev
+#USAGE     Only macOS desktop machines     → mac
+#USAGE     Only Linux server machines      → linux
+#USAGE   """
+#USAGE }
 
 # usage_* variables are injected by mise's file-task argument parser.
 # shellcheck disable=SC2154
@@ -15,8 +26,8 @@ source "$REPO_ROOT/.mise/lib/common.sh"
 source "$REPO_ROOT/.mise/lib/packages.sh"
 
 package="${usage_package}"
-profile="${usage_profile}"
-package_profile_exists "$REPO_ROOT" "$profile" || die "profile '$profile' does not exist; available profiles: base, developer, mac-desktop, linux-server"
+profile="${usage_profile:-base}"
+package_profile_exists "$REPO_ROOT" "$profile" || die "profile '$profile' does not exist; available profiles: base, dev, mac, linux"
 backup="$(mktemp "${TMPDIR:-/tmp}/packages.toml.XXXXXX")"
 cp packages.toml "$backup"
 restore() {

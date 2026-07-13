@@ -12,7 +12,7 @@ PY
 
 package_profile_exists() {
   case "$2" in
-    base | developer | mac-desktop | linux-server) return 0 ;;
+    base | dev | mac | linux) return 0 ;;
     *) return 1 ;;
   esac
 }

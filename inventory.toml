@@ -19,7 +19,7 @@ github = "RobertDeRose"
 [hosts.USMBDEROSER]
 system = "aarch64-darwin"
 user = "DeRoseR"
-profiles = ["base", "developer", "mac-desktop"]
+profiles = ["base", "dev", "mac"]
 
 [hosts.USMBDEROSER.features]
 personal_cache = true
@@ -27,7 +27,7 @@ personal_cache = true
 [hosts.dev-som]
 system = "aarch64-linux"
 user = "rderose"
-profiles = ["base", "developer", "linux-server"]
+profiles = ["base", "dev", "linux"]
 
 [hosts.dev-som.features]
 personal_cache = true

@@ -50,9 +50,9 @@ printf '%s\n' "$hosts" | while IFS= read -r host; do
   [ -n "$profiles" ] || die "host '$host' has no profiles"
   printf '%s\n' "$profiles" | while IFS= read -r profile; do
     case "$profile" in
-      base | developer) ;;
-      mac-desktop) case "$system" in *-darwin) ;; *) die "host '$host' cannot use mac-desktop on '$system'" ;; esac ;;
-      linux-server) case "$system" in *-linux) ;; *) die "host '$host' cannot use linux-server on '$system'" ;; esac ;;
+      base | dev) ;;
+      mac) case "$system" in *-darwin) ;; *) die "host '$host' cannot use mac on '$system'" ;; esac ;;
+      linux) case "$system" in *-linux) ;; *) die "host '$host' cannot use linux on '$system'" ;; esac ;;
       *) die "host '$host' references unknown profile '$profile'" ;;
     esac
   done

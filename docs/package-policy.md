@@ -34,9 +34,9 @@ Reassess this exception when all four tools have suitable, trusted mise backends
 Use `mise run package:search <name>` to inspect available source classes. Then use one explicit command:
 
 ```bash
-mise run tool:add <tool>
-mise run package:add <package> --profile <profile>
-mise run app:add <cask>
+maison tool:add <tool>
+maison package:add <package> [--profile <profile>]
+maison app:add <cask>
 ```
 
 The commands show a diff and run ownership validation. They never choose a source silently and never stage, commit, or push.

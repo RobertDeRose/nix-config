@@ -18,7 +18,7 @@ github = "alice"
 [hosts.linux-one]
 system = "x86_64-linux"
 user = "alice"
-profiles = ["base", "linux-server"]
+profiles = ["base", "linux"]
 TOML
 
 nix_command() {

@@ -35,14 +35,14 @@ aarch64-darwin = ["bitwarden-cli"]
 aarch64-linux = ["bitwarden-cli"]
 x86_64-linux = ["bitwarden-cli"]
 
-[profiles.developer.nix]
+[profiles.dev.nix]
 packages = []
 
-[profiles.mac-desktop.nix]
+[profiles.mac.nix]
 packages = []
 
 # System-wide Nix packages required by the platform profiles.
-[profiles.mac-desktop.system]
+[profiles.mac.system]
 packages = [
   "bat",
   "devenv",
@@ -51,7 +51,7 @@ packages = [
   "git",
 ]
 
-[profiles.mac-desktop.homebrew]
+[profiles.mac.homebrew]
 taps = [
   "macos-fuse-t/cask",
   "manaflow-ai/cmux",
@@ -85,10 +85,10 @@ casks = [
   "zed",
 ]
 
-[profiles.mac-desktop.homebrew.systems]
+[profiles.mac.homebrew.systems]
 aarch64-darwin = ["chatgpt"]
 
-[profiles.mac-desktop.mas]
+[profiles.mac.mas]
 Amphetamine = 937984704
 Bitwarden = 1352778147
 "Keynote: Design Presentations" = 361285480
@@ -96,10 +96,10 @@ Bitwarden = 1352778147
 "Pages: Create Documents" = 361309726
 "Windows App" = 1295203466
 
-[profiles.linux-server.nix]
+[profiles.linux.nix]
 packages = []
 
-[profiles.linux-server.system]
+[profiles.linux.system]
 packages = [
   "bat",
   "curl",

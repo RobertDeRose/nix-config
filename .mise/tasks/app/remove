@@ -2,7 +2,7 @@
 # [MISE] description="Remove a macOS Homebrew cask"
 #
 #USAGE arg "<cask>" help="Homebrew cask token"
-#USAGE flag "--profile <profile>" help="macOS profile" default="mac-desktop"
+#USAGE flag "--profile <profile>" help="macOS profile" default="mac"
 
 # usage_* variables are injected by mise's file-task argument parser.
 # shellcheck disable=SC2154
@@ -13,8 +13,8 @@ REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 source "$REPO_ROOT/.mise/lib/common.sh"
 source "$REPO_ROOT/.mise/lib/packages.sh"
-profile="${usage_profile:-mac-desktop}"
-[ "$profile" = mac-desktop ] || die "Homebrew casks are currently supported only by the mac-desktop profile"
+profile="${usage_profile:-mac}"
+[ "$profile" = mac ] || die "Homebrew casks are currently supported only by the mac profile"
 backup="$(mktemp "${TMPDIR:-/tmp}/packages.toml.XXXXXX")"
 cp packages.toml "$backup"
 restore() {

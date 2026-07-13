@@ -26,10 +26,14 @@ This updates `[tools]` in `mise.toml`, validates ownership, sorts the table, and
 ## Add a Nix package
 
 ```bash
-mise run package:add <nixpkgs-attribute> --profile developer
+# Adds to base by default.
+maison package add <nixpkgs-attribute>
+
+# Select a narrower profile when appropriate.
+maison package add <nixpkgs-attribute> --profile dev
 ```
 
-Valid profiles are `base`, `developer`, `mac-desktop`, and `linux-server`. Dotted attributes such as `python312Packages.example` are supported. Applicable hosts are evaluated when Nix is available.
+The default profile is `base`. Valid profiles are `base`, `dev`, `mac`, and `linux`. Dotted attributes such as `python312Packages.example` are supported. Applicable hosts are evaluated when Nix is available.
 
 Unknown paths fail with the package, profile, system, invalid attribute path, and the `package:search` command.
 

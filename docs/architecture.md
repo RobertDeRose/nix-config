@@ -66,9 +66,9 @@ They contain exceptions only. System, user, and profile metadata are not duplica
 The profile registry in `nix/lib/profiles.nix` exposes `darwinModules`, `linuxModules`, and `homeModules` for four profiles:
 
 - `base`: shared shell, Git, basic utilities, and common Home Manager state.
-- `developer`: editor and developer integrations.
-- `mac-desktop`: nix-darwin, macOS defaults, Homebrew, MAS, fonts, and desktop-specific Home Manager state.
-- `linux-server`: system-manager users, sudoers, SSH, services, packages, and Linux Home Manager state.
+- `dev`: editor and developer integrations.
+- `mac`: nix-darwin, macOS defaults, Homebrew, MAS, fonts, and desktop-specific Home Manager state.
+- `linux`: system-manager users, sudoers, SSH, services, packages, and Linux Home Manager state.
 
 Profiles express machine purpose. Low-level reusable implementation remains under `nix/modules/`; there is no profile per application.
 

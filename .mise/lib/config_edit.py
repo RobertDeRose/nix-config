@@ -165,7 +165,7 @@ def validate(root: Path) -> None:
     if packages.get("schema") != 1:
         raise ConfigError("packages.toml: schema must be 1")
 
-    inventory_profiles = {"base", "developer", "mac-desktop", "linux-server"}
+    inventory_profiles = {"base", "dev", "mac", "linux"}
     unknown_profiles = set(packages.get("profiles", {})) - inventory_profiles
     if unknown_profiles:
         raise ConfigError(f"packages.toml: unknown profiles: {sorted(unknown_profiles)}")

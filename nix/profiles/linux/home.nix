@@ -7,7 +7,7 @@
 {
   home.packages = packageData.profileNixPackages {
     inherit pkgs;
-    profile = "linux-server";
+    profile = "linux";
   };
 
   home.homeDirectory = "/home/${user.username}";

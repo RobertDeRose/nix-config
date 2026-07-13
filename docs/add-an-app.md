@@ -8,7 +8,7 @@ Use casks for ordinary macOS GUI applications:
 mise run app:add <cask>
 ```
 
-The command adds the cask to `profiles.mac-desktop.homebrew.casks` in `packages.toml`, sorts the list, validates package ownership, and shows the diff.
+The command adds the cask to `profiles.mac.homebrew.casks` in `packages.toml`, sorts the list, validates package ownership, and shows the diff.
 
 Remove one with:
 
@@ -21,7 +21,7 @@ mise run app:remove <cask>
 Formulae are explicit data in `packages.toml`:
 
 ```toml
-[profiles.mac-desktop.homebrew]
+[profiles.mac.homebrew]
 brews = [
   "owner/tap/formula",
 ]
@@ -34,7 +34,7 @@ Use a formula only for macOS-specific software or when the Homebrew bottle is in
 MAS entries map a display name to the numeric App Store ID:
 
 ```toml
-[profiles.mac-desktop.mas]
+[profiles.mac.mas]
 "Application Name" = 123456789
 ```
 
@@ -45,7 +45,7 @@ MAS is for Mac App Store applications only. IDs must be unique integers.
 Put architecture-specific casks under the system table:
 
 ```toml
-[profiles.mac-desktop.homebrew.systems]
+[profiles.mac.homebrew.systems]
 aarch64-darwin = ["application"]
 ```
 

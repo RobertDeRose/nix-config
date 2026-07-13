@@ -42,8 +42,8 @@ user="${usage_user:-$(current_user)}"
 profiles="${usage_profiles:-}"
 if [ -z "$profiles" ]; then
   case "$system" in
-    *-darwin) profiles=base,developer,mac-desktop ;;
-    *-linux) profiles=base,developer,linux-server ;;
+    *-darwin) profiles=base,dev,mac ;;
+    *-linux) profiles=base,dev,linux ;;
   esac
 fi
 
@@ -53,9 +53,9 @@ IFS=','
 for profile in $profiles; do
   profile="$(printf '%s' "$profile" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
   case "$profile" in
-    base | developer) ;;
-    mac-desktop) case "$system" in *-darwin) ;; *) die "profile '$profile' is incompatible with '$system'" ;; esac ;;
-    linux-server) case "$system" in *-linux) ;; *) die "profile '$profile' is incompatible with '$system'" ;; esac ;;
+    base | dev) ;;
+    mac) case "$system" in *-darwin) ;; *) die "profile '$profile' is incompatible with '$system'" ;; esac ;;
+    linux) case "$system" in *-linux) ;; *) die "profile '$profile' is incompatible with '$system'" ;; esac ;;
     *) die "unknown profile '$profile'" ;;
   esac
   [ -z "$profile_toml" ] || profile_toml="$profile_toml, "

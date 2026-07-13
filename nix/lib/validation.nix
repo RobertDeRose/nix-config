@@ -8,18 +8,18 @@ let
   ];
   profileNames = [
     "base"
-    "developer"
-    "mac-desktop"
-    "linux-server"
+    "dev"
+    "mac"
+    "linux"
   ];
   validHostname = value: builtins.match "[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?" value != null;
   validUsername = value: value != "root" && builtins.match "[a-z_][a-z0-9_-]*" value != null;
   validGithub = value: builtins.match "[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?" value != null;
   compatibleProfile =
     system: profile:
-    if profile == "mac-desktop" then
+    if profile == "mac" then
       lib.hasSuffix "-darwin" system
-    else if profile == "linux-server" then
+    else if profile == "linux" then
       lib.hasSuffix "-linux" system
     else
       true;

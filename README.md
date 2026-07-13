@@ -18,7 +18,7 @@ Routine use should not require knowing flake output names or platform-specific a
 | Change | Source of truth | Command |
 | --- | --- | --- |
 | Standalone developer tool | `mise.toml` `[tools]` | `mise run tool:add <tool>` |
-| Nix-managed package | `packages.toml` | `mise run package:add <package> --profile <profile>` |
+| Nix-managed package | `packages.toml` | `mise run package:add <package> [--profile <profile>]` |
 | macOS GUI application | `packages.toml` Homebrew casks | `mise run app:add <cask>` |
 | Git, Helix, Starship, Zsh, Zellij, Pi, or OpenCode settings | `dotfiles/<application>/` | Edit the native file, then `mise run plan` |
 | Host, system, user, or profiles | `inventory.toml` | `mise run host:add <hostname> ...` |
@@ -65,7 +65,7 @@ Re-running bootstrap is safe. Existing hosts are validated rather than recreated
 mise run tool:add usage --version latest
 
 # A Nix package in an intent-oriented profile
-mise run package:add ripgrep --profile developer
+mise run package:add ripgrep --profile dev
 
 # A macOS Homebrew cask
 mise run app:add firefox
@@ -74,7 +74,7 @@ mise run app:add firefox
 mise run host:add build-server \
   --system x86_64-linux \
   --user rderose \
-  --profiles base,developer,linux-server
+  --profiles base,dev,linux
 ```
 
 Each mutation command validates the result and displays a Git diff. `host:add` commits only when `--commit` is explicitly supplied.
@@ -105,7 +105,7 @@ host constructor ──► profiles ──► platform modules
 ├── .mise/lib/                # Shared shell implementation, never exposed as tasks
 ├── nix/outputs.nix           # Flake output construction
 ├── nix/lib/                  # Inventory, validation, profiles, constructors
-├── nix/profiles/             # base, developer, mac-desktop, linux-server
+├── nix/profiles/             # base, dev, mac, linux
 ├── nix/modules/              # Low-level Darwin, Linux, and Home Manager modules
 ├── nix/checks/               # Inventory, ownership, and host checks
 ├── hosts/<hostname>/         # Optional host exceptions only

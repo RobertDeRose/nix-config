@@ -11,16 +11,16 @@ github = "fixture-user"
 
 [hosts.fixture-aarch64-darwin]
 system = "aarch64-darwin"
-profiles = ["base", "developer", "mac-desktop"]
+profiles = ["base", "dev", "mac"]
 
 [hosts.fixture-x86_64-darwin]
 system = "x86_64-darwin"
-profiles = ["base", "developer", "mac-desktop"]
+profiles = ["base", "dev", "mac"]
 
 [hosts.fixture-aarch64-linux]
 system = "aarch64-linux"
-profiles = ["base", "developer", "linux-server"]
+profiles = ["base", "dev", "linux"]
 
 [hosts.fixture-x86_64-linux]
 system = "x86_64-linux"
-profiles = ["base", "developer", "linux-server"]
+profiles = ["base", "dev", "linux"]

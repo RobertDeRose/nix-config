@@ -97,7 +97,7 @@ in
   # ------------------------------------------------------------------ #
   environment.systemPackages = packageData.profileSystemPackages {
     inherit pkgs;
-    profile = "linux-server";
+    profile = "linux";
   };
 
   environment.etc."sudoers.d/90-system-manager-wheel" = {

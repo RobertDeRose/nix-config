@@ -7,7 +7,7 @@
 {
   home.packages = packageData.profileNixPackages {
     inherit pkgs;
-    profile = "developer";
+    profile = "dev";
   };
 
   imports = [

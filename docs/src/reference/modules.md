@@ -3,9 +3,9 @@
 ## Profiles
 
 - `nix/profiles/base/`: shared Darwin/Linux wiring and common Home Manager state.
-- `nix/profiles/developer/home.nix`: editor and developer integrations.
-- `nix/profiles/mac-desktop/`: nix-darwin, Homebrew/MAS, fonts, terminals, and desktop state.
-- `nix/profiles/linux-server/`: system-manager and Linux Home Manager state.
+- `nix/profiles/dev/home.nix`: editor and developer integrations.
+- `nix/profiles/mac/`: nix-darwin, Homebrew/MAS, fonts, terminals, and desktop state.
+- `nix/profiles/linux/`: system-manager and Linux Home Manager state.
 
 ## System modules
 
