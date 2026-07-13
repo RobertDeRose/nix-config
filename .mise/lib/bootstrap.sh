@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
 wait_for_nix_daemon() {
-  local i
-  for i in $(seq 1 30); do
+  for _i in $(seq 1 30); do
     [ -S /nix/var/nix/daemon-socket/socket ] && return 0
     sleep 1
   done
@@ -10,13 +9,13 @@ wait_for_nix_daemon() {
 }
 
 verify_nix() {
-  if ! command -v nix >/dev/null 2>&1 && [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
+  if ! command -v nix > /dev/null 2>&1 && [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
     set +u
     # shellcheck disable=SC1091
     . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
     set -u
   fi
-  command -v nix >/dev/null 2>&1 && nix --version >/dev/null
+  command -v nix > /dev/null 2>&1 && nix --version > /dev/null
 }
 
 install_nix_or_lix_if_missing() {
@@ -63,14 +62,37 @@ sandbox = false"
   verify_nix || die "Nix/Lix installation completed but the nix command is not functional"
 }
 
-ensure_github_auth() {
-  if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+install_linuxbrew_if_missing() {
+  [ "$(current_os)" = linux ] || return 0
+  if command -v brew > /dev/null 2>&1 || [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv 2> /dev/null || true)"
     return 0
   fi
-  require_command mise
-  mise install gh
-  if mise x gh -- gh auth status >/dev/null 2>&1; then
-    return 0
+  log_info "Installing Homebrew for Linux"
+  if command -v apt-get > /dev/null 2>&1; then
+    sudo apt-get update
+    sudo apt-get install -y build-essential procps curl file git
+  elif command -v dnf > /dev/null 2>&1; then
+    sudo dnf group install -y development-tools
+    sudo dnf install -y procps-ng curl file git
+  elif command -v pacman > /dev/null 2>&1; then
+    sudo pacman -Sy --needed --noconfirm base-devel procps-ng curl file git
+  elif command -v zypper > /dev/null 2>&1; then
+    sudo zypper --non-interactive install -t pattern devel_basis
+    sudo zypper --non-interactive install procps curl file git
+  else
+    die "unsupported Linux package manager; install Homebrew prerequisites manually"
+  fi
+  NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  [ -x /home/linuxbrew/.linuxbrew/bin/brew ] || die "Homebrew installation did not create /home/linuxbrew/.linuxbrew/bin/brew"
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+}
+
+ensure_github_auth() {
+  local token=""
+  token="$(mise token github --raw 2> /dev/null || true)"
+  if [ -z "$token" ] && command -v gh > /dev/null 2>&1; then
+    token="$(gh auth token 2> /dev/null || true)"
   fi
   if is_ci; then
     die "GitHub CLI is not authenticated and interactive login is disabled in CI"

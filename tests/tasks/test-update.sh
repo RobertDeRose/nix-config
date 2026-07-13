@@ -10,7 +10,7 @@ cp -R "$ROOT/.mise" "$tmp/"
 printf '{"lock":"original"}\n' > "$tmp/flake.lock"
 mkdir -p "$tmp/bin" "$tmp/log"
 
-cat > "$tmp/bin/nix" <<'MOCK'
+cat > "$tmp/bin/nix" << 'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "$*" >> "$MOCK_LOG/nix"
@@ -20,7 +20,7 @@ if [ "${MOCK_NIX_FAIL:-false}" = true ]; then
 fi
 MOCK
 
-cat > "$tmp/bin/mise" <<'MOCK'
+cat > "$tmp/bin/mise" << 'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail
 printf 'args=%s suppress_dirty=%s\n' "$*" "${NIX_SUPPRESS_DIRTY_WARNING:-false}" >> "$MOCK_LOG/mise"
@@ -37,7 +37,7 @@ if (
   cd "$tmp"
   PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MOCK_NIX_FAIL=true \
     "$tmp/.mise/tasks/update"
-) >"$tmp/update-failure.out" 2>&1; then
+) > "$tmp/update-failure.out" 2>&1; then
   fail 'update succeeded after the Nix update command failed'
 fi
 assert_eq "$original" "$(cat "$tmp/flake.lock")" 'failed Nix update did not restore flake.lock'
@@ -49,7 +49,7 @@ if (
   cd "$tmp"
   PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MOCK_CHECK_FAIL=true \
     "$tmp/.mise/tasks/update"
-) >"$tmp/validation-failure.out" 2>&1; then
+) > "$tmp/validation-failure.out" 2>&1; then
   fail 'update succeeded after host validation failed'
 fi
 assert_eq "$original" "$(cat "$tmp/flake.lock")" 'failed host validation did not restore flake.lock'
@@ -64,6 +64,6 @@ assert_file_contains "$tmp/log/mise" 'args=run check:hosts suppress_dirty=true'
   cd "$tmp"
   PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" \
     "$tmp/.mise/tasks/update"
-) >"$tmp/success.out" 2>&1
+) > "$tmp/success.out" 2>&1
 assert_eq '{"lock":"candidate"}' "$(cat "$tmp/flake.lock")" 'successful update did not retain the candidate lockfile'
 assert_file_contains "$tmp/success.out" 'Updated flake.lock and validated every configured host'

@@ -8,7 +8,7 @@ source "$ROOT/.mise/lib/inventory.sh"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-cat > "$tmp/inventory.toml" <<'TOML'
+cat > "$tmp/inventory.toml" << 'TOML'
 schema = 1
 [defaults]
 user = "alice"

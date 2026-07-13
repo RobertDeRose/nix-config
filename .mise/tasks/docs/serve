@@ -14,12 +14,12 @@ PORT="${usage_port:-3000}"
 
 cd docs
 
-if command -v mdbook &>/dev/null; then
+if command -v mdbook &> /dev/null; then
   echo "Serving documentation at http://localhost:${PORT}"
   echo "Press Ctrl+C to stop."
   echo ""
   mdbook serve --port "$PORT"
-elif command -v nix &>/dev/null; then
+elif command -v nix &> /dev/null; then
   echo "Serving documentation at http://localhost:${PORT}"
   echo "Press Ctrl+C to stop."
   echo ""

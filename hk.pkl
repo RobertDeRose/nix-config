@@ -17,7 +17,9 @@ local linters = new Mapping<String, Step> {
   ["newlines"] = Builtins.newlines
   ["nixfmt"] = Builtins.nix_fmt
   ["pkl_format"] = Builtins.pkl_format
-  ["shellcheck"] = Builtins.shellcheck
+  ["shellcheck"] = (Builtins.shellcheck) {
+    check = "shellcheck -x {{ files }}"
+  }
   ["shfmt"] = Builtins.shfmt
   ["tombi_format"] = Builtins.tombi_format
   ["tombi"] = Builtins.tombi

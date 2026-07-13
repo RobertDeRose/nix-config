@@ -13,6 +13,9 @@
 #USAGE flag "--overrides" help="Create hosts/<hostname>/system.nix and home.nix stubs"
 #USAGE flag "--commit" help="Stage and commit the inventory change"
 
+# usage_* variables are injected by mise's file-task argument parser.
+# shellcheck disable=SC2154
+
 set -euo pipefail
 TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
@@ -45,13 +48,14 @@ if [ -z "$profiles" ]; then
 fi
 
 profile_toml=""
-old_ifs="$IFS"; IFS=','
+old_ifs="$IFS"
+IFS=','
 for profile in $profiles; do
   profile="$(printf '%s' "$profile" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
   case "$profile" in
-    base|developer) ;;
-    mac-desktop) case "$system" in *-darwin) ;; *) die "profile '$profile' is incompatible with '$system'";; esac ;;
-    linux-server) case "$system" in *-linux) ;; *) die "profile '$profile' is incompatible with '$system'";; esac ;;
+    base | developer) ;;
+    mac-desktop) case "$system" in *-darwin) ;; *) die "profile '$profile' is incompatible with '$system'" ;; esac ;;
+    linux-server) case "$system" in *-linux) ;; *) die "profile '$profile' is incompatible with '$system'" ;; esac ;;
     *) die "unknown profile '$profile'" ;;
   esac
   [ -z "$profile_toml" ] || profile_toml="$profile_toml, "
@@ -69,7 +73,7 @@ fi
 toml_basic_string() {
   local value="$1"
   case "$value" in
-    *$'\n'*|*$'\r'*) die "TOML string values may not contain newlines" ;;
+    *$'\n'* | *$'\r'*) die "TOML string values may not contain newlines" ;;
   esac
   printf '%s' "$value" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
@@ -100,7 +104,7 @@ if ! inventory_has_user "$REPO_ROOT" "$user"; then
   escaped_fullname="$(toml_basic_string "$fullname")"
   escaped_email="$(toml_basic_string "$email")"
   escaped_github="$(toml_basic_string "$github")"
-  cat >> "$candidate" <<USER_ENTRY
+  cat >> "$candidate" << USER_ENTRY
 
 [users.$user]
 username = "$escaped_user"
@@ -110,7 +114,7 @@ github = "$escaped_github"
 USER_ENTRY
 fi
 
-cat >> "$candidate" <<HOST_ENTRY
+cat >> "$candidate" << HOST_ENTRY
 
 [hosts.$host]
 system = "$system"
@@ -124,13 +128,13 @@ if [ "${usage_overrides:-false}" = true ]; then
   [ ! -e "$override_dir" ] || die "override path '$override_dir' already exists"
   mkdir -p "$override_dir"
   override_created=true
-  cat > "$override_dir/system.nix" <<'SYSTEM_OVERRIDE'
+  cat > "$override_dir/system.nix" << 'SYSTEM_OVERRIDE'
 { ... }:
 {
   # Host-specific system exceptions only.
 }
 SYSTEM_OVERRIDE
-  cat > "$override_dir/home.nix" <<'HOME_OVERRIDE'
+  cat > "$override_dir/home.nix" << 'HOME_OVERRIDE'
 { ... }:
 {
   # Host-specific Home Manager exceptions only.
@@ -140,7 +144,7 @@ HOME_OVERRIDE
 fi
 
 mise run host:validate
-if command -v nix >/dev/null 2>&1; then
+if command -v nix > /dev/null 2>&1; then
   load_nix_environment
   configure_github_access_token
   evaluate_host "$REPO_ROOT" "$host" false

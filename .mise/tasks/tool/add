@@ -4,6 +4,9 @@
 #USAGE arg "<tool>" help="Mise tool or backend-qualified tool name"
 #USAGE flag "--version <version>" help="Version constraint" default="latest"
 
+# usage_* variables are injected by mise's file-task argument parser.
+# shellcheck disable=SC2154
+
 set -euo pipefail
 TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
@@ -13,7 +16,10 @@ source "$REPO_ROOT/.mise/lib/packages.sh"
 
 backup="$(mktemp "${TMPDIR:-/tmp}/mise.toml.XXXXXX")"
 cp mise.toml "$backup"
-restore() { cp "$backup" mise.toml; rm -f "$backup"; }
+restore() {
+  cp "$backup" mise.toml
+  rm -f "$backup"
+}
 trap restore ERR INT TERM
 config_editor "$REPO_ROOT" tool "${usage_tool}" --version "${usage_version:-latest}"
 validate_package_inventory "$REPO_ROOT"

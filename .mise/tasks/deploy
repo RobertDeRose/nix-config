@@ -6,6 +6,9 @@
 #USAGE arg "[host]" help="Inventory host name (defaults to the remote hostname)"
 #USAGE flag "-d --debug" help="Show verbose Nix output and traces"
 
+# usage_* variables are injected by mise's file-task argument parser.
+# shellcheck disable=SC2154
+
 set -euo pipefail
 
 TASK_FILE="${BASH_SOURCE[0]}"
@@ -42,14 +45,14 @@ log_info "Checking published GitHub SSH keys for $github_user"
 keys="$(curl -fsSL --connect-timeout 5 --max-time 10 "https://github.com/$github_user.keys")" || die "failed to fetch GitHub SSH keys for '$github_user'"
 [ -n "$keys" ] || die "GitHub user '$github_user' has no published SSH keys"
 
-if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "$destination" true 2>/dev/null; then
+if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "$destination" true 2> /dev/null; then
   require_command ssh-copy-id
   ssh-copy-id "$destination"
 fi
 
 if ! ssh "$destination" 'command -v nix >/dev/null 2>&1 && command -v nix-store >/dev/null 2>&1'; then
   log_info "Installing Lix on $destination"
-  ssh -t "$destination" 'bash -s' <<'REMOTE_BOOTSTRAP'
+  ssh -t "$destination" 'bash -s' << 'REMOTE_BOOTSTRAP'
 set -euo pipefail
 sudo_cmd=()
 if [ "$(id -u)" -ne 0 ]; then
@@ -79,7 +82,7 @@ fi
 ssh_user="$(ssh -G "$destination" | sed -n 's/^user //p' | head -n1)"
 [ -n "$ssh_user" ] || ssh_user="$(printf '%s' "$destination" | sed -n 's/@.*//p')"
 log_info "Ensuring remote Nix trusts SSH user ${ssh_user:-unknown}"
-ssh -t "$destination" 'bash -s' <<'REMOTE_TRUST'
+ssh -t "$destination" 'bash -s' << 'REMOTE_TRUST'
 set -euo pipefail
 trusted_user="$(id -un)"
 conf=/etc/nix/nix.conf
@@ -108,7 +111,9 @@ home_store_path="$(nix_command "$debug" path-info "$home_ref")"
 log_info "Copying Home Manager activation closure"
 nix_command "$debug" copy --to "ssh://$destination" "$home_store_path"
 log_info "Activating Home Manager for $managed_user"
-ssh "$destination" sh -s -- "$managed_user" "$home_store_path/activate" <<'REMOTE_HOME'
+remote_token_file="$(ssh "$destination" 'umask 077; mktemp /tmp/maison-github-token.XXXXXX')"
+printf '%s' "$GITHUB_TOKEN" | ssh "$destination" "cat > '$remote_token_file'"
+ssh "$destination" sh -s -- "$managed_user" "$home_store_path/activate" "$remote_token_file" << 'REMOTE_HOME'
 set -eu
 activate_user="$1"
 hm_activate="$2"

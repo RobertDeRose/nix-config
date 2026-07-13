@@ -15,7 +15,7 @@ require_inventory_host "$REPO_ROOT" "$host"
 
 status=0
 for cache in https://cache.nixos.org https://nix-community.cachix.org https://cache.numtide.com; do
-  if curl -fsI --connect-timeout 2 --max-time 4 "$cache/nix-cache-info" >/dev/null 2>&1; then
+  if curl -fsI --connect-timeout 2 --max-time 4 "$cache/nix-cache-info" > /dev/null 2>&1; then
     printf 'OK       %s\n' "$cache"
   else
     printf 'UNREACH  %s\n' "$cache"
@@ -23,7 +23,7 @@ for cache in https://cache.nixos.org https://nix-community.cachix.org https://ca
   fi
 done
 if [ "$(inventory_host_feature "$REPO_ROOT" "$host" personal_cache)" = true ]; then
-  if curl -fsI --connect-timeout 2 --max-time 4 https://robertderose.cachix.org/nix-cache-info >/dev/null 2>&1; then
+  if curl -fsI --connect-timeout 2 --max-time 4 https://robertderose.cachix.org/nix-cache-info > /dev/null 2>&1; then
     printf 'OK       %s\n' https://robertderose.cachix.org
   else
     printf 'OPTIONAL %s (unavailable)\n' https://robertderose.cachix.org

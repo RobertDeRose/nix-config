@@ -10,8 +10,8 @@ current_os() {
 
 current_arch() {
   case "$(uname -m)" in
-    arm64|aarch64) printf '%s\n' aarch64 ;;
-    x86_64|amd64) printf '%s\n' x86_64 ;;
+    arm64 | aarch64) printf '%s\n' aarch64 ;;
+    x86_64 | amd64) printf '%s\n' x86_64 ;;
     *) return 1 ;;
   esac
 }
@@ -30,10 +30,10 @@ current_user() {
 
 home_directory_for_user() {
   local username="$1" home=""
-  if command -v getent >/dev/null 2>&1; then
-    home="$(getent passwd "$username" 2>/dev/null | awk -F: 'NR == 1 { print $6 }')"
-  elif [ "$(uname -s)" = "Darwin" ] && command -v dscl >/dev/null 2>&1; then
-    home="$(dscl . -read "/Users/$username" NFSHomeDirectory 2>/dev/null | awk '{ print $2 }')"
+  if command -v getent > /dev/null 2>&1; then
+    home="$(getent passwd "$username" 2> /dev/null | awk -F: 'NR == 1 { print $6 }')"
+  elif [ "$(uname -s)" = "Darwin" ] && command -v dscl > /dev/null 2>&1; then
+    home="$(dscl . -read "/Users/$username" NFSHomeDirectory 2> /dev/null | awk '{ print $2 }')"
   fi
   [ -n "$home" ] || home="${HOME:-/home/$username}"
   printf '%s\n' "$home"
@@ -41,7 +41,7 @@ home_directory_for_user() {
 
 is_supported_system() {
   case "$1" in
-    aarch64-darwin|x86_64-darwin|aarch64-linux|x86_64-linux) return 0 ;;
+    aarch64-darwin | x86_64-darwin | aarch64-linux | x86_64-linux) return 0 ;;
     *) return 1 ;;
   esac
 }

@@ -44,9 +44,9 @@ else
   record error repository "not inside the repository"
 fi
 
-if command -v mise >/dev/null 2>&1; then
-  record ok mise "$(mise --version 2>/dev/null | head -n1)"
-  if mise tasks validate >/dev/null 2>&1; then
+if command -v mise > /dev/null 2>&1; then
+  record ok mise "$(mise --version 2> /dev/null | head -n1)"
+  if mise tasks validate > /dev/null 2>&1; then
     record ok task-metadata "mise tasks validate passed"
   else
     record error task-metadata "mise rejected one or more task definitions; run: mise tasks validate"
@@ -56,7 +56,7 @@ else
   record warning task-metadata "not checked because mise is unavailable"
 fi
 
-if command -v nix >/dev/null 2>&1 || [ -x /nix/var/nix/profiles/default/bin/nix ]; then
+if command -v nix > /dev/null 2>&1 || [ -x /nix/var/nix/profiles/default/bin/nix ]; then
   record ok nix "Nix/Lix is installed"
 else
   record error nix "Nix/Lix is not installed"
@@ -68,7 +68,7 @@ if [ "$(current_os)" = linux ]; then
   else
     record error nix-daemon "daemon socket is unavailable"
   fi
-elif pgrep -q nix-daemon 2>/dev/null; then
+elif pgrep -q nix-daemon 2> /dev/null; then
   record ok nix-daemon "daemon is running"
 else
   record warning nix-daemon "daemon process was not detected"
@@ -76,7 +76,7 @@ fi
 
 if inventory_has_host "$REPO_ROOT" "$host"; then
   record ok host "$host is defined as $(inventory_host_system "$REPO_ROOT" "$host")"
-  if validate_host_platform "$REPO_ROOT" "$host" "$(current_system)" >/dev/null 2>&1; then
+  if validate_host_platform "$REPO_ROOT" "$host" "$(current_system)" > /dev/null 2>&1; then
     record ok platform "$(current_system)"
   else
     record error platform "host and current machine systems differ"
@@ -85,28 +85,28 @@ else
   record error host "$host is not defined in inventory.toml"
 fi
 
-if command -v git >/dev/null 2>&1; then
+if command -v git > /dev/null 2>&1; then
   record ok git "$(git --version)"
 else
   record error git "command not found"
 fi
 
-if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+if command -v gh > /dev/null 2>&1 && gh auth status > /dev/null 2>&1; then
   record ok github "GitHub CLI is authenticated"
 else
   record warning github "GitHub CLI is unavailable or unauthenticated"
 fi
 
 if [ "$(current_os)" = darwin ]; then
-  if command -v brew >/dev/null 2>&1; then
+  if command -v brew > /dev/null 2>&1; then
     record ok homebrew "Homebrew is installed"
   else
     record error homebrew "Homebrew is not installed"
   fi
 fi
 
-if command -v curl >/dev/null 2>&1; then
-  if curl -fsI --connect-timeout 2 --max-time 4 https://cache.nixos.org/nix-cache-info >/dev/null 2>&1; then
+if command -v curl > /dev/null 2>&1; then
+  if curl -fsI --connect-timeout 2 --max-time 4 https://cache.nixos.org/nix-cache-info > /dev/null 2>&1; then
     record ok standard-cache "cache.nixos.org is reachable"
   else
     record warning standard-cache "cache.nixos.org is currently unreachable"
@@ -115,9 +115,9 @@ else
   record warning standard-cache "curl is unavailable; cache reachability was not checked"
 fi
 
-personal_cache="$(inventory_host_feature "$REPO_ROOT" "$host" personal_cache 2>/dev/null || true)"
+personal_cache="$(inventory_host_feature "$REPO_ROOT" "$host" personal_cache 2> /dev/null || true)"
 if [ "$personal_cache" = true ]; then
-  if command -v curl >/dev/null 2>&1 && curl -fsI --connect-timeout 2 --max-time 4 https://robertderose.cachix.org/nix-cache-info >/dev/null 2>&1; then
+  if command -v curl > /dev/null 2>&1 && curl -fsI --connect-timeout 2 --max-time 4 https://robertderose.cachix.org/nix-cache-info > /dev/null 2>&1; then
     record ok personal-cache "opted in and reachable"
   else
     record warning personal-cache "opted in but unavailable; standard caches and local builds remain usable"
@@ -140,7 +140,7 @@ else
   record error task-headers "invalid task headers: $(printf '%s' "$bad_headers" | tr '\n' ' ')"
 fi
 
-if git_is_dirty "$REPO_ROOT" 2>/dev/null; then
+if git_is_dirty "$REPO_ROOT" 2> /dev/null; then
   record warning working-tree "uncommitted changes are present"
 else
   record ok working-tree "clean"
@@ -152,7 +152,7 @@ while IFS= read -r target; do
   if { [ -e "$target" ] || [ -L "$target" ]; } && [ ! -L "$target" ]; then
     conflicts+=("${target#"$HOME"/}")
   fi
-done <<EOF_CONFLICTS
+done << EOF_CONFLICTS
 $HOME/.gitconfig
 $HOME/.zshrc
 $HOME/.zprofile

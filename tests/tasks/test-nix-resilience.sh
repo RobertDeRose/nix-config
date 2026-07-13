@@ -9,7 +9,7 @@ source "$ROOT/.mise/lib/nix.sh"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-cat > "$tmp/inventory.toml" <<'TOML'
+cat > "$tmp/inventory.toml" << 'TOML'
 schema = 1
 [users.alice]
 full_name = "Alice"
@@ -53,10 +53,11 @@ MOCK_HOME_WRONG_TYPE=true
 assert_failure evaluate_host "$tmp" linux-one false
 unset MOCK_HOME_WRONG_TYPE
 
-flags="$(nix_common_flags false)"
-assert_contains "$flags" '--option' 'Nix common flags'
-assert_contains "$flags" 'fallback' 'Nix common flags'
+flags=()
+mapfile -t flags < <(nix_common_flags false)
+assert_array_contains '--option' 'Nix common flags' "${flags[@]}"
+assert_array_contains 'fallback' 'Nix common flags' "${flags[@]}"
 NIX_SUPPRESS_DIRTY_WARNING=true
-flags="$(nix_common_flags false)"
+mapfile -t flags < <(nix_common_flags false)
 unset NIX_SUPPRESS_DIRTY_WARNING
-assert_contains "$flags" '--no-warn-dirty' 'Nix dirty-warning suppression'
+assert_array_contains '--no-warn-dirty' 'Nix dirty-warning suppression' "${flags[@]}"

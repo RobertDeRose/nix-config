@@ -7,7 +7,7 @@ fi
 # Press Esc Esc to toggle a leading sudo.
 sudo-command-line() {
   local prefix="sudo "
-  if [[ "$BUFFER" == "$prefix"* ]]; then
+  if [[ $BUFFER == "$prefix"* ]]; then
     BUFFER="${BUFFER#$prefix}"
   else
     BUFFER="$prefix$BUFFER"

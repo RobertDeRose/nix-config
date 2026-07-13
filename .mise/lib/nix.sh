@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 load_nix_environment() {
-  if command -v nix >/dev/null 2>&1; then
+  if command -v nix > /dev/null 2>&1; then
     return 0
   fi
   if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
@@ -10,16 +10,20 @@ load_nix_environment() {
     . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
     set -u
   fi
-  command -v nix >/dev/null 2>&1 || die "Nix or Lix is not available"
+  command -v nix > /dev/null 2>&1 || die "Nix or Lix is not available"
 }
 
 configure_github_access_token() {
-  local token=""
-  [ -z "${GITHUB_TOKEN:-}" ] || return 0
-  if command -v gh >/dev/null 2>&1; then
-    token="$(gh auth token 2>/dev/null || true)"
-  elif command -v mise >/dev/null 2>&1; then
-    token="$(mise x gh -- gh auth token 2>/dev/null || true)"
+  local token="${MISE_GITHUB_TOKEN:-${GITHUB_API_TOKEN:-${GITHUB_TOKEN:-}}}"
+
+  if [ -z "$token" ] && command -v mise > /dev/null 2>&1; then
+    token="$(mise token github --raw 2> /dev/null || true)"
+  fi
+  if [ -z "$token" ] && command -v gh > /dev/null 2>&1; then
+    token="$(gh auth token 2> /dev/null || true)"
+  fi
+  if [ -z "$token" ] && command -v mise > /dev/null 2>&1; then
+    token="$(mise x gh -- gh auth token 2> /dev/null || true)"
   fi
   if [ -n "$token" ]; then
     export GITHUB_TOKEN="$token"
@@ -146,7 +150,7 @@ prepare_darwin_activation() {
     sudo launchctl kickstart -k system/org.nixos.nix-daemon
     sleep 2
   fi
-  if [ -f /etc/nix/nix.conf ] && ! grep -qF nix-darwin /etc/nix/nix.conf 2>/dev/null; then
+  if [ -f /etc/nix/nix.conf ] && ! grep -qF nix-darwin /etc/nix/nix.conf 2> /dev/null; then
     log_info "Moving unmanaged /etc/nix/nix.conf aside for nix-darwin"
     sudo mv /etc/nix/nix.conf /etc/nix/nix.conf.before-nix-darwin
   fi
@@ -172,7 +176,7 @@ activate_linux_home() {
   local root="$1" host="$2" username home group activation_path
   username="$(require_inventory_user_for_host "$root" "$host")"
   home="$(home_directory_for_user "$username")"
-  group="$(id -gn "$username" 2>/dev/null || printf '%s' "$username")"
+  group="$(id -gn "$username" 2> /dev/null || printf '%s' "$username")"
   activation_path="/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:${PATH:-/usr/bin:/bin}"
   sudo install -d -m755 -o "$username" -g "$group" "/nix/var/nix/profiles/per-user/$username"
   if [ "$(id -un)" = "$username" ]; then

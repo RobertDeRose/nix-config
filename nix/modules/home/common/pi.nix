@@ -15,10 +15,14 @@ in
 {
   home.packages = [ piPackage ];
 
-  home.file.".pi/agent/themes/ayu-mirage.json".source = ../../../../dotfiles/pi/themes/ayu-mirage.json;
-  home.file.".pi/agent/extensions/ayu-footer.ts".source = ../../../../dotfiles/pi/extensions/footer.ts;
-  home.file.".pi/agent/extensions/markdown-pager.ts".source = ../../../../dotfiles/pi/extensions/pager.ts;
-  home.file.".pi/agent/extensions/bookmark.ts".source = ../../../../dotfiles/pi/extensions/bookmark.ts;
+  home.file.".pi/agent/themes/ayu-mirage.json".source =
+    ../../../../dotfiles/pi/themes/ayu-mirage.json;
+  home.file.".pi/agent/extensions/ayu-footer.ts".source =
+    ../../../../dotfiles/pi/extensions/footer.ts;
+  home.file.".pi/agent/extensions/markdown-pager.ts".source =
+    ../../../../dotfiles/pi/extensions/pager.ts;
+  home.file.".pi/agent/extensions/bookmark.ts".source =
+    ../../../../dotfiles/pi/extensions/bookmark.ts;
   home.file.".pi/agent/AGENTS.md".source = ../../../../dotfiles/pi/AGENTS.md;
 
   home.activation.backupOldPiOverlayExtension = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''

@@ -43,7 +43,8 @@
     };
   };
 
-  outputs = inputs:
+  outputs =
+    inputs:
     import ./nix/outputs.nix {
       inherit inputs;
       inventory = builtins.fromTOML (builtins.readFile ./inventory.toml);

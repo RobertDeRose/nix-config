@@ -3,6 +3,9 @@
 #
 #USAGE arg "<query>" help="Package or application name"
 
+# usage_* variables are injected by mise's file-task argument parser.
+# shellcheck disable=SC2154
+
 set -euo pipefail
 
 TASK_FILE="${BASH_SOURCE[0]}"
@@ -11,8 +14,8 @@ cd "$REPO_ROOT"
 query="${usage_query}"
 
 printf '== Mise ==\n'
-if command -v mise >/dev/null 2>&1; then
-  matches="$(mise registry 2>/dev/null | grep -i -- "$query" | head -40 || true)"
+if command -v mise > /dev/null 2>&1; then
+  matches="$(mise registry 2> /dev/null | grep -i -- "$query" | head -40 || true)"
   if [ -n "$matches" ]; then
     printf '%s\n' "$matches"
   else
@@ -23,21 +26,21 @@ else
 fi
 
 printf '\n== nixpkgs ==\n'
-if command -v nix >/dev/null 2>&1; then
+if command -v nix > /dev/null 2>&1; then
   nix search nixpkgs "$query" 2>&1 | head -80 || true
 else
   printf 'Nix/Lix is unavailable\n'
 fi
 
 printf '\n== Homebrew formulae ==\n'
-if command -v brew >/dev/null 2>&1; then
+if command -v brew > /dev/null 2>&1; then
   brew search --formula "$query" 2>&1 | head -80 || true
 else
   printf 'Homebrew is unavailable on this machine\n'
 fi
 
 printf '\n== Homebrew casks ==\n'
-if command -v brew >/dev/null 2>&1; then
+if command -v brew > /dev/null 2>&1; then
   brew search --cask "$query" 2>&1 | head -80 || true
 else
   printf 'Homebrew is unavailable on this machine\n'

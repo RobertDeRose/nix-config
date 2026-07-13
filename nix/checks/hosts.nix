@@ -8,7 +8,8 @@
 }:
 let
   hostsForSystem = lib.filterAttrs (_: host: host.system == system) inventoryData.hosts;
-  checksForHost = name: host:
+  checksForHost =
+    name: host:
     if lib.hasSuffix "-darwin" host.system then
       [
         {
@@ -28,8 +29,4 @@ let
         }
       ];
 in
-builtins.listToAttrs (
-  lib.concatLists (
-    lib.mapAttrsToList checksForHost hostsForSystem
-  )
-)
+builtins.listToAttrs (lib.concatLists (lib.mapAttrsToList checksForHost hostsForSystem))

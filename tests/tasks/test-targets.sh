@@ -13,7 +13,7 @@ assert_eq '/repo#homeConfigurations."linux-one".activationPackage' "$(linux_home
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-cat > "$tmp/inventory.toml" <<'TOML'
+cat > "$tmp/inventory.toml" << 'TOML'
 schema = 1
 [users.alice]
 full_name = "Alice"

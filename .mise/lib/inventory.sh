@@ -91,11 +91,11 @@ inventory_host_profiles() {
   require_inventory_file "$root" || return 1
   file="$(inventory_path "$root")"
   value="$(inventory_field "$file" "hosts.$host" profiles)"
-  printf '%s' "$value" \
-    | tr -d '[]"' \
-    | tr ',' '\n' \
-    | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
-    | sed '/^$/d'
+  printf '%s' "$value" |
+    tr -d '[]"' |
+    tr ',' '\n' |
+    sed 's/^[[:space:]]*//;s/[[:space:]]*$//' |
+    sed '/^$/d'
 }
 
 inventory_user_field() {

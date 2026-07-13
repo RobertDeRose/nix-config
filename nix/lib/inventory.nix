@@ -39,10 +39,17 @@ let
     name: raw:
     let
       system = raw.system or (fail "host '${name}' is missing field 'system'");
-      userName = raw.user or (inventory.defaults.user or (fail "host '${name}' is missing field 'user' and defaults.user is unset"));
+      userName =
+        raw.user or (inventory.defaults.user
+          or (fail "host '${name}' is missing field 'user' and defaults.user is unset")
+        );
       profileList = raw.profiles or (fail "host '${name}' is missing field 'profiles'");
-      unknownProfiles = lib.filter (profile: !(builtins.elem profile validation.profileNames)) profileList;
-      incompatibleProfiles = lib.filter (profile: !validation.compatibleProfile system profile) profileList;
+      unknownProfiles = lib.filter (
+        profile: !(builtins.elem profile validation.profileNames)
+      ) profileList;
+      incompatibleProfiles = lib.filter (
+        profile: !validation.compatibleProfile system profile
+      ) profileList;
       rawFeatures = raw.features or { };
       features = {
         personalCache = rawFeatures.personal_cache or false;
@@ -64,7 +71,13 @@ let
       fail "host '${name}' uses platform-incompatible profiles for '${system}': ${lib.concatStringsSep ", " incompatibleProfiles}"
     else
       {
-        inherit name system profileList userName features;
+        inherit
+          name
+          system
+          profileList
+          userName
+          features
+          ;
         profiles = profileList;
         user = users.${userName};
       }

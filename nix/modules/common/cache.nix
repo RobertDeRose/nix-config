@@ -1,4 +1,6 @@
-{ personal ? false }:
+{
+  personal ? false,
+}:
 {
   # A cache miss or broken NAR must degrade to a local build, not correctness failure.
   fallback = true;
@@ -8,12 +10,7 @@
     "https://nix-community.cachix.org"
     "https://cache.numtide.com"
   ]
-  ++ (
-    if personal then
-      [ "https://robertderose.cachix.org" ]
-    else
-      [ ]
-  );
+  ++ (if personal then [ "https://robertderose.cachix.org" ] else [ ]);
 
   trustedPublicKeys = [
     "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="

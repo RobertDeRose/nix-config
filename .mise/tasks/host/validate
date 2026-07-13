@@ -50,9 +50,9 @@ printf '%s\n' "$hosts" | while IFS= read -r host; do
   [ -n "$profiles" ] || die "host '$host' has no profiles"
   printf '%s\n' "$profiles" | while IFS= read -r profile; do
     case "$profile" in
-      base|developer) ;;
-      mac-desktop) case "$system" in *-darwin) ;; *) die "host '$host' cannot use mac-desktop on '$system'";; esac ;;
-      linux-server) case "$system" in *-linux) ;; *) die "host '$host' cannot use linux-server on '$system'";; esac ;;
+      base | developer) ;;
+      mac-desktop) case "$system" in *-darwin) ;; *) die "host '$host' cannot use mac-desktop on '$system'" ;; esac ;;
+      linux-server) case "$system" in *-linux) ;; *) die "host '$host' cannot use linux-server on '$system'" ;; esac ;;
       *) die "host '$host' references unknown profile '$profile'" ;;
     esac
   done
@@ -63,7 +63,7 @@ if [ -d "$REPO_ROOT/hosts" ]; then
     host="$(basename "$dir")"
     inventory_has_host "$REPO_ROOT" "$host" || die "override directory hosts/$host has no inventory entry"
     find "$dir" -maxdepth 1 -type f ! -name system.nix ! -name home.nix -print | while IFS= read -r unexpected; do
-      die "unexpected host override file: ${unexpected#$REPO_ROOT/}"
+      die "unexpected host override file: ${unexpected#"$REPO_ROOT"/}"
     done
   done
 fi

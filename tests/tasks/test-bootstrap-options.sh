@@ -8,7 +8,7 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/bin" "$tmp/work"
 real_git="$(command -v git)"
-cat > "$tmp/bin/git" <<'MOCK'
+cat > "$tmp/bin/git" << 'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "$*" >> "$MOCK_LOG/git"
@@ -23,13 +23,13 @@ case "$1" in
   *) exec "$REAL_GIT" "$@" ;;
 esac
 MOCK
-cat > "$tmp/bin/mise" <<'MOCK'
+cat > "$tmp/bin/mise" << 'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "$*" >> "$MOCK_LOG/mise"
 exit 0
 MOCK
-cat > "$tmp/bin/uname" <<'MOCK'
+cat > "$tmp/bin/uname" << 'MOCK'
 #!/usr/bin/env bash
 [ "$1" = -s ] && printf 'Linux\n' || /usr/bin/uname "$@"
 MOCK

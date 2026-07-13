@@ -14,32 +14,32 @@ echo "==> Starting uninstallation process..."
 
 # 1. Uninstall Configuration Managers FIRST
 if [[ "$(uname -s)" == "Darwin" ]]; then
-    if command -v darwin-uninstaller &> /dev/null; then
-        echo "--> Found nix-darwin, running uninstaller..."
-        sudo darwin-uninstaller
-    elif [[ -d "/etc/static" ]]; then
-        # If the binary is missing but traces exist, try running from flake
-        echo "--> nix-darwin detected but uninstaller not in PATH. Trying nix run..."
-        sudo nix --extra-experimental-features "nix-command flakes" \
-            run github:LnL7/nix-darwin#darwin-uninstaller || true
-    fi
+  if command -v darwin-uninstaller &> /dev/null; then
+    echo "--> Found nix-darwin, running uninstaller..."
+    sudo darwin-uninstaller
+  elif [[ -d "/etc/static" ]]; then
+    # If the binary is missing but traces exist, try running from flake
+    echo "--> nix-darwin detected but uninstaller not in PATH. Trying nix run..."
+    sudo nix --extra-experimental-features "nix-command flakes" \
+      run github:LnL7/nix-darwin#darwin-uninstaller || true
+  fi
 else
-    # Linux: Check for system-manager (usually doesn't have a standalone uninstaller,
-    # but we should at least acknowledge it)
-    if [[ -d "/etc/system-manager" ]]; then
-        echo "--> system-manager detected. Note: Manual cleanup of /etc/system-manager may be required."
-    fi
+  # Linux: Check for system-manager (usually doesn't have a standalone uninstaller,
+  # but we should at least acknowledge it)
+  if [[ -d "/etc/system-manager" ]]; then
+    echo "--> system-manager detected. Note: Manual cleanup of /etc/system-manager may be required."
+  fi
 fi
 
 # 2. Uninstall Nix via nix-installer
 if [[ -e /nix/nix-installer ]]; then
-    echo "==> Uninstalling Nix via nix-installer..."
-    sudo /nix/nix-installer uninstall
+  echo "==> Uninstalling Nix via nix-installer..."
+  sudo /nix/nix-installer uninstall
 else
-    echo "ERROR: /nix/nix-installer not found."
-    echo "       Nix may not have been installed via the Determinate nix-installer."
-    echo "       Refer to https://nix.dev for manual steps."
-    exit 1
+  echo "ERROR: /nix/nix-installer not found."
+  echo "       Nix may not have been installed via the Determinate nix-installer."
+  echo "       Refer to https://nix.dev for manual steps."
+  exit 1
 fi
 
 echo -e "\nDone! Open a new shell or restart your computer to fully clear changes."

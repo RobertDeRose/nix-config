@@ -37,7 +37,7 @@ rsync -a --delete \
   "$REPO_ROOT/" "$STAGE_DIR/"
 git -C "$STAGE_DIR" init -q
 git -C "$STAGE_DIR" add -A
-mise trust "$STAGE_DIR/mise.toml" >/dev/null
+mise trust "$STAGE_DIR/mise.toml" > /dev/null
 (
   cd "$STAGE_DIR"
   mise run host:add -- apple-ssh-test \
@@ -51,13 +51,13 @@ mise trust "$STAGE_DIR/mise.toml" >/dev/null
 git -C "$STAGE_DIR" add -A
 
 echo "==> Recreating Apple deploy test container '$NAME'..."
-container delete --force "$NAME" >/dev/null 2>&1 || true
+container delete --force "$NAME" > /dev/null 2>&1 || true
 container run -d \
   --name "$NAME" \
   --dns 1.1.1.1 \
   --dns 8.8.8.8 \
   -v "$PUBKEY_DIR:/workspace/host-ssh" \
-  "$IMAGE" >/dev/null
+  "$IMAGE" > /dev/null
 
 IP="$(container inspect "$NAME" | jq -r '.[0].networks[0].ipv4Address | split("/")[0]')"
 
@@ -67,7 +67,7 @@ container exec "$NAME" sh -lc "cp /workspace/host-ssh/$PUBKEY_NAME /home/tester/
 echo "==> Waiting for SSH to accept connections..."
 SSH_READY=false
 for _ in $(seq 1 120); do
-  if ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=2 "$TARGET@$IP" true >/dev/null 2>&1; then
+  if ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=2 "$TARGET@$IP" true > /dev/null 2>&1; then
     SSH_READY=true
     break
   fi
@@ -83,7 +83,7 @@ echo "==> Installing Nix on remote test target..."
 ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" 'export NIX_INSTALLER_NO_CONFIRM=true NIX_INSTALLER_ENABLE_FLAKES=true; curl -sSfL https://install.lix.systems/lix | sh -s -- install'
 
 echo "==> Configuring trusted-users and PATH on remote target..."
-ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" <<'EOF'
+ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" << 'EOF'
 sudo sh -lc '
 mkdir -p /etc/nix /usr/local/bin
 touch /etc/nix/nix.custom.conf
@@ -103,7 +103,7 @@ EOF
 
 echo "==> Trusting remote host key in local known_hosts..."
 touch "$KNOWN_HOSTS"
-ssh-keygen -R "$IP" -f "$KNOWN_HOSTS" >/dev/null 2>&1 || true
+ssh-keygen -R "$IP" -f "$KNOWN_HOSTS" > /dev/null 2>&1 || true
 ssh-keyscan "$IP" >> "$KNOWN_HOSTS"
 
 echo "==> Running deployment test..."

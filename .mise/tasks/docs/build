@@ -10,9 +10,9 @@ cd "$REPO_ROOT"
 
 cd docs
 
-if command -v mdbook &>/dev/null; then
+if command -v mdbook &> /dev/null; then
   mdbook build
-elif command -v nix &>/dev/null; then
+elif command -v nix &> /dev/null; then
   nix develop --command mdbook build
 else
   echo "Error: mdbook not found. Install via 'mise install' or 'cargo install mdbook'." >&2

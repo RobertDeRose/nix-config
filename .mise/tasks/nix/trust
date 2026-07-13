@@ -12,7 +12,7 @@ REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
 # CI runners are already trusted; skip to avoid sudo prompts.
-[[ "${CI:-false}" == "true" ]] && exit 0
+[[ ${CI:-false} == "true" ]] && exit 0
 
 USER="$(whoami)"
 CONF="/etc/nix/nix.custom.conf"
@@ -22,7 +22,7 @@ IS_DARWIN=false
 
 # nix-darwin manages trusted-users in nix.conf directly after first activation.
 if [ "$IS_DARWIN" = true ] && [ -e /run/current-system/darwin-version ]; then
-  if [ -f /etc/nix/nix.conf ] && grep -qE "^(extra-)?trusted-users[[:space:]]*=[[:space:]]*([^[:space:]]+[[:space:]]+)*${USER_REGEX}([[:space:]]|$)" /etc/nix/nix.conf 2>/dev/null; then
+  if [ -f /etc/nix/nix.conf ] && grep -qE "^(extra-)?trusted-users[[:space:]]*=[[:space:]]*([^[:space:]]+[[:space:]]+)*${USER_REGEX}([[:space:]]|$)" /etc/nix/nix.conf 2> /dev/null; then
     echo "'$USER' is already a trusted user."
     exit 0
   fi
@@ -40,17 +40,19 @@ fi
 
 # Check if the user is already trusted in any nix config file
 for f in /etc/nix/nix.conf "$CONF"; do
-  if [ -f "$f" ] && grep -qE "^(extra-)?trusted-users[[:space:]]*=[[:space:]]*([^[:space:]]+[[:space:]]+)*${USER_REGEX}([[:space:]]|$)" "$f" 2>/dev/null; then
+  if [ -f "$f" ] && grep -qE "^(extra-)?trusted-users[[:space:]]*=[[:space:]]*([^[:space:]]+[[:space:]]+)*${USER_REGEX}([[:space:]]|$)" "$f" 2> /dev/null; then
     echo "'$USER' is already a trusted user."
     exit 0
   fi
 done
 
 # Append to existing extra-trusted-users line, or create one
-if grep -qE "^extra-trusted-users([[:space:]]|=)" "$CONF" 2>/dev/null; then
+if grep -qE "^extra-trusted-users([[:space:]]|=)" "$CONF" 2> /dev/null; then
   echo "==> Adding '$USER' to existing extra-trusted-users..."
   tmp_conf="$(mktemp "${TMPDIR:-/tmp}/nix.custom.conf.XXXXXX")"
   trap 'rm -f "$tmp_conf"' EXIT
+  # The redirect intentionally writes privileged output to a user-owned temporary file.
+  # shellcheck disable=SC2024
   sudo awk -v user="$USER" '
     /^extra-trusted-users([[:space:]]*=|[[:space:]]+)/ { print $0 " " user; next }
     { print }

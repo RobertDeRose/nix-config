@@ -8,7 +8,7 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 cp -R "$ROOT/.mise" "$ROOT/inventory.toml" "$tmp/"
 mkdir -p "$tmp/hosts" "$tmp/bin"
-cat > "$tmp/bin/mise" <<'MOCK'
+cat > "$tmp/bin/mise" << 'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail
 [ "$1" = run ] && [ "$2" = host:validate ] || { echo "unexpected mise call: $*" >&2; exit 2; }
@@ -22,7 +22,7 @@ make_git_repo "$tmp"
 branch_before="$(git -C "$tmp" branch --show-current)"
 commits_before="$(git -C "$tmp" rev-list --count HEAD)"
 (
-  cd "$tmp/subdir" 2>/dev/null || mkdir -p "$tmp/subdir" && cd "$tmp/subdir"
+  cd "$tmp/subdir" 2> /dev/null || mkdir -p "$tmp/subdir" && cd "$tmp/subdir"
   PATH="$tmp/bin:$PATH" MOCK_ROOT="$tmp" \
     usage_hostname=build-server usage_system=x86_64-linux usage_user=rderose \
     usage_profiles=base,developer,linux-server \
@@ -40,11 +40,10 @@ if (
     usage_hostname=bad-profile usage_system=x86_64-linux usage_user=rderose \
     usage_profiles=base,mac-desktop \
     "$tmp/.mise/tasks/host/add"
-) >/dev/null 2>&1; then
+) > /dev/null 2>&1; then
   fail 'host:add accepted a platform-incompatible profile'
 fi
 assert_eq "$before" "$(cat "$tmp/inventory.toml")" 'failed host:add changed inventory'
-
 
 before="$(cat "$tmp/inventory.toml")"
 if (
@@ -53,7 +52,7 @@ if (
     usage_hostname=validation-fails usage_system=x86_64-linux usage_user=rderose \
     usage_profiles=base,linux-server \
     "$tmp/.mise/tasks/host/add"
-) >/dev/null 2>&1; then
+) > /dev/null 2>&1; then
   fail 'host:add accepted a failed post-write validation'
 fi
 assert_eq "$before" "$(cat "$tmp/inventory.toml")" 'host:add did not restore inventory after validation failure'

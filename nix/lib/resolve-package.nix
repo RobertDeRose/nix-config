@@ -7,24 +7,26 @@
 }:
 let
   segments = lib.splitString "." package;
-  resolved = lib.foldl' (
-    state: segment:
-    if state.found && builtins.isAttrs state.value && builtins.hasAttr segment state.value then
+  resolved =
+    lib.foldl'
+      (
+        state: segment:
+        if state.found && builtins.isAttrs state.value && builtins.hasAttr segment state.value then
+          {
+            found = true;
+            value = builtins.getAttr segment state.value;
+          }
+        else
+          {
+            found = false;
+            value = null;
+          }
+      )
       {
         found = true;
-        value = builtins.getAttr segment state.value;
+        value = pkgs;
       }
-    else
-      {
-        found = false;
-        value = null;
-      }
-  )
-    {
-      found = true;
-      value = pkgs;
-    }
-    segments;
+      segments;
 in
 if !resolved.found then
   throw ''

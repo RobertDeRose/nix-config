@@ -3,12 +3,15 @@
 #
 #USAGE arg "<query>" help="Tool name"
 
+# usage_* variables are injected by mise's file-task argument parser.
+# shellcheck disable=SC2154
+
 set -euo pipefail
 
 TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
-if mise registry 2>/dev/null | grep -i -- "${usage_query}" | head -80; then
+if mise registry 2> /dev/null | grep -i -- "${usage_query}" | head -80; then
   exit 0
 fi
 printf 'No mise registry matches for %s. Try:\n  mise ls-remote %s\n' "${usage_query}" "${usage_query}"

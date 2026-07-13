@@ -14,7 +14,12 @@ let
   systemOverride = hostDir + "/system.nix";
   homeOverride = hostDir + "/home.nix";
   specialArgs = {
-    inherit inputs host user packageData;
+    inherit
+      inputs
+      host
+      user
+      packageData
+      ;
   };
 in
 inputs.darwin.lib.darwinSystem {

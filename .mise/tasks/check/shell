@@ -7,7 +7,7 @@ TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
-if command -v mise >/dev/null 2>&1; then
+if command -v mise > /dev/null 2>&1; then
   mise tasks validate
 else
   printf 'warning: mise is not installed; task metadata validation was skipped\n' >&2
@@ -19,16 +19,16 @@ find .mise/tasks .mise/lib tests/tasks -type f \
 bash -n bootstrap.sh
 python3 -m py_compile .mise/lib/config_edit.py
 
-if command -v shellcheck >/dev/null 2>&1; then
+if command -v shellcheck > /dev/null 2>&1; then
   find .mise/tasks .mise/lib tests/tasks -type f \
     \( -name '*.sh' -o -path '.mise/tasks/*' \) \
-    -exec shellcheck {} +
-  shellcheck bootstrap.sh
+    -exec shellcheck -x {} +
+  shellcheck -x bootstrap.sh
 else
   printf 'warning: shellcheck is not installed; syntax checks completed\n' >&2
 fi
 
-if command -v shfmt >/dev/null 2>&1; then
+if command -v shfmt > /dev/null 2>&1; then
   find .mise/tasks .mise/lib tests/tasks -type f \
     \( -name '*.sh' -o -path '.mise/tasks/*' \) \
     -exec shfmt -d {} +

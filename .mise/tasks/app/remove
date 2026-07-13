@@ -4,6 +4,9 @@
 #USAGE arg "<cask>" help="Homebrew cask token"
 #USAGE flag "--profile <profile>" help="macOS profile" default="mac-desktop"
 
+# usage_* variables are injected by mise's file-task argument parser.
+# shellcheck disable=SC2154
+
 set -euo pipefail
 TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
@@ -14,7 +17,10 @@ profile="${usage_profile:-mac-desktop}"
 [ "$profile" = mac-desktop ] || die "Homebrew casks are currently supported only by the mac-desktop profile"
 backup="$(mktemp "${TMPDIR:-/tmp}/packages.toml.XXXXXX")"
 cp packages.toml "$backup"
-restore() { cp "$backup" packages.toml; rm -f "$backup"; }
+restore() {
+  cp "$backup" packages.toml
+  rm -f "$backup"
+}
 trap restore ERR INT TERM
 config_editor "$REPO_ROOT" array --file packages.toml --section "profiles.$profile.homebrew" --key casks --value "${usage_cask}" --remove
 validate_package_change "$REPO_ROOT"

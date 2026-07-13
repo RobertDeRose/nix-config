@@ -8,15 +8,19 @@ let
   profiles = packageInventory.profiles or { };
   hosts = packageInventory.hosts or { };
 
-  getAttrOr = name: set: if builtins.isAttrs set && builtins.hasAttr name set then builtins.getAttr name set else { };
-  getProfile = name:
+  getAttrOr =
+    name: set:
+    if builtins.isAttrs set && builtins.hasAttr name set then builtins.getAttr name set else { };
+  getProfile =
+    name:
     if builtins.hasAttr name profiles then
       builtins.getAttr name profiles
     else
       fail "profile '${name}' has no package inventory entry";
   getProfileSection = profile: section: getAttrOr section (getProfile profile);
   getHostSection = host: section: getAttrOr section (getAttrOr host hosts);
-  namesForSystem = section: system:
+  namesForSystem =
+    section: system:
     let
       common = section.packages or [ ];
       systems = section.systems or { };

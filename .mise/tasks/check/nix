@@ -9,6 +9,6 @@ cd "$REPO_ROOT"
 source "$REPO_ROOT/.mise/lib/common.sh"
 source "$REPO_ROOT/.mise/lib/nix.sh"
 load_nix_environment
-nix_command false flake metadata >/dev/null
+nix_command false flake metadata > /dev/null
 nix_command false flake check --no-build
 nix_command false fmt -- --check .

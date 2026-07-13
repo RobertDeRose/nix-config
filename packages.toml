@@ -41,9 +41,6 @@ packages = []
 [profiles.mac-desktop.nix]
 packages = []
 
-[profiles.linux-server.nix]
-packages = []
-
 # System-wide Nix packages required by the platform profiles.
 [profiles.mac-desktop.system]
 packages = [
@@ -52,15 +49,6 @@ packages = [
   "eza",
   "fastfetch",
   "git",
-]
-
-[profiles.linux-server.system]
-packages = [
-  "bat",
-  "curl",
-  "eza",
-  "gitMinimal",
-  "wget",
 ]
 
 [profiles.mac-desktop.homebrew]
@@ -107,6 +95,18 @@ Bitwarden = 1352778147
 "Numbers: Make Spreadsheets" = 361304891
 "Pages: Create Documents" = 361309726
 "Windows App" = 1295203466
+
+[profiles.linux-server.nix]
+packages = []
+
+[profiles.linux-server.system]
+packages = [
+  "bat",
+  "curl",
+  "eza",
+  "gitMinimal",
+  "wget",
+]
 
 # Host-only package exceptions. Ordinary hosts should not need these sections.
 [hosts.USMBDEROSER.nix]

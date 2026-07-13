@@ -40,7 +40,7 @@ read_required() {
   fi
   while [ -z "$value" ]; do
     printf '%s: ' "$label" >&2
-    IFS= read -r reply </dev/tty
+    IFS= read -r reply < /dev/tty
     value="$reply"
   done
   printf '%s\n' "$value"
@@ -51,9 +51,9 @@ if ! inventory_has_host "$REPO_ROOT" "$host"; then
   args=("$host" --system "$system" --user "$user")
   [ -z "${usage_profiles:-}" ] || args+=(--profiles "${usage_profiles}")
   if ! inventory_has_user "$REPO_ROOT" "$user"; then
-    fullname="$(read_required 'Full name' "${usage_fullname:-$(git config user.name 2>/dev/null || true)}")"
-    email="$(read_required 'Email' "${usage_email:-$(git config user.email 2>/dev/null || true)}")"
-    detected_github="$(git remote get-url origin 2>/dev/null | sed -n 's|.*github.com[:/]\([^/]*\)/.*|\1|p' | head -n1 || true)"
+    fullname="$(read_required 'Full name' "${usage_fullname:-$(git config user.name 2> /dev/null || true)}")"
+    email="$(read_required 'Email' "${usage_email:-$(git config user.email 2> /dev/null || true)}")"
+    detected_github="$(git remote get-url origin 2> /dev/null | sed -n 's|.*github.com[:/]\([^/]*\)/.*|\1|p' | head -n1 || true)"
     github="$(read_required 'GitHub username' "${usage_github:-$detected_github}")"
     args+=(--fullname "$fullname" --email "$email" --github "$github")
   fi

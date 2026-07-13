@@ -21,13 +21,13 @@ build_target() {
 
 ensure_linux_user() {
   local username="$1" fullname="$2"
-  id -u "$username" >/dev/null 2>&1 && return 0
+  id -u "$username" > /dev/null 2>&1 && return 0
   sudo useradd --create-home --comment "$fullname" --shell /bin/bash "$username"
 }
 
 ensure_darwin_user() {
   local username="$1" fullname="$2" next_uid
-  id -u "$username" >/dev/null 2>&1 && return 0
+  id -u "$username" > /dev/null 2>&1 && return 0
   next_uid="$(dscl . -list /Users UniqueID | awk 'BEGIN { max = 500 } { if ($2 > max) max = $2 } END { print max + 1 }')"
   sudo dscl . -create "/Users/$username"
   sudo dscl . -create "/Users/$username" UserShell /bin/zsh
@@ -35,7 +35,7 @@ ensure_darwin_user() {
   sudo dscl . -create "/Users/$username" UniqueID "$next_uid"
   sudo dscl . -create "/Users/$username" PrimaryGroupID 20
   sudo dscl . -create "/Users/$username" NFSHomeDirectory "/Users/$username"
-  sudo createhomedir -c -u "$username" >/dev/null 2>&1 || true
+  sudo createhomedir -c -u "$username" > /dev/null 2>&1 || true
 }
 
 ensure_runner_user() {
@@ -47,7 +47,7 @@ ensure_runner_user() {
 }
 
 host_rows() {
-  python3 - "$SYSTEM" <<'PY'
+  python3 - "$SYSTEM" << 'PY'
 import sys, tomllib
 system = sys.argv[1]
 with open("inventory.toml", "rb") as handle:

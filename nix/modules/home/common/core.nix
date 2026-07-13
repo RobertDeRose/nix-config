@@ -6,9 +6,11 @@
   ...
 }:
 let
-  customAgent = name: import ../../../packages/custom/llmagents.nix {
-    inherit inputs pkgs name;
-  };
+  customAgent =
+    name:
+    import ../../../packages/custom/llmagents.nix {
+      inherit inputs pkgs name;
+    };
 in
 {
   home.packages =

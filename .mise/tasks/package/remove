@@ -2,7 +2,10 @@
 # [MISE] description="Remove a Nix package from an intent-oriented profile"
 #
 #USAGE arg "<package>" help="nixpkgs attribute path"
-#USAGE flag "--profile <profile>" help="Profile that owns the package" required=true
+#USAGE flag "--profile <profile>" help="Profile that owns the package" required=#true
+
+# usage_* variables are injected by mise's file-task argument parser.
+# shellcheck disable=SC2154
 
 set -euo pipefail
 TASK_FILE="${BASH_SOURCE[0]}"
@@ -16,7 +19,10 @@ profile="${usage_profile}"
 package_profile_exists "$REPO_ROOT" "$profile" || die "profile '$profile' does not exist"
 backup="$(mktemp "${TMPDIR:-/tmp}/packages.toml.XXXXXX")"
 cp packages.toml "$backup"
-restore() { cp "$backup" packages.toml; rm -f "$backup"; }
+restore() {
+  cp "$backup" packages.toml
+  rm -f "$backup"
+}
 trap restore ERR INT TERM
 config_editor "$REPO_ROOT" array --file packages.toml --section "profiles.$profile.nix" --key packages --value "$package" --remove
 validate_package_change "$REPO_ROOT"

@@ -2,7 +2,7 @@
 
 repo_root() {
   local start="${1:-${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}}"
-  git -C "$(dirname "$start")" rev-parse --show-toplevel 2>/dev/null
+  git -C "$(dirname "$start")" rev-parse --show-toplevel 2> /dev/null
 }
 
 log_info() { printf '==> %s\n' "$*"; }
@@ -15,7 +15,7 @@ die() {
 }
 
 require_command() {
-  command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
+  command -v "$1" > /dev/null 2>&1 || die "required command not found: $1"
 }
 
 is_ci() {
@@ -30,7 +30,7 @@ confirm() {
   printf '%s [y/N] ' "$prompt" >&2
   IFS= read -r reply
   case "$reply" in
-    y|Y|yes|YES|Yes) return 0 ;;
+    y | Y | yes | YES | Yes) return 0 ;;
     *) return 1 ;;
   esac
 }

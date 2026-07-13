@@ -18,6 +18,21 @@ assert_contains() {
   esac
 }
 
+assert_array_contains() {
+  local expected="$1"
+  local description="$2"
+  shift 2
+
+  local item
+  for item in "$@"; do
+    if [[ $item == "$expected" ]]; then
+      return 0
+    fi
+  done
+
+  fail "$description: expected array to contain '$expected'"
+}
+
 assert_file_contains() {
   local file="$1" needle="$2"
   grep -Fq -- "$needle" "$file" || fail "$file does not contain: $needle"
