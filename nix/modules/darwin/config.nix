@@ -25,6 +25,7 @@ in
 
     settings = {
       builders-use-substitutes = true;
+      fallback = cache.fallback;
       experimental-features = [
         "nix-command"
         "flakes"

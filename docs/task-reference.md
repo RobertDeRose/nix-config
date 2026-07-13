@@ -10,7 +10,7 @@ Run `mise tasks` for live discovery and `mise run <task> --help` for generated u
 | `plan` | Resolve and preview a host or explicit target | Read-only | No | All | `nix:dry-run` | `.mise/tasks/plan` |
 | `apply` | Build the complete selected target, then activate | Changes unless `--no-activate` | During activation | All | `nix:switch`, `nix:debug` | `.mise/tasks/apply` |
 | `check` | Run every repository validation check | Read-only | No | All/CI | — | `.mise/tasks/check/_default` |
-| `update [input]` | Update all or one flake input, show the lock diff, validate hosts | Repository only | No | All | `nix:up` | `.mise/tasks/update` |
+| `update [input]` | Update all or one flake input, show the lock diff, validate hosts, restore the prior lock on failure | Repository only | No | All | `nix:up` | `.mise/tasks/update` |
 | `deploy <destination> [host]` | Build and deploy a Linux host over SSH | Remote changes | Remote sudo may be required | Linux targets | `nix:deploy` | `.mise/tasks/deploy` |
 | `rollback [--yes]` | Roll back nix-darwin or deactivate system-manager | Changes | Yes | All | — | `.mise/tasks/rollback` |
 | `bootstrap` | Install Nix/Lix after mise is available, validate/create a host, and apply it | Changes | Installer/activation | All | `nix:init` | `.mise/tasks/bootstrap` |

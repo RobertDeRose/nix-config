@@ -9,18 +9,63 @@ TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/git.sh"
 source "$REPO_ROOT/.mise/lib/nix.sh"
 load_nix_environment
+
+if git_is_dirty "$REPO_ROOT"; then
+  log_warn "working tree was already dirty; update will preserve its exact pre-update flake.lock on failure"
+fi
+
 before="$(mktemp)"
-trap 'rm -f "$before"' EXIT
+transaction_complete=false
 cp flake.lock "$before"
+
+cleanup() {
+  local status=$?
+  if [ "$transaction_complete" != true ] && [ -f "$before" ]; then
+    cp "$before" flake.lock
+  fi
+  rm -f "$before"
+  return "$status"
+}
+trap cleanup EXIT
+
+restore_lockfile() {
+  cp "$before" flake.lock
+}
+
 if [ -n "${usage_input:-}" ]; then
   log_info "Updating flake input: ${usage_input}"
-  nix_command false flake update "${usage_input}"
+  if NIX_SUPPRESS_DIRTY_WARNING=true nix_command false flake update "${usage_input}"; then
+    :
+  else
+    status=$?
+    restore_lockfile
+    log_error "flake input update failed; restored the previous flake.lock"
+    exit "$status"
+  fi
 else
-  log_info "Updating all direct flake inputs"
-  nix_command false flake update
+  log_info "Updating flake inputs"
+  if NIX_SUPPRESS_DIRTY_WARNING=true nix_command false flake update; then
+    :
+  else
+    status=$?
+    restore_lockfile
+    log_error "flake input update failed; restored the previous flake.lock"
+    exit "$status"
+  fi
 fi
+
 printf '\nLockfile diff:\n'
 git --no-pager diff -- flake.lock
-mise run check:hosts
+
+if NIX_SUPPRESS_DIRTY_WARNING=true mise run check:hosts; then
+  transaction_complete=true
+  log_info "Updated flake.lock and validated every configured host"
+else
+  status=$?
+  restore_lockfile
+  log_error "host validation failed; restored the previous flake.lock"
+  exit "$status"
+fi

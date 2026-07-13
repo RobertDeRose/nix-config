@@ -66,6 +66,7 @@ in
   environment.etc."nix/nix.custom.conf" = {
     text = ''
       experimental-features = nix-command flakes
+      fallback = ${if cache.fallback then "true" else "false"}
       extra-substituters = ${builtins.concatStringsSep " " cache.substituters}
       extra-trusted-public-keys = ${builtins.concatStringsSep " " cache.trustedPublicKeys}
       extra-trusted-users = root ${user.username}

@@ -22,3 +22,9 @@ Each refactor phase appends its implementation and validation result here. User-
 ## Compatibility exception: existing Darwin username
 
 The existing macOS account name `DeRoseR` contains uppercase characters and therefore is not portable to Linux. To preserve the active macOS identity without renaming the account, `inventory.toml` marks that existing identity with `allow_nonportable = true`. Validation permits the exception only for Darwin hosts; newly scaffolded users must still use portable lowercase account names.
+
+## Post-checkpoint correction: transactional updates and cache fallback
+
+- Correction branch: `fix/update-cache-fallback`
+
+A clean-machine `mise update` exposed a misleading missing-NAR message from the Numtide cache during host evaluation. The correction makes `update` transactional, suppresses expected dirty-tree warnings while validating its own lockfile change, evaluates hosts without package-specific caches, enables Nix/Lix substitute fallback for builds, and prints explicit per-host and aggregate validation results. Regression tests cover lock restoration and Linux multi-output evaluation failure propagation.

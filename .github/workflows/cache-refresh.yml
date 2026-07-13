@@ -34,6 +34,7 @@ jobs:
             # .mise/lib/bootstrap.sh; this workflow needs them before any
             # managed system config is evaluated.
             experimental-features = nix-command flakes
+            fallback = true
             extra-substituters = https://cache.numtide.com https://cache.nixos.org https://nix-community.cachix.org https://robertderose.cachix.org
             extra-trusted-public-keys = ${{ env.NIXOS_CACHE_KEY }} ${{ env.NIX_COMMUNITY_KEY }} ${{ env.NUMTIDE_KEY }} ${{ env.CACHIX_PUBLIC_KEY }}
 
@@ -87,6 +88,7 @@ jobs:
             # .mise/lib/bootstrap.sh; this workflow needs them before any
             # managed system config is evaluated.
             experimental-features = nix-command flakes
+            fallback = true
             extra-substituters = https://cache.numtide.com https://cache.nixos.org https://nix-community.cachix.org https://robertderose.cachix.org
             extra-trusted-public-keys = ${{ env.NIXOS_CACHE_KEY }} ${{ env.NIX_COMMUNITY_KEY }} ${{ env.NUMTIDE_KEY }} ${{ env.CACHIX_PUBLIC_KEY }}
 

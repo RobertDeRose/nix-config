@@ -78,7 +78,7 @@ Profiles express machine purpose. Low-level reusable implementation remains unde
 
 Module-coupled packages remain beside the module and are listed under `[module_owned]` for ownership auditing. Temporary duplicate ownership requires an exact owner set and written reason. The Python validator in `.mise/lib/config_edit.py` checks sorting, duplicates, inventory references, and exceptions.
 
-The personal Cachix cache is opt-in per host. Standard caches and local builds remain sufficient for correctness.
+The personal Cachix cache is opt-in per host. All configured caches are acceleration only: substitute failures fall back to local builds, and read-only host evaluation avoids package-specific caches.
 
 ## Native dotfiles
 

@@ -1,5 +1,8 @@
 { personal ? false }:
 {
+  # A cache miss or broken NAR must degrade to a local build, not correctness failure.
+  fallback = true;
+
   substituters = [
     "https://cache.nixos.org"
     "https://nix-community.cachix.org"

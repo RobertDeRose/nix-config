@@ -67,14 +67,14 @@ Open a recovery shell using a known system path such as `/bin/bash` or `/bin/zsh
 
 ## Cache outage
 
-The personal cache is optional. `doctor` reports it as a warning, not a correctness error. Standard caches and local builds remain available. To disable the opt-in for a host:
+Every non-local cache is acceleration, not a correctness dependency. Task-driven Nix commands enable substitute fallback, and host evaluation uses the standard NixOS cache rather than package-specific caches. `doctor` reports the optional personal cache as a warning, not a correctness error. To disable the personal-cache opt-in for a host:
 
 ```toml
 [hosts.<hostname>.features]
 personal_cache = false
 ```
 
-Run `mise run plan` afterward. A cache outage may make a custom package slow to build but must not make evaluation depend on the cache.
+Run `mise run plan` afterward. A cache outage may make a custom package build locally and therefore run slowly, but it must not make evaluation depend on that cache.
 
 ## Bootstrap failure before mise
 
@@ -97,10 +97,10 @@ Provide `--system`, `--user`, `--profiles`, `--fullname`, `--email`, and `--gith
 
 ## Lockfile update failure
 
-`update` changes only `flake.lock`, prints its diff, and validates all hosts. Restore it with:
+`update` changes only `flake.lock`, prints the candidate diff, and validates all hosts. If the update command or any host evaluation fails, it restores the exact pre-update `flake.lock` automatically and exits nonzero. No activation occurs automatically.
+
+After an external interruption such as `kill -9` or a machine shutdown, restore manually when necessary:
 
 ```bash
 git restore -- flake.lock
 ```
-
-No activation occurs automatically.

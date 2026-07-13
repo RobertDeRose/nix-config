@@ -30,7 +30,13 @@ configure_github_access_token() {
 
 nix_common_flags() {
   local debug="${1:-false}"
-  printf '%s\n' --accept-flake-config --extra-experimental-features 'nix-command flakes'
+  printf '%s\n' \
+    --accept-flake-config \
+    --extra-experimental-features 'nix-command flakes' \
+    --option fallback true
+  if [ "${NIX_SUPPRESS_DIRTY_WARNING:-false}" = true ]; then
+    printf '%s\n' --no-warn-dirty
+  fi
   if [ "$debug" = true ]; then
     printf '%s\n' --show-trace --verbose
   fi
@@ -66,19 +72,36 @@ resolved_target_for_host() {
   esac
 }
 
+evaluate_derivation_target() {
+  local target="$1" debug="${2:-false}" value eval_substituters
+  eval_substituters="${NIX_EVALUATION_SUBSTITUTERS:-https://cache.nixos.org}"
+  if ! value="$(
+    nix_command "$debug" \
+      --option substituters "$eval_substituters" \
+      eval --raw "$target.type"
+  )"; then
+    log_error "failed to evaluate Nix target: $target"
+    return 1
+  fi
+  if [ "$value" != derivation ]; then
+    log_error "Nix target is not a derivation: $target (type: ${value:-empty})"
+    return 1
+  fi
+}
+
 evaluate_host() {
   local root="$1" host="$2" debug="${3:-false}" system target
   system="$(inventory_host_system "$root" "$host")"
   case "$system" in
     *-darwin)
       target="$(darwin_target_for_host "$root" "$host")"
-      test "$(nix_command "$debug" eval --raw "$target.type")" = derivation
+      evaluate_derivation_target "$target" "$debug" || return 1
       ;;
     *-linux)
       target="$(linux_system_target_for_host "$root" "$host")"
-      test "$(nix_command "$debug" eval --raw "$target.type")" = derivation
+      evaluate_derivation_target "$target" "$debug" || return 1
       target="$(linux_home_target_for_host "$root" "$host")"
-      test "$(nix_command "$debug" eval --raw "$target.type")" = derivation
+      evaluate_derivation_target "$target" "$debug" || return 1
       ;;
     *) die "unsupported host system: $system" ;;
   esac

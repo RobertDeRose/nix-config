@@ -11,8 +11,24 @@ source "$REPO_ROOT/.mise/lib/inventory.sh"
 source "$REPO_ROOT/.mise/lib/nix.sh"
 load_nix_environment
 configure_github_access_token
-inventory_hosts "$REPO_ROOT" | while IFS= read -r host; do
+
+hosts_checked=0
+failed_hosts=()
+while IFS= read -r host; do
   [ -n "$host" ] || continue
+  hosts_checked=$((hosts_checked + 1))
   log_info "Evaluating $host"
-  evaluate_host "$REPO_ROOT" "$host" false
-done
+  if evaluate_host "$REPO_ROOT" "$host" false; then
+    log_info "$host evaluated successfully"
+  else
+    log_error "$host evaluation failed"
+    failed_hosts+=("$host")
+  fi
+done < <(inventory_hosts "$REPO_ROOT")
+
+[ "$hosts_checked" -gt 0 ] || die "inventory.toml defines no hosts"
+if [ "${#failed_hosts[@]}" -gt 0 ]; then
+  log_error "host validation failed: ${failed_hosts[*]}"
+  exit 1
+fi
+log_info "All $hosts_checked configured hosts evaluated successfully"
