@@ -6,6 +6,6 @@ let
   validated = builtins.deepSeq inventoryData true;
 in
 assert validated;
-pkgs.runCommandNoCC "inventory-validation" { } ''
+pkgs.runCommand "inventory-validation" { } ''
   printf '%s\n' 'inventory.toml evaluated successfully' > "$out"
 ''

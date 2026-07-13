@@ -2,7 +2,7 @@
   pkgs,
   root,
 }:
-pkgs.runCommandNoCC "package-ownership-validation"
+pkgs.runCommand "package-ownership-validation"
   {
     nativeBuildInputs = [ pkgs.python3 ];
   }
