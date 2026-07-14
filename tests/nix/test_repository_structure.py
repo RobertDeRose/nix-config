@@ -83,9 +83,19 @@ def check_outputs_and_legacy_paths() -> None:
             fail(f"nix/outputs.nix does not expose package {package}")
     if 'lib.hasSuffix "-darwin" system' not in outputs:
         fail("AI package outputs must be restricted to Darwin systems")
-    mise = (ROOT / "mise.toml").read_text()
-    if '"github:max-sixty/worktrunk"' not in mise:
-        fail("mise.toml must own the Worktrunk installation")
+    mise = load_toml("mise.toml")
+    packages = load_toml("packages.toml")
+    worktrunk = "github:max-sixty/worktrunk"
+    if worktrunk in mise.get("tools", {}):
+        fail("repository-local mise.toml must not activate Worktrunk globally")
+    if packages.get("profiles", {}).get("base", {}).get("mise", {}).get("tools", {}).get(worktrunk) != "latest":
+        fail("packages.toml must own the global Worktrunk installation")
+    mise_module = (ROOT / "nix/modules/home/common/mise.nix").read_text()
+    if 'xdg.configFile."mise/config.toml"' not in mise_module:
+        fail("Home Manager must render the global mise config")
+    apply_task = (ROOT / ".mise/tasks/apply").read_text()
+    if 'MISE_CONFIG_FILE="$global_mise_config" mise install' not in apply_task:
+        fail("apply must install tools from the Home Manager-managed global mise config")
     if (ROOT / "nix/modules/home/common/zellij.nix").exists():
         fail("removed Zellij Home Manager module still exists")
     if "formatter = pkgs.nixfmt-tree;" not in outputs:

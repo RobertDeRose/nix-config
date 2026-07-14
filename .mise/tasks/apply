@@ -48,3 +48,11 @@ fi
 
 log_info "Activating host configuration"
 activate_host "$REPO_ROOT" "$host" "$debug"
+
+global_mise_config="$HOME/.config/mise/config.toml"
+if [ ! -f "$global_mise_config" ]; then
+  die "Home Manager did not create the global mise config: $global_mise_config"
+fi
+require_command mise
+log_info "Installing globally configured mise tools"
+MISE_CONFIG_FILE="$global_mise_config" mise install

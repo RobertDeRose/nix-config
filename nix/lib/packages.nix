@@ -47,6 +47,10 @@ else
   {
     inherit packageInventory;
 
+    miseToolsForProfiles =
+      { profiles }:
+      lib.foldl' (tools: profile: tools // (getProfileSection profile "mise").tools or { }) { } profiles;
+
     profileNixPackages =
       {
         pkgs,

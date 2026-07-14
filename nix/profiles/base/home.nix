@@ -10,6 +10,7 @@
     ../../modules/home/common/core.nix
     ../../modules/home/common/git.nix
     ../../modules/home/common/htop.nix
+    ../../modules/home/common/mise.nix
     ../../modules/home/common/shell.nix
   ];
 

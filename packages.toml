@@ -1,6 +1,9 @@
 schema = 1
 
 # User-scoped Nix packages shared by the base profile.
+[profiles.base.mise.tools]
+"github:max-sixty/worktrunk" = "latest"
+
 [profiles.base.nix]
 packages = [
   "acli",

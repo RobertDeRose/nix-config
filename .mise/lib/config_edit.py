@@ -181,6 +181,15 @@ def validate(root: Path) -> None:
         add_owner(owners, canonical_tool(tool), "mise")
 
     for profile, profile_data in packages.get("profiles", {}).items():
+        mise_tools = profile_data.get("mise", {}).get("tools", {})
+        if not isinstance(mise_tools, dict) or not all(
+            isinstance(tool, str) and isinstance(version, str)
+            for tool, version in mise_tools.items()
+        ):
+            raise ConfigError(f"profiles.{profile}.mise.tools must map tool names to version strings")
+        for tool in mise_tools:
+            add_owner(owners, canonical_tool(tool), "mise")
+
         for section_name in ("nix", "system"):
             section = profile_data.get(section_name, {})
             for package in iter_strings(section.get("packages", []), f"profiles.{profile}.{section_name}.packages"):

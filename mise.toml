@@ -14,7 +14,6 @@ shfmt = "latest"
 tombi = "latest"
 "aqua:Mic92/nixfmt-rs" = "latest"
 "github:rust-lang/mdbook" = "latest"
-"github:max-sixty/worktrunk" = "latest"
 
 [env]
 HK_MISE = 1

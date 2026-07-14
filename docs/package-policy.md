@@ -14,7 +14,7 @@ Ordinary profile and host package changes belong in `packages.toml`. Mise tools 
 
 ## Current explicit exceptions
 
-`jq` is intentionally present in two closures: mise supplies the interactive/CI command, while the Pi activation script embeds `pkgs.jq` so activation cannot depend on the user environment. `worktrunk` is mise-owned on every supported platform so fresh Linux bootstraps use a prebuilt release instead of compiling its Rust dependency graph.
+`jq` is intentionally present in two closures: mise supplies the interactive/CI command, while the Pi activation script embeds `pkgs.jq` so activation cannot depend on the user environment. `worktrunk` is declared in `packages.toml`, rendered into the Home Manager-managed global mise config, and installed after activation so fresh Linux bootstraps use a prebuilt release instead of compiling its Rust dependency graph.
 
 ## Custom Nix package group: llm-agents.nix
 
