@@ -4,16 +4,16 @@ experimental = true
 env_shell_expand = true
 
 [tools]
-python = "3.13"
-hk = "1.41"
-actionlint = "1.7.12"
+python = "latest"
+hk = "latest"
+actionlint = "latest"
 jq = "latest"
-mdbook = "0.5.2"
-pkl = "0.31.1"
-shellcheck = "0.11.0"
-shfmt = "3.13.1"
-tombi = "0.9.16"
-"nix:nixfmt" = "1.2.0"
+pkl = "latest"
+shellcheck = "latest"
+shfmt = "latest"
+tombi = "latest"
+"aqua:Mic92/nixfmt-rs" = "latest"
+"github:rust-lang/mdbook" = "latest"
 
 [env]
 HK_MISE = 1
