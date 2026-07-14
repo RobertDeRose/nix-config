@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - docs/**
+      - .mise/tasks/docs/build
       - .github/workflows/docs.yml
       - mise.toml
   workflow_dispatch:

@@ -108,6 +108,12 @@ def check_outputs_and_legacy_paths() -> None:
         fail("flake.nix nixConfig must not import cache values as thunks")
 
 
+def check_workflows() -> None:
+    docs_workflow = (ROOT / ".github/workflows/docs.yml").read_text()
+    if "- .mise/tasks/docs/build" not in docs_workflow:
+        fail("docs workflow must run when the docs build task changes")
+
+
 def check_mdbook_links() -> None:
     summary = ROOT / "docs/src/SUMMARY.md"
     link_pattern = re.compile(r"\[[^]]+\]\(([^)#]+)(?:#[^)]+)?\)")
@@ -126,6 +132,7 @@ def main() -> int:
         check_flake_lock,
         check_nix_paths,
         check_outputs_and_legacy_paths,
+        check_workflows,
         check_mdbook_links,
     )
     try:

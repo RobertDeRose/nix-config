@@ -161,7 +161,12 @@ prepare_darwin_activation() {
 }
 
 activate_darwin_host() {
-  local root="$1" host="$2" debug="${3:-false}" flags=()
+  local root="$1" host="$2" debug="${3:-false}"
+  local flags=(
+    --option accept-flake-config true
+    --option fallback true
+    --option warn-dirty false
+  )
   [ "$debug" = true ] && flags+=(--show-trace --verbose)
   prepare_darwin_activation
   sudo "$root/.build/darwin-$host/sw/bin/darwin-rebuild" switch --flake "$root#$host" "${flags[@]}"

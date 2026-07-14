@@ -29,6 +29,7 @@ require_inventory_host "$REPO_ROOT" "$host"
 validate_host_platform "$REPO_ROOT" "$host" "$(current_system)"
 load_nix_environment
 configure_github_access_token
+export NIX_SUPPRESS_DIRTY_WARNING=true
 
 log_info "Selected host: $host ($(inventory_host_system "$REPO_ROOT" "$host"))"
 if is_ci; then

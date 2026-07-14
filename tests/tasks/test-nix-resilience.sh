@@ -61,3 +61,16 @@ NIX_SUPPRESS_DIRTY_WARNING=true
 mapfile -t flags < <(nix_common_flags false)
 unset NIX_SUPPRESS_DIRTY_WARNING
 assert_array_contains '--no-warn-dirty' 'Nix dirty-warning suppression' "${flags[@]}"
+
+prepare_darwin_activation() {
+  return 0
+}
+
+sudo() {
+  printf '%s\n' "$*" > "$tmp/darwin-activation-call"
+}
+
+activate_darwin_host "$tmp" mac-one false
+assert_file_contains "$tmp/darwin-activation-call" '--option accept-flake-config true'
+assert_file_contains "$tmp/darwin-activation-call" '--option fallback true'
+assert_file_contains "$tmp/darwin-activation-call" '--option warn-dirty false'
