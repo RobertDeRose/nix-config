@@ -14,11 +14,11 @@ Ordinary profile and host package changes belong in `packages.toml`. Mise tools 
 
 ## Current explicit exceptions
 
-`jq` is intentionally present in two closures: mise supplies the interactive/CI command, while the Pi activation script embeds `pkgs.jq` so activation cannot depend on the user environment. `worktrunk` is Homebrew-owned on macOS to avoid an uncached Rust build and Nix-owned on Linux; its Home Manager module remains supplied by the flake input. Both exceptions are encoded with reasons in `packages.toml`.
+`jq` is intentionally present in two closures: mise supplies the interactive/CI command, while the Pi activation script embeds `pkgs.jq` so activation cannot depend on the user environment. `worktrunk` is mise-owned on every supported platform so fresh Linux bootstraps use a prebuilt release instead of compiling its Rust dependency graph.
 
 ## Custom Nix package group: llm-agents.nix
 
-The `llmagents` flake input currently supplies `herdr`, `opencode`, `openspec`, and `pi` through `nix/packages/custom/llmagents.nix`.
+The `llmagents` flake input supplies the macOS-only AI tools `herdr`, `opencode`, `openspec`, and `pi` through `nix/packages/custom/llmagents.nix`.
 
 - Upstream: `numtide/llm-agents.nix`.
 - nixpkgs is insufficient because these rapidly changing agent binaries are not all available there at compatible versions.

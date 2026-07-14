@@ -12,6 +12,7 @@ let
   packageData = import ./lib/packages.nix {
     inherit lib packageInventory;
   };
+  systemManagerNoCheckOverlay = import ./lib/system-manager-no-check-overlay.nix { inherit lib; };
 
   darwinHosts = lib.filterAttrs (_: host: lib.hasSuffix "-darwin" host.system) inventoryData.hosts;
   linuxHosts = lib.filterAttrs (_: host: lib.hasSuffix "-linux" host.system) inventoryData.hosts;
@@ -37,6 +38,7 @@ let
         lib
         profileRegistry
         packageData
+        systemManagerNoCheckOverlay
         host
         ;
     }
@@ -49,7 +51,6 @@ inputs.flake-parts.lib.mkFlake { inherit inputs; } {
   systems = [
     "aarch64-darwin"
     "aarch64-linux"
-    "x86_64-darwin"
     "x86_64-linux"
   ];
 
@@ -67,17 +68,27 @@ inputs.flake-parts.lib.mkFlake { inherit inputs; } {
       formatter = pkgs.nixfmt-tree;
       packages =
         lib.optionalAttrs (builtins.hasAttr system inputs.system-manager.packages) {
-          system-manager = inputs.system-manager.packages.${system}.default;
+          system-manager =
+            let
+              systemManagerPkgs = import inputs.nixpkgs {
+                inherit system;
+                overlays = [
+                  systemManagerNoCheckOverlay
+                  inputs.system-manager.overlays.default
+                ];
+              };
+            in
+            systemManagerPkgs.system-manager;
         }
-        // lib.optionalAttrs (builtins.hasAttr system inputs.llmagents.packages) {
-          herdr = inputs.llmagents.packages.${system}.herdr;
-          opencode = inputs.llmagents.packages.${system}.opencode;
-          openspec = inputs.llmagents.packages.${system}.openspec;
-          pi = inputs.llmagents.packages.${system}.pi;
-        }
-        // lib.optionalAttrs (builtins.hasAttr system inputs.worktrunk.packages) {
-          worktrunk = inputs.worktrunk.packages.${system}.worktrunk;
-        };
+        //
+          lib.optionalAttrs
+            (lib.hasSuffix "-darwin" system && builtins.hasAttr system inputs.llmagents.packages)
+            {
+              herdr = inputs.llmagents.packages.${system}.herdr;
+              opencode = inputs.llmagents.packages.${system}.opencode;
+              openspec = inputs.llmagents.packages.${system}.openspec;
+              pi = inputs.llmagents.packages.${system}.pi;
+            };
 
       checks = {
         inventory = import ./checks/inventory.nix {

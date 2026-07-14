@@ -2,7 +2,7 @@
 # Bootstrap this repository far enough to hand machine setup to `mise run bootstrap`.
 #
 # Usage:
-#   ./bootstrap.sh [--host HOST] [--repo OWNER/REPO|URL] [--ref REF]
+#   ./bootstrap.sh [--host HOST] [--repo OWNER/REPO|URL] [--ref REF] [--profiles LIST]
 #   curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh \
 #     | bash -s -- --host HOST --repo RobertDeRose/nix-config --ref main
 
@@ -17,6 +17,7 @@ die() {
 host="$(hostname -s)"
 repo="${REPO:-RobertDeRose/nix-config}"
 ref="${REF:-${BRANCH:-main}}"
+profiles="${PROFILES:-}"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -33,6 +34,11 @@ while [ "$#" -gt 0 ]; do
     --ref)
       [ "$#" -ge 2 ] || die "--ref requires a value"
       ref="$2"
+      shift 2
+      ;;
+    --profiles)
+      [ "$#" -ge 2 ] || die "--profiles requires a value"
+      profiles="$2"
       shift 2
       ;;
     -h | --help)
@@ -146,4 +152,6 @@ log "Trusting repository configuration"
 mise trust "$repo_root/mise.toml" > /dev/null
 
 log "Handing off to mise for host $host"
-exec mise run bootstrap -- --host "$host"
+bootstrap_args=(--host "$host")
+[ -z "$profiles" ] || bootstrap_args+=(--profiles "$profiles")
+exec mise run --skip-tools bootstrap -- "${bootstrap_args[@]}"

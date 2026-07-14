@@ -161,7 +161,6 @@ $HOME/.config/git/ignore
 $HOME/.config/helix/config.toml
 $HOME/.config/helix/languages.toml
 $HOME/.config/starship.toml
-$HOME/.config/zellij/config.kdl
 $HOME/.pi/agent/AGENTS.md
 EOF_CONFLICTS
 if [ "${#conflicts[@]}" -eq 0 ]; then

@@ -20,7 +20,7 @@ Routine use should not require knowing flake output names or platform-specific a
 | Standalone developer tool | `mise.toml` `[tools]` | `mise run tool:add <tool>` |
 | Nix-managed package | `packages.toml` | `mise run package:add <package> [--profile <profile>]` |
 | macOS GUI application | `packages.toml` Homebrew casks | `mise run app:add <cask>` |
-| Git, Helix, Starship, Zsh, Zellij, Pi, or OpenCode settings | `dotfiles/<application>/` | Edit the native file, then `mise run plan` |
+| Git, Helix, Starship, Zsh, Pi, or OpenCode settings | `dotfiles/<application>/` | Edit the native file, then `mise run plan` |
 | Host, system, user, or profiles | `inventory.toml` | `mise run host:add <hostname> ...` |
 | Host-specific exception | `hosts/<hostname>/system.nix` or `home.nix` | Create only when an exception is required |
 

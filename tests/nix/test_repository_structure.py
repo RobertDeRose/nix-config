@@ -78,11 +78,21 @@ def check_outputs_and_legacy_paths() -> None:
     for output in ("darwinConfigurations", "systemConfigs", "homeConfigurations"):
         if output not in outputs:
             fail(f"nix/outputs.nix does not expose {output}")
-    for package in ("herdr", "opencode", "openspec", "pi", "worktrunk"):
+    for package in ("herdr", "opencode", "openspec", "pi"):
         if f"{package} =" not in outputs:
             fail(f"nix/outputs.nix does not expose package {package}")
+    if 'lib.hasSuffix "-darwin" system' not in outputs:
+        fail("AI package outputs must be restricted to Darwin systems")
+    mise = (ROOT / "mise.toml").read_text()
+    if '"github:max-sixty/worktrunk"' not in mise:
+        fail("mise.toml must own the Worktrunk installation")
+    if (ROOT / "nix/modules/home/common/zellij.nix").exists():
+        fail("removed Zellij Home Manager module still exists")
     if "formatter = pkgs.nixfmt-tree;" not in outputs:
         fail("nix/outputs.nix must use the nixfmt-tree formatter wrapper")
+    overlay = ROOT / "nix/lib/system-manager-no-check-overlay.nix"
+    if not overlay.is_file():
+        fail("targeted system-manager no-check overlay file is missing")
     if "systemManagerNoCheckOverlay" not in outputs:
         fail("nix/outputs.nix must apply the targeted system-manager no-check overlay")
     linux_host = (ROOT / "nix/lib/mk-linux-host.nix").read_text()

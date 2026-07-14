@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # [MISE] description="Run Linux bootstrap validation in an Apple container"
 # [MISE] quiet=true
-# [MISE] depends=["test:image"]
 #
 #USAGE arg "[hostname]" help="Test hostname passed to bootstrap" default="ci-bootstrap"
+#USAGE flag "--dev" help="Include the Linux developer profile"
 
 set -euo pipefail
 
@@ -11,11 +11,39 @@ TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
+# shellcheck source=.mise/lib/apple-container.sh
+source "$REPO_ROOT/.mise/lib/apple-container.sh"
+
 NAME="test-bootstrap"
 HOSTNAME="${usage_hostname:-ci-bootstrap}"
+PROFILES="base,linux"
+if [ "${usage_dev:-false}" = true ]; then
+  PROFILES="base,dev,linux"
+fi
 IMAGE="local/nix-config-test-linux:24.04"
 BRANCH="$(git branch --show-current)"
 ORIGIN_URL="$(git remote get-url origin)"
+
+github_token="${GITHUB_TOKEN:-}"
+if [ -z "$github_token" ] && command -v gh > /dev/null 2>&1; then
+  github_token="$(gh auth token 2> /dev/null || true)"
+fi
+
+if [ -z "$github_token" ]; then
+  cat >&2 << 'EOF'
+ERROR: test:bootstrap requires GitHub authentication.
+
+Set GITHUB_TOKEN in the environment or authenticate the GitHub CLI:
+
+  gh auth login
+
+The resolved token is passed into the test container as GITHUB_TOKEN so mise
+and other GitHub API clients use the authenticated rate limit.
+EOF
+  exit 1
+fi
+
+mise run test:image
 
 if [ -z "$BRANCH" ]; then
   echo "ERROR: test:bootstrap must be run from a named branch."
@@ -68,12 +96,37 @@ container delete --force "$NAME" > /dev/null 2>&1 || true
 container run -d \
   --name "$NAME" \
   --memory 4G \
+  --cap-add ALL \
+  --tmpfs /run \
+  --tmpfs /tmp \
   --dns 1.1.1.1 \
   --dns 8.8.8.8 \
-  "$IMAGE" > /dev/null
+  "$IMAGE" \
+  /lib/systemd/systemd --system > /dev/null
+
+echo "==> Waiting for Apple container '$NAME' to become ready..."
+wait_for_apple_container "$NAME"
 
 echo "==> Running bootstrap validation from $BOOTSTRAP_URL..."
-container exec "$NAME" bash -lc "sudo -iu tester bash -lc 'git config --global user.name \"Container Test User\" && git config --global user.email \"tester@localhost\" && export HOME_MANAGER_USER=tester NIX_BUILD_CORES=1 CARGO_BUILD_JOBS=1 NIX_INSTALLER_NO_SANDBOX=true && curl -sSfL \"$BOOTSTRAP_URL\" | bash -s -- \"$HOSTNAME\"'"
+printf -v bootstrap_command \
+  'git config --global user.name %q && git config --global user.email %q && curl -sSfL %q | bash -s -- --host %q --repo %q --ref %q --profiles %q' \
+  'Container Test User' \
+  'tester@localhost' \
+  "$BOOTSTRAP_URL" \
+  "$HOSTNAME" \
+  "$REPO" \
+  "$BRANCH" \
+  "$PROFILES"
+
+container exec "$NAME" \
+  sudo -iu tester \
+  env \
+  GITHUB_TOKEN="$github_token" \
+  HOME_MANAGER_USER=tester \
+  NIX_BUILD_CORES=1 \
+  CARGO_BUILD_JOBS=1 \
+  NIX_INSTALLER_NO_SANDBOX=true \
+  bash -lc "$bootstrap_command"
 
 echo ""
 echo "Bootstrap test completed in container '$NAME'."

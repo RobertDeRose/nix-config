@@ -3,6 +3,7 @@
   lib,
   profileRegistry,
   packageData,
+  systemManagerNoCheckOverlay,
   host,
 }:
 let
@@ -24,6 +25,7 @@ let
 in
 {
   systemConfig = inputs.system-manager.lib.makeSystemConfig {
+    overlays = [ systemManagerNoCheckOverlay ];
     modules = [
       {
         nixpkgs.hostPlatform = host.system;

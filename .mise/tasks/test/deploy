@@ -9,6 +9,9 @@ TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
+# shellcheck source=.mise/lib/apple-container.sh
+source "$REPO_ROOT/.mise/lib/apple-container.sh"
+
 NAME="apple-ssh-test"
 IMAGE="local/nix-config-test-linux:24.04"
 TARGET="tester"
@@ -43,7 +46,7 @@ mise trust "$STAGE_DIR/mise.toml" > /dev/null
   mise run host:add -- apple-ssh-test \
     --system aarch64-linux \
     --user tester \
-    --profiles base,dev,linux \
+    --profiles base,linux \
     --fullname "Container Test User" \
     --email tester@localhost \
     --github RobertDeRose
@@ -54,12 +57,18 @@ echo "==> Recreating Apple deploy test container '$NAME'..."
 container delete --force "$NAME" > /dev/null 2>&1 || true
 container run -d \
   --name "$NAME" \
+  --cap-add ALL \
+  --tmpfs /run \
+  --tmpfs /tmp \
   --dns 1.1.1.1 \
   --dns 8.8.8.8 \
   -v "$PUBKEY_DIR:/workspace/host-ssh" \
-  "$IMAGE" > /dev/null
+  "$IMAGE" \
+  /lib/systemd/systemd --system > /dev/null
 
-IP="$(container inspect "$NAME" | jq -r '.[0].networks[0].ipv4Address | split("/")[0]')"
+echo "==> Waiting for Apple container '$NAME' to become ready..."
+wait_for_apple_container "$NAME"
+IP="$(apple_container_ipv4 "$NAME")"
 
 echo "==> Installing SSH key for $TARGET@$IP..."
 container exec "$NAME" sh -lc "cp /workspace/host-ssh/$PUBKEY_NAME /home/tester/.ssh/authorized_keys && chown tester:tester /home/tester/.ssh/authorized_keys && chmod 600 /home/tester/.ssh/authorized_keys"

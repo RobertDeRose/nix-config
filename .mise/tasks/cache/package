@@ -188,13 +188,13 @@ mapfile -t targets < <(
   fi
 )
 
-if (( ${#targets[@]} == 0 )) && [[ -n $resolved_out ]]; then
+if ((${#targets[@]} == 0)) && [[ -n $resolved_out ]]; then
   targets=("$resolved_out")
 fi
 
-(( ${#targets[@]} > 0 )) || die "could not determine an output path for '$target_input'"
+((${#targets[@]} > 0)) || die "could not determine an output path for '$target_input'"
 mapfile -t substituters < <(configured_substituters)
-(( ${#substituters[@]} > 0 )) || die "no binary substituters are configured"
+((${#substituters[@]} > 0)) || die "no binary substituters are configured"
 
 printf '\nCache availability:\n'
 cached_outputs=0
@@ -208,7 +208,7 @@ for target in "${targets[@]}"; do
 
   printf '  %s\n' "$(output_name "$target")"
   printf '    %s\n' "$target"
-  if (( ${#hits[@]} > 0 )); then
+  if ((${#hits[@]} > 0)); then
     cached_outputs=$((cached_outputs + 1))
     printf '    Available from:\n'
     printf '      %s\n' "${hits[@]}"

@@ -43,12 +43,6 @@ case "$1" in
     apply="$2"
     ref="$3"
     case "$ref:$apply" in
-      *'#worktrunk:package: package.outPath')
-        printf '/nix/store/worktrunk-out'
-        ;;
-      *'#worktrunk:package: package.drvPath')
-        printf '/nix/store/worktrunk.drv'
-        ;;
       *'#pi:package: package.outPath' | \
         github:numtide/llm-agents.nix*'#pi:package: package.outPath')
         printf '/nix/store/pi-out'
@@ -83,9 +77,6 @@ case "$1" in
   derivation)
     [ "$2" = show ] || exit 2
     case "$3" in
-      /nix/store/worktrunk.drv)
-        printf '%s\n' '{"/nix/store/worktrunk.drv":{"outputs":{"out":{"path":"/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-worktrunk"}}}}'
-        ;;
       /nix/store/pi.drv)
         printf '%s\n' '{"/nix/store/pi.drv":{"outputs":{"out":{"path":"/nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-pi"}}}}'
         ;;
@@ -112,8 +103,7 @@ case "$1" in
     store="$3"
     path="$4"
     case "$store:$path" in
-      https://cache.numtide.com:/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-worktrunk | \
-        https://cache.numtide.com:/nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-pi | \
+      https://cache.numtide.com:/nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-pi | \
         https://cache.nixos.org:/nix/store/cccccccccccccccccccccccccccccccc-bash-dev | \
         https://cache.numtide.com:/nix/store/cccccccccccccccccccccccccccccccc-bash-dev | \
         https://cache.nixos.org:/nix/store/dddddddddddddddddddddddddddddddd-bash | \
@@ -140,11 +130,6 @@ run_check() {
   local package="$1"
   PATH="$tmp/bin:$PATH" usage_target="$package" "$ROOT/.mise/tasks/cache/package"
 }
-
-output="$(run_check worktrunk)"
-assert_contains "$output" "$ROOT#worktrunk" 'flake package resolution'
-assert_contains "$output" 'https://cache.numtide.com' 'Numtide cache hit'
-assert_eq 0 "$(grep -c 'https://cache.nixos.org/' <<< "$output" || true)" 'substituter trailing-slash normalization'
 
 output="$(run_check pi)"
 assert_contains "$output" "$ROOT#pi" 'llm-agents package resolution'

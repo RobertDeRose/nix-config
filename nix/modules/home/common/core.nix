@@ -1,24 +1,14 @@
 # Cross-platform CLI tools and programs.
 {
   pkgs,
-  inputs,
   packageData,
   ...
 }:
-let
-  customAgent =
-    name:
-    import ../../../packages/custom/llmagents.nix {
-      inherit inputs pkgs name;
-    };
-in
 {
-  home.packages =
-    packageData.profileNixPackages {
-      inherit pkgs;
-      profile = "base";
-    }
-    ++ [ (customAgent "openspec") ];
+  home.packages = packageData.profileNixPackages {
+    inherit pkgs;
+    profile = "base";
+  };
 
   programs = {
     fzf = {

@@ -59,7 +59,6 @@ taps = [
 ]
 brews = [
   "modem-dev/tap/hunk",
-  "worktrunk",
 ]
 casks = [
   "anki",
@@ -143,9 +142,7 @@ packages = [
   "nix-direnv",
   "rumdl",
   "starship",
-  "worktrunk",
   "yazi",
-  "zellij",
   "zsh",
   "zsh-autosuggestions",
   "zsh-syntax-highlighting",
@@ -163,8 +160,3 @@ packages = [
 package = "jq"
 owners = ["mise", "nix"]
 reason = "mise supplies the user-facing CLI and CI helper; the Pi Home Manager activation embeds pkgs.jq in its closure."
-
-[[ownership.exceptions]]
-package = "worktrunk"
-owners = ["homebrew", "nix"]
-reason = "Homebrew supplies the macOS binary to avoid uncached Rust builds; the worktrunk Home Manager module and Linux package remain Nix-managed."

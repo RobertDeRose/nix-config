@@ -88,7 +88,6 @@ Static configuration is authored under:
 dotfiles/git/
 dotfiles/helix/
 dotfiles/starship/
-dotfiles/zellij/
 dotfiles/zsh/
 dotfiles/pi/
 dotfiles/opencode/

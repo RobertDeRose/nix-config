@@ -29,7 +29,7 @@ case "$query" in
 esac
 
 stop_spinner() {
-  if [[ -z "$spinner_pid" ]]; then
+  if [[ -z $spinner_pid ]]; then
     return
   fi
 
@@ -96,7 +96,7 @@ search_mise() {
       true
   )"
 
-  if [[ -n "$matches" ]]; then
+  if [[ -n $matches ]]; then
     printf '%s\n' "$matches"
     return
   fi
@@ -152,7 +152,7 @@ search_mise() {
       true
   )"
 
-  if [[ -n "$suggestion_matches" ]]; then
+  if [[ -n $suggestion_matches ]]; then
     printf '%s\n' "$suggestion_matches"
   else
     printf 'No Mise registry or backend matches\n'
@@ -170,7 +170,7 @@ search_nixpkgs() {
 
   if nix --quiet search nixpkgs "$query" \
     > "$stdout_file" 2> "$stderr_file"; then
-    if [[ -s "$stdout_file" ]]; then
+    if [[ -s $stdout_file ]]; then
       head -80 "$stdout_file"
     else
       printf 'No nixpkgs matches\n'

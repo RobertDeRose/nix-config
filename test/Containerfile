@@ -1,6 +1,9 @@
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV container=oci
+
+STOPSIGNAL SIGRTMIN+3
 
 RUN apt-get update && apt-get install -y \
     ca-certificates \
@@ -23,6 +26,13 @@ RUN useradd -m -s /usr/bin/zsh tester \
   && install -d -m755 /etc/systemd/system/ssh.service.requires
 
 RUN ssh-keygen -A \
-  && systemctl enable ssh.socket
+  && systemctl enable ssh.socket \
+  && systemctl mask \
+    console-getty.service \
+    dev-hugepages.mount \
+    getty.target \
+    sys-fs-fuse-connections.mount \
+    systemd-logind.service \
+    systemd-remount-fs.service
 
-CMD ["/usr/lib/systemd/systemd"]
+CMD ["/bin/bash"]

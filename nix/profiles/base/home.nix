@@ -11,7 +11,6 @@
     ../../modules/home/common/git.nix
     ../../modules/home/common/htop.nix
     ../../modules/home/common/shell.nix
-    ../../modules/home/common/zellij.nix
   ];
 
   home.packages = packageData.hostNixPackages {
