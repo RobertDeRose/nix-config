@@ -1,6 +1,21 @@
 {
   description = "Rob's system configuration";
 
+  # Flake-level cache configuration must remain literal. Importing these
+  # values leaves thunks that newer Nix/Lix releases reject before evaluating
+  # outputs. The standard cache is already configured by Nix, while fallback
+  # remains an execution preference supplied by repository tasks.
+  nixConfig = {
+    extra-substituters = [
+      "https://nix-community.cachix.org"
+      "https://cache.numtide.com"
+    ];
+    extra-trusted-public-keys = [
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
+    ];
+  };
+
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
 

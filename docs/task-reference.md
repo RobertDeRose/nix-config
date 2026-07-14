@@ -23,7 +23,6 @@ Run `mise tasks` for live discovery and `mise run <task> --help` for generated u
 | --- | --- | --- | --- |
 | `host:add <hostname>` | Add a validated inventory entry; optionally create override stubs | Configuration files only; commit only with `--commit` | `.mise/tasks/host/add` |
 | `host:list` | Show hosts, systems, users, and profiles | Read-only | `.mise/tasks/host/list` |
-| `host:validate` | Validate schema, users, systems, profiles, and override paths | Read-only | `.mise/tasks/host/validate` |
 
 ## Package and application management
 
@@ -31,14 +30,13 @@ Run `mise tasks` for live discovery and `mise run <task> --help` for generated u
 | --- | --- | --- |
 | `tool:add <tool> [--version]` | Add/update a mise-owned standalone tool | `.mise/tasks/tool/add` |
 | `tool:remove <tool>` | Remove a mise-owned tool | `.mise/tasks/tool/remove` |
-| `tool:search <query>` | Search the mise registry | `.mise/tasks/tool/search` |
 | `package:add <package> [--profile <profile>]` | Add a nixpkgs attribute to a profile; defaults to `base` | `.mise/tasks/package/add` |
 | `package:remove <package> --profile <profile>` | Remove a profile Nix package | `.mise/tasks/package/remove` |
-| `package:search <query>` | Show mise, nixpkgs, and Homebrew results without selecting an owner | `.mise/tasks/package/search` |
-| `package:validate` | Validate TOML structure, sorting, ownership, and exceptions | `.mise/tasks/package/validate` |
+| `package:search <query>` | Search Mise, nixpkgs, and Homebrew | `.mise/tasks/package/search` |
 | `app:add <cask>` | Add a macOS Homebrew cask | `.mise/tasks/app/add` |
 | `app:remove <cask>` | Remove a macOS Homebrew cask | `.mise/tasks/app/remove` |
-| `cache:check` | Report standard and optional cache availability | `.mise/tasks/cache/check` |
+| `cache:package <target>` | Check package outputs against configured binary caches | `.mise/tasks/cache/package` |
+| `cache:status [--host <host>]` | Check configured binary-cache endpoint availability | `.mise/tasks/cache/status` |
 
 Mutation commands are transactional where validation can fail, display a Git diff, and do not stage, commit, switch branches, or push.
 
@@ -49,7 +47,7 @@ Mutation commands are transactional where validation can fail, display a Git dif
 | Task | Validation |
 | --- | --- |
 | `check:shell` | Mise metadata, executable task modes, Bash syntax, Python bytecode, ShellCheck, and shfmt |
-| `check:nix` | Flake metadata, `nix flake check --no-build`, and Nix formatting |
+| `check:nix` | Flake metadata, all-system `nix flake check --no-build`, and Nix formatting |
 | `check:inventory` | Inventory users, hosts, systems, profiles, and overrides |
 | `check:packages` | Package data and ownership |
 | `check:hosts` | Every Darwin system output and every Linux system/Home Manager output |
@@ -57,9 +55,9 @@ Mutation commands are transactional where validation can fail, display a Git dif
 
 ## Advanced maintenance
 
-The following remain public for direct maintenance: `nix:clean`, `nix:gc`, `nix:gcroot`, `nix:history`, `nix:repl`, `nix:fmt`, `nix:trust`, `nix:uninstall`, `nix:check-cache`, `iterm:export`, `docs:build`, `docs:serve`, `test:bootstrap`, and `test:deploy`.
+The following remain public for direct maintenance: `nix:clean`, `nix:gc`, `nix:gcroot`, `nix:history`, `nix:repl`, `nix:fmt`, `nix:trust`, `nix:uninstall`, `iterm:export`, `docs:build`, `docs:serve`, `test:bootstrap`, and `test:deploy`.
 
-Hidden helpers include `install-nix`, `github-auth`, and `test:image`.
+Hidden helpers include `host:validate`, `package:validate`, `install-nix`, `github-auth`, and `test:image`.
 
 ## Compatibility wrappers
 

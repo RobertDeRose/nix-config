@@ -7,12 +7,22 @@ TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
-find tests/tasks -type f -name '*.sh' | sort | while IFS= read -r test_file; do
-  printf '==> %s\n' "$test_file"
-  bash "$test_file"
-done
+run_test() {
+  local test_file="$1"
+  shift
+  local output
 
-find tests/nix -type f -name '*.py' | sort | while IFS= read -r test_file; do
   printf '==> %s\n' "$test_file"
-  python3 "$test_file"
-done
+  if ! output="$("$@" "$test_file" 2>&1)"; then
+    [ -z "$output" ] || printf '%s\n' "$output" >&2
+    return 1
+  fi
+}
+
+while IFS= read -r test_file; do
+  run_test "$test_file" bash
+done < <(find tests/tasks -type f -name '*.sh' | sort)
+
+while IFS= read -r test_file; do
+  run_test "$test_file" python3
+done < <(find tests/nix -type f -name '*.py' | sort)

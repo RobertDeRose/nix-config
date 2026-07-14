@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# [MISE] description="Search each supported package source without choosing one"
+# [MISE] description="Search Mise, nixpkgs, and Homebrew"
 #
 #USAGE arg "<query>" help="Package name or regex; use ^name$ for an exact match"
 
@@ -55,12 +55,13 @@ abort() {
 }
 
 spinner() {
-  local frames='|/-\'
+  local -a frames=('|' '/' '-' $'\\')
+  local frame_count=${#frames[@]}
   local index=0
 
   while true; do
     printf '\r\033[KSearching package sources... %s' \
-      "${frames:index % 4:1}" >&2
+      "${frames[index % frame_count]}" >&2
 
     index=$((index + 1))
     sleep 0.1

@@ -34,5 +34,5 @@ assert_eq alice "$(inventory_host_user "$tmp" mac-one)" 'default user'
 assert_eq $'base\ndev\nmac' "$(inventory_host_profiles "$tmp" mac-one)" 'profile parsing'
 assert_eq true "$(inventory_host_feature "$tmp" linux-one personal_cache)" 'feature parsing'
 assert_success require_inventory_host "$tmp" mac-one
-assert_failure require_inventory_host "$tmp" missing
-assert_failure inventory_hosts "$tmp/missing"
+assert_failure require_inventory_host "$tmp" missing 2> /dev/null
+assert_failure inventory_hosts "$tmp/missing" 2> /dev/null

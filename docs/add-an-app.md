@@ -52,8 +52,8 @@ aarch64-darwin = ["application"]
 ## Validate and preview
 
 ```bash
-mise run package:validate
-mise run plan
+maison check:packages
+maison plan
 ```
 
 Homebrew activation does not auto-update, auto-upgrade, or prune applications. The configuration installs declared items without silently removing unrelated software.

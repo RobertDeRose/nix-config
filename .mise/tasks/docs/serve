@@ -9,6 +9,10 @@ set -euo pipefail
 TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/nix.sh"
+
+export NIX_SUPPRESS_DIRTY_WARNING=true
 
 PORT="${usage_port:-3000}"
 
@@ -23,7 +27,9 @@ elif command -v nix &> /dev/null; then
   echo "Serving documentation at http://localhost:${PORT}"
   echo "Press Ctrl+C to stop."
   echo ""
-  nix develop --command mdbook serve --port "$PORT"
+  load_nix_environment
+  configure_github_access_token
+  nix_command false develop --command mdbook serve --port "$PORT"
 else
   echo "Error: mdbook not found. Install via 'mise install' or 'cargo install mdbook'." >&2
   exit 1

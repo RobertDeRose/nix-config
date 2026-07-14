@@ -7,5 +7,10 @@ set -euo pipefail
 TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/nix.sh"
 
-nix fmt
+export NIX_SUPPRESS_DIRTY_WARNING=true
+load_nix_environment
+configure_github_access_token
+nix_command false fmt

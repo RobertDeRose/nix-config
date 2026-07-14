@@ -8,7 +8,9 @@ REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 source "$REPO_ROOT/.mise/lib/common.sh"
 source "$REPO_ROOT/.mise/lib/nix.sh"
+export NIX_SUPPRESS_DIRTY_WARNING=true
 load_nix_environment
 nix_command false flake metadata > /dev/null
-nix_command false flake check --no-build
-nix_command false fmt -- --check .
+nix_command false flake check --all-systems --no-build \
+  2> >(grep -vFx "warning: unknown flake output 'systemConfigs'" >&2)
+nix_command false fmt -- --ci

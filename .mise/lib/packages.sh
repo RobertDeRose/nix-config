@@ -32,7 +32,7 @@ validate_package_change() {
   local root="$1"
   validate_package_inventory "$root"
   if command -v nix > /dev/null 2>&1; then
-    mise run check:hosts
+    "$root/.mise/tasks/check/hosts"
   else
     log_warn "Nix/Lix is unavailable; package attribute evaluation was skipped"
   fi

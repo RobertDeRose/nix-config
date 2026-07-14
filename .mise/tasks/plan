@@ -14,6 +14,7 @@ source "$REPO_ROOT/.mise/lib/common.sh"
 source "$REPO_ROOT/.mise/lib/platform.sh"
 source "$REPO_ROOT/.mise/lib/inventory.sh"
 source "$REPO_ROOT/.mise/lib/nix.sh"
+export NIX_SUPPRESS_DIRTY_WARNING=true
 
 host="${usage_host:-$(current_hostname)}"
 debug="${usage_debug:-false}"

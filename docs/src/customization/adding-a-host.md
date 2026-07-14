@@ -70,9 +70,9 @@ Remove an unused empty file. Do not repeat the system, user, or profile metadata
 ## 5. Validate and preview
 
 ```bash
-mise run host:validate
-mise run check:hosts
-mise run plan --host build-server
+maison check:inventory
+maison check:hosts
+maison plan --host build-server
 ```
 
 `plan --host` requires the selected host to match the current machine platform. Remote Linux hosts can be built and activated with:

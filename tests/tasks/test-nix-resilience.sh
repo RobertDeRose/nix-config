@@ -39,7 +39,7 @@ nix_command() {
 
 : > "$tmp/calls"
 MOCK_SYSTEM_FAIL=true
-assert_failure evaluate_host "$tmp" linux-one false
+assert_failure evaluate_host "$tmp" linux-one false 2> /dev/null
 unset MOCK_SYSTEM_FAIL
 assert_eq 1 "$(wc -l < "$tmp/calls" | tr -d ' ')" 'Linux evaluation continued after the system target failed'
 assert_file_contains "$tmp/calls" '--option substituters https://cache.nixos.org'
@@ -50,7 +50,7 @@ assert_eq 2 "$(wc -l < "$tmp/calls" | tr -d ' ')" 'Linux evaluation did not chec
 
 : > "$tmp/calls"
 MOCK_HOME_WRONG_TYPE=true
-assert_failure evaluate_host "$tmp" linux-one false
+assert_failure evaluate_host "$tmp" linux-one false 2> /dev/null
 unset MOCK_HOME_WRONG_TYPE
 
 flags=()

@@ -64,14 +64,16 @@ inputs.flake-parts.lib.mkFlake { inherit inputs; } {
   perSystem =
     { pkgs, system, ... }:
     {
-      formatter = pkgs.nixfmt;
+      formatter = pkgs.nixfmt-tree;
       packages =
         lib.optionalAttrs (builtins.hasAttr system inputs.system-manager.packages) {
           system-manager = inputs.system-manager.packages.${system}.default;
         }
         // lib.optionalAttrs (builtins.hasAttr system inputs.llmagents.packages) {
-          opencode = inputs.llmagents.packages.${system}.opencode;
           herdr = inputs.llmagents.packages.${system}.herdr;
+          opencode = inputs.llmagents.packages.${system}.opencode;
+          openspec = inputs.llmagents.packages.${system}.openspec;
+          pi = inputs.llmagents.packages.${system}.pi;
         }
         // lib.optionalAttrs (builtins.hasAttr system inputs.worktrunk.packages) {
           worktrunk = inputs.worktrunk.packages.${system}.worktrunk;

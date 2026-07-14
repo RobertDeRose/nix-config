@@ -18,6 +18,34 @@ fi
 exec bash "$MOCK_ROOT/.mise/tasks/host/validate"
 MOCK
 chmod +x "$tmp/bin/mise"
+cat > "$tmp/bin/nix" << 'MOCK'
+#!/usr/bin/env bash
+set -euo pipefail
+
+while (( $# > 0 )); do
+  case "$1" in
+    --accept-flake-config | --no-warn-dirty | --show-trace | --verbose)
+      shift
+      ;;
+    --extra-experimental-features)
+      shift 2
+      ;;
+    --option)
+      shift 3
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+[ "$1" = eval ] && [ "$2" = --raw ] || {
+  printf 'unexpected nix call: %s\n' "$*" >&2
+  exit 2
+}
+printf 'derivation\n'
+MOCK
+chmod +x "$tmp/bin/nix"
 make_git_repo "$tmp"
 branch_before="$(git -C "$tmp" branch --show-current)"
 commits_before="$(git -C "$tmp" rev-list --count HEAD)"
@@ -26,7 +54,7 @@ commits_before="$(git -C "$tmp" rev-list --count HEAD)"
   PATH="$tmp/bin:$PATH" MOCK_ROOT="$tmp" \
     usage_hostname=build-server usage_system=x86_64-linux usage_user=rderose \
     usage_profiles=base,dev,linux \
-    "$tmp/.mise/tasks/host/add"
+    "$tmp/.mise/tasks/host/add" > /dev/null
 )
 assert_file_contains "$tmp/inventory.toml" '[hosts.build-server]'
 assert_eq "$branch_before" "$(git -C "$tmp" branch --show-current)" 'host:add branch mutation'

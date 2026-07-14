@@ -78,12 +78,34 @@ def check_outputs_and_legacy_paths() -> None:
     for output in ("darwinConfigurations", "systemConfigs", "homeConfigurations"):
         if output not in outputs:
             fail(f"nix/outputs.nix does not expose {output}")
+    for package in ("herdr", "opencode", "openspec", "pi", "worktrunk"):
+        if f"{package} =" not in outputs:
+            fail(f"nix/outputs.nix does not expose package {package}")
+    if "formatter = pkgs.nixfmt-tree;" not in outputs:
+        fail("nix/outputs.nix must use the nixfmt-tree formatter wrapper")
+    if "systemManagerNoCheckOverlay" not in outputs:
+        fail("nix/outputs.nix must apply the targeted system-manager no-check overlay")
+    linux_host = (ROOT / "nix/lib/mk-linux-host.nix").read_text()
+    if "overlays = [ systemManagerNoCheckOverlay ];" not in linux_host:
+        fail("Linux host construction must disable only system-manager package checks")
     for legacy in ("systems", "templates", "home", "modules"):
         if (ROOT / legacy).exists():
             fail(f"legacy top-level path remains: {legacy}/")
     flake = (ROOT / "flake.nix").read_text()
     if "readDir" in flake or "easy-hosts" in flake:
         fail("flake.nix still contains filesystem host discovery")
+    required_cache_settings = (
+        '"https://nix-community.cachix.org"',
+        '"https://cache.numtide.com"',
+    )
+    if any(setting not in flake for setting in required_cache_settings):
+        fail("flake.nix does not advertise the non-default public binary caches as literal values")
+    if "fallback = true;" in flake:
+        fail("flake.nix must not require trust for the fallback execution preference")
+    if '"https://cache.nixos.org"' in flake:
+        fail("flake.nix must not duplicate the standard cache as an extra substituter")
+    if "publicCache" in flake:
+        fail("flake.nix nixConfig must not import cache values as thunks")
 
 
 def check_mdbook_links() -> None:

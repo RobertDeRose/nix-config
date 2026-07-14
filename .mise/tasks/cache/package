@@ -1,0 +1,222 @@
+#!/usr/bin/env bash
+# [MISE] description="Check package outputs against configured binary caches"
+# [MISE] quiet=true
+#
+#USAGE arg "<target>" {
+#USAGE   help "Package name, flake installable, .drv path, or output path"
+#USAGE   long_help """
+#USAGE   The task resolves the package without building it, then checks each
+#USAGE   output against every configured binary cache.
+#USAGE
+#USAGE   Examples:
+#USAGE     pi
+#USAGE     python3.14
+#USAGE     '.#pi'
+#USAGE     'github:numtide/llm-agents.nix#pi'
+#USAGE     /nix/store/<hash>-package.drv
+#USAGE   """
+#USAGE }
+#USAGE flag "--system <system>" help="Nix system used for package lookup (defaults to the current system)"
+
+# usage_* variables are injected by mise's file-task argument parser.
+# shellcheck disable=SC2154
+
+set -euo pipefail
+
+TASK_FILE="${BASH_SOURCE[0]}"
+REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+source "$REPO_ROOT/.mise/lib/common.sh"
+source "$REPO_ROOT/.mise/lib/nix.sh"
+
+load_nix_environment
+require_command jq
+
+export NIX_SUPPRESS_DIRTY_WARNING=true
+
+target_input="${usage_target}"
+system="${usage_system:-$(nix_command false eval --impure --raw --expr builtins.currentSystem)}"
+resolved_ref=""
+resolved_drv=""
+resolved_out=""
+nixpkgs_ref=""
+
+validate_package_name() {
+  local name="$1"
+  [[ $name =~ ^[A-Za-z0-9._+@:-]+$ ]] ||
+    die "unsupported package name '$name'; use a quoted flake installable for unusual attribute names"
+}
+
+resolve_package_ref() {
+  local ref="$1"
+  local out_path drv_path
+
+  out_path="$(
+    nix_command false eval --raw --apply 'package: package.outPath' "$ref" 2> /dev/null
+  )" || return 1
+  drv_path="$(
+    nix_command false eval --raw --apply 'package: package.drvPath' "$ref" 2> /dev/null
+  )" || return 1
+
+  resolved_ref="$ref"
+  resolved_drv="$drv_path"
+  resolved_out="$out_path"
+}
+
+quoted_attr_path() {
+  local name="$1"
+  local segment
+  local -a segments=()
+
+  IFS='.' read -r -a segments <<< "$name"
+  for segment in "${segments[@]}"; do
+    printf '."%s"' "$segment"
+  done
+}
+
+locked_github_input_ref() {
+  local input="$1"
+  local node type owner repo rev
+
+  node="$(jq -er --arg input "$input" '.nodes.root.inputs[$input] | select(type == "string")' flake.lock)" || return 1
+  type="$(jq -er --arg node "$node" '.nodes[$node].locked.type' flake.lock)" || return 1
+  [[ $type == github ]] || return 1
+  owner="$(jq -er --arg node "$node" '.nodes[$node].locked.owner' flake.lock)" || return 1
+  repo="$(jq -er --arg node "$node" '.nodes[$node].locked.repo' flake.lock)" || return 1
+  rev="$(jq -er --arg node "$node" '.nodes[$node].locked.rev' flake.lock)" || return 1
+  printf 'github:%s/%s/%s' "$owner" "$repo" "$rev"
+}
+
+resolve_named_package() {
+  local name="$1"
+  local exact_ref nested_ref
+
+  validate_package_name "$name"
+
+  # Standard flake package shorthand resolves packages.<system>.<name> and
+  # legacyPackages.<system>.<name> without exposing that implementation detail.
+  resolve_package_ref "$REPO_ROOT#$name" && return 0
+
+  exact_ref="$nixpkgs_ref#legacyPackages.\"$system\".\"$name\""
+  resolve_package_ref "$exact_ref" && return 0
+
+  if [[ $name == *.* ]]; then
+    nested_ref="$nixpkgs_ref#legacyPackages.\"$system\"$(quoted_attr_path "$name")"
+    resolve_package_ref "$nested_ref" && return 0
+  fi
+
+  return 1
+}
+
+outputs_for_derivation() {
+  local drv="$1"
+  nix_command false derivation show "$drv" |
+    jq -r 'to_entries[0].value.outputs | to_entries[] | .value.path // empty'
+}
+
+configured_substituters() {
+  {
+    # These are part of the repository's public cache contract. Include them
+    # even before a machine has applied the managed Nix configuration.
+    printf '%s\n' \
+      https://cache.nixos.org \
+      https://nix-community.cachix.org \
+      https://cache.numtide.com
+
+    nix_command false config show --json |
+      jq -r '
+        .substituters.value
+        | if type == "array" then .[]
+          elif type == "string" then split(" ")[]
+          else empty
+          end
+      '
+  } | awk '
+    NF {
+      sub(/\/+$/, "")
+      if (!seen[$0]++) {
+        print
+      }
+    }
+  '
+}
+
+output_name() {
+  local path="${1##*/}"
+  printf '%s' "${path#*-}"
+}
+
+case "$target_input" in
+  /nix/store/*.drv)
+    resolved_drv="$target_input"
+    ;;
+  /nix/store/*)
+    resolved_out="$target_input"
+    ;;
+  \#legacyPackages.*)
+    die "'$target_input' is not a complete flake installable; use a package name such as 'pi', '.#pi', or 'github:nixos/nixpkgs#<package>'"
+    ;;
+  \#*)
+    resolve_package_ref "$REPO_ROOT$target_input" ||
+      die "relative flake reference does not resolve to a package: $target_input"
+    ;;
+  *#*)
+    resolve_package_ref "$target_input" ||
+      die "flake installable does not resolve to a package: $target_input"
+    ;;
+  *)
+    nixpkgs_ref="$(locked_github_input_ref nixpkgs)" ||
+      die "flake.lock does not contain a locked GitHub nixpkgs input"
+    resolve_named_package "$target_input" || {
+      die "package '$target_input' was not found in this flake or nixpkgs for $system; try: mise run package:search '$target_input'"
+    }
+    ;;
+esac
+
+printf '==> %s\n' "$target_input"
+if [[ -n $resolved_ref ]]; then
+  printf 'Resolved: %s\n' "$resolved_ref"
+elif [[ -n $resolved_drv ]]; then
+  printf 'Derivation: %s\n' "$resolved_drv"
+else
+  printf 'Output: %s\n' "$resolved_out"
+fi
+
+mapfile -t targets < <(
+  if [[ -n $resolved_drv ]]; then
+    outputs_for_derivation "$resolved_drv"
+  fi
+)
+
+if (( ${#targets[@]} == 0 )) && [[ -n $resolved_out ]]; then
+  targets=("$resolved_out")
+fi
+
+(( ${#targets[@]} > 0 )) || die "could not determine an output path for '$target_input'"
+mapfile -t substituters < <(configured_substituters)
+(( ${#substituters[@]} > 0 )) || die "no binary substituters are configured"
+
+printf '\nCache availability:\n'
+cached_outputs=0
+for target in "${targets[@]}"; do
+  hits=()
+  for store in "${substituters[@]}"; do
+    if nix_command false path-info --store "$store" "$target" > /dev/null 2>&1; then
+      hits+=("$store")
+    fi
+  done
+
+  printf '  %s\n' "$(output_name "$target")"
+  printf '    %s\n' "$target"
+  if (( ${#hits[@]} > 0 )); then
+    cached_outputs=$((cached_outputs + 1))
+    printf '    Available from:\n'
+    printf '      %s\n' "${hits[@]}"
+  else
+    printf '    Not found in any of the %d configured caches.\n' "${#substituters[@]}"
+  fi
+  printf '\n'
+done
+
+printf 'Summary: %d/%d output(s) available from at least one cache.\n' \
+  "$cached_outputs" "${#targets[@]}"

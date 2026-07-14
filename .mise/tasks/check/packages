@@ -7,4 +7,4 @@ TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
-mise run package:validate
+"$REPO_ROOT/.mise/tasks/package/validate"

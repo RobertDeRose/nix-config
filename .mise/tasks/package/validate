@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # [MISE] description="Validate package inventory structure and ownership"
+# [MISE] hide=true
 
 set -euo pipefail
 TASK_FILE="${BASH_SOURCE[0]}"

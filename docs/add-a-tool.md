@@ -46,6 +46,6 @@ mise run package:remove <package> --profile <profile>
 
 ## Ownership conflicts
 
-A package may have one owner. A deliberate temporary overlap must be added to `[[ownership.exceptions]]` in `packages.toml` with the exact owner set and a non-empty reason. `mise run package:validate` rejects undocumented duplicates and unused exceptions.
+A package may have one owner. A deliberate temporary overlap must be added to `[[ownership.exceptions]]` in `packages.toml` with the exact owner set and a non-empty reason. `maison check:packages` rejects undocumented duplicates and unused exceptions.
 
 Module-coupled packages stay in the module and are recorded under `[module_owned]` for auditing; do not duplicate their declaration in a profile merely to make it visible.

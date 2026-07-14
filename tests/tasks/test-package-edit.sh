@@ -7,14 +7,30 @@ source "$ROOT/tests/tasks/_testlib.bash"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 cp -R "$ROOT/.mise" "$ROOT/inventory.toml" "$ROOT/packages.toml" "$ROOT/mise.toml" "$tmp/"
+mkdir -p "$tmp/bin"
+cat > "$tmp/bin/nix" << 'MOCK'
+#!/usr/bin/env bash
+set -euo pipefail
+while (( $# > 0 )); do
+  case "$1" in
+    --accept-flake-config | --no-warn-dirty | --show-trace | --verbose) shift ;;
+    --extra-experimental-features) shift 2 ;;
+    --option) shift 3 ;;
+    *) break ;;
+  esac
+done
+[ "$1" = eval ] && [ "$2" = --raw ] || exit 2
+printf 'derivation\n'
+MOCK
+chmod +x "$tmp/bin/nix"
 make_git_repo "$tmp"
 (
   cd "$tmp"
-  usage_package=hello "$tmp/.mise/tasks/package/add"
+  PATH="$tmp/bin:$PATH" usage_package=hello "$tmp/.mise/tasks/package/add" > /dev/null
 )
 (
   cd "$tmp"
-  usage_package=cowsay usage_profile=dev "$tmp/.mise/tasks/package/add"
+  PATH="$tmp/bin:$PATH" usage_package=cowsay usage_profile=dev "$tmp/.mise/tasks/package/add" > /dev/null
 )
 python3 - "$tmp/packages.toml" << 'PY'
 import sys, tomllib
@@ -26,7 +42,7 @@ PY
 before="$(cat "$tmp/packages.toml")"
 if (
   cd "$tmp"
-  usage_package=hello "$tmp/.mise/tasks/package/add"
+  PATH="$tmp/bin:$PATH" usage_package=hello "$tmp/.mise/tasks/package/add"
 ) > /dev/null 2>&1; then
   fail 'package:add accepted a duplicate package'
 fi
