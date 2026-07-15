@@ -13,6 +13,7 @@ cd "$REPO_ROOT"
 source "$REPO_ROOT/.mise/lib/apple-container.sh"
 
 NAME="apple-ssh-test"
+install_apple_container_test_signal_handlers "$NAME"
 IMAGE="local/nix-config-test-linux:24.04"
 TARGET="tester"
 SSH_KEY="$HOME/.ssh/id_ed25519"
@@ -88,8 +89,14 @@ if [ "$SSH_READY" != true ]; then
   exit 1
 fi
 
-echo "==> Installing Nix on remote test target..."
-ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" 'export NIX_INSTALLER_NO_CONFIRM=true NIX_INSTALLER_ENABLE_FLAKES=true; curl -sSfL https://install.lix.systems/lix | sh -s -- install'
+echo "==> Installing bootstrap prerequisites on remote test target..."
+ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" << 'EOF'
+set -euo pipefail
+curl -sSfL https://mise.run | sh
+export NIX_INSTALLER_NO_CONFIRM=true
+export NIX_INSTALLER_ENABLE_FLAKES=true
+curl -sSfL https://install.lix.systems/lix | sh -s -- install
+EOF
 
 echo "==> Configuring trusted-users and PATH on remote target..."
 ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" << 'EOF'
@@ -115,11 +122,27 @@ touch "$KNOWN_HOSTS"
 ssh-keygen -R "$IP" -f "$KNOWN_HOSTS" > /dev/null 2>&1 || true
 ssh-keyscan "$IP" >> "$KNOWN_HOSTS"
 
-echo "==> Running deployment test..."
-(
+run_deploy_test() {
   cd "$STAGE_DIR"
-  GIT_SSH_COMMAND="ssh -i '$SSH_KEY' -o IdentitiesOnly=yes" mise run deploy -- "$TARGET@$IP" apple-ssh-test
-)
+  GIT_SSH_COMMAND="ssh -i '$SSH_KEY' -o IdentitiesOnly=yes" \
+    mise run deploy -- "$TARGET@$IP" apple-ssh-test
+}
+
+echo "==> Running deployment test..."
+run_apple_container_test_command run_deploy_test
+
+echo "==> Verifying remote mise installation and global tools..."
+ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" << 'EOF'
+set -euo pipefail
+test -x "$HOME/.local/bin/mise"
+test -x "$HOME/.local/bin/maison"
+test -f "$HOME/.maison/mise.toml"
+test -f "$HOME/.maison/flake.nix"
+MISE_CONFIG_FILE="$HOME/.config/mise/config.toml" "$HOME/.local/bin/mise" --version
+MISE_CONFIG_FILE="$HOME/.config/mise/config.toml" "$HOME/.local/bin/mise" exec -- wt --version
+"$HOME/.local/bin/maison" --help > /dev/null
+command -v maison
+EOF
 
 echo ""
 echo "Deploy test completed against $TARGET@$IP using container '$NAME'."

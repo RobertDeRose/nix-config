@@ -51,32 +51,17 @@ if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "$destination" true 2> /dev/null; 
 fi
 
 if ! ssh "$destination" 'command -v nix >/dev/null 2>&1 && command -v nix-store >/dev/null 2>&1'; then
-  log_info "Installing Lix on $destination"
-  ssh -t "$destination" 'bash -s' << 'REMOTE_BOOTSTRAP'
-set -euo pipefail
-sudo_cmd=()
-if [ "$(id -u)" -ne 0 ]; then
-  command -v sudo >/dev/null 2>&1 || { echo "remote bootstrap requires root or sudo" >&2; exit 1; }
-  sudo_cmd=(sudo)
-  sudo -v
+  die "remote host '$destination' is not bootstrapped: Nix/Lix is unavailable; run bootstrap first"
 fi
-if ! command -v nix >/dev/null 2>&1; then
-  export NIX_INSTALLER_NO_CONFIRM=true
-  export NIX_INSTALLER_ENABLE_FLAKES=true
-  curl -sSfL https://install.lix.systems/lix | sh -s -- install
-fi
-"${sudo_cmd[@]}" mkdir -p /usr/local/bin
-"${sudo_cmd[@]}" ln -sf /nix/var/nix/profiles/default/bin/nix /usr/local/bin/nix
-"${sudo_cmd[@]}" ln -sf /nix/var/nix/profiles/default/bin/nix-store /usr/local/bin/nix-store
-"${sudo_cmd[@]}" systemctl restart nix-daemon.socket 2>/dev/null || true
-"${sudo_cmd[@]}" systemctl restart nix-daemon.service 2>/dev/null || true
-for _ in $(seq 1 30); do
-  [ -S /nix/var/nix/daemon-socket/socket ] && break
-  sleep 1
-done
-. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-nix --version >/dev/null
-REMOTE_BOOTSTRAP
+
+if ! ssh "$destination" sh -s -- "$managed_user" << 'REMOTE_MISE_CHECK'; then
+set -eu
+managed_user="$1"
+managed_home="$(getent passwd "$managed_user" | cut -d: -f6)"
+[ -n "$managed_home" ] || managed_home="/home/$managed_user"
+test -x "$managed_home/.local/bin/mise"
+REMOTE_MISE_CHECK
+  die "remote host '$destination' is not bootstrapped: mise is unavailable for '$managed_user'; run bootstrap first"
 fi
 
 ssh_user="$(ssh -G "$destination" | sed -n 's/^user //p' | head -n1)"
@@ -102,8 +87,13 @@ REMOTE_TRUST
 
 system_ref="$(linux_system_target_for_host "$REPO_ROOT" "$host")"
 home_ref="$(linux_home_target_for_host "$REPO_ROOT" "$host")"
-manager_args=(--target-host "$destination" switch --flake "$system_ref")
-if [ "$ssh_user" != root ]; then manager_args+=(--ask-sudo-password); fi
+manager_args=(
+  --target-host "$destination"
+  --nix-option accept-flake-config true
+  switch
+  --flake "$system_ref"
+)
+if [ "$ssh_user" != root ]; then manager_args+=(--sudo); fi
 log_info "Activating system configuration for $host"
 "$REPO_ROOT/.build/system-manager/bin/system-manager" "${manager_args[@]}"
 
@@ -134,5 +124,24 @@ elif [ "$current_user" = root ]; then
   su -s /bin/sh "$activate_user" -c "USER='$activate_user' HOME='$activate_home' PATH='$activate_path' HOME_MANAGER_BACKUP_EXT=hm_bak '$hm_activate'"
 else
   sudo -u "$activate_user" env USER="$activate_user" HOME="$activate_home" PATH="$activate_path" HOME_MANAGER_BACKUP_EXT=hm_bak "$hm_activate"
+fi
+
+mise_bin="$activate_home/.local/bin/mise"
+mise_config="$activate_home/.config/mise/config.toml"
+[ -x "$mise_bin" ] || { echo "mise is unavailable for $activate_user; run bootstrap first" >&2; exit 1; }
+[ -f "$mise_config" ] || { echo "Home Manager did not create the global mise config: $mise_config" >&2; exit 1; }
+
+run_mise_install() {
+  env USER="$activate_user" HOME="$activate_home" PATH="$activate_home/.local/bin:$activate_path" MISE_CONFIG_FILE="$mise_config" GITHUB_TOKEN="$github_token" "$mise_bin" install
+}
+
+if [ "$current_user" = "$activate_user" ]; then
+  run_mise_install
+elif [ "$current_user" = root ] && command -v runuser >/dev/null 2>&1; then
+  runuser -u "$activate_user" -- env USER="$activate_user" HOME="$activate_home" PATH="$activate_home/.local/bin:$activate_path" MISE_CONFIG_FILE="$mise_config" GITHUB_TOKEN="$github_token" "$mise_bin" install
+elif [ "$current_user" = root ]; then
+  GITHUB_TOKEN="$github_token" su -m -s /bin/sh "$activate_user" -c "USER='$activate_user' HOME='$activate_home' PATH='$activate_home/.local/bin:$activate_path' MISE_CONFIG_FILE='$mise_config' '$mise_bin' install"
+else
+  sudo -u "$activate_user" env USER="$activate_user" HOME="$activate_home" PATH="$activate_home/.local/bin:$activate_path" MISE_CONFIG_FILE="$mise_config" GITHUB_TOKEN="$github_token" "$mise_bin" install
 fi
 REMOTE_HOME

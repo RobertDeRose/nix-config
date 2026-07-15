@@ -15,6 +15,13 @@ cd "$REPO_ROOT"
 source "$REPO_ROOT/.mise/lib/apple-container.sh"
 
 NAME="test-bootstrap"
+install_apple_container_test_signal_handlers "$NAME"
+
+cleanup() {
+  stop_and_delete_apple_test_container "$NAME"
+}
+trap cleanup EXIT
+
 HOSTNAME="${usage_hostname:-ci-bootstrap}"
 PROFILES="base,linux"
 if [ "${usage_dev:-false}" = true ]; then
@@ -43,7 +50,7 @@ EOF
   exit 1
 fi
 
-mise run test:image
+run_apple_container_test_command mise run test:image
 
 if [ -z "$BRANCH" ]; then
   echo "ERROR: test:bootstrap must be run from a named branch."
@@ -118,7 +125,8 @@ printf -v bootstrap_command \
   "$BRANCH" \
   "$PROFILES"
 
-container exec "$NAME" \
+run_apple_container_test_command \
+  container exec "$NAME" \
   sudo -iu tester \
   env \
   GITHUB_TOKEN="$github_token" \

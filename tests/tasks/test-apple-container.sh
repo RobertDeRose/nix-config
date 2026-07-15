@@ -80,6 +80,44 @@ if grep -Fq 'bash -s -- "$HOSTNAME"' "$ROOT/.mise/tasks/test/bootstrap"; then
   fail 'bootstrap integration task still uses the legacy positional hostname invocation'
 fi
 
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'curl -sSfL https://mise.run | sh'
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'exec -- wt --version'
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'gh auth token'
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'requires GitHub authentication'
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'export GITHUB_TOKEN='
+assert_file_contains "$ROOT/.mise/tasks/deploy" '--nix-option accept-flake-config true'
+assert_file_contains "$ROOT/.mise/tasks/deploy" 'manager_args+=(--sudo)'
+assert_file_contains "$ROOT/.mise/tasks/deploy" 'GitHub authentication is required for remote mise installation'
+assert_file_contains "$ROOT/.mise/tasks/deploy" 'mktemp /tmp/maison-github-token.XXXXXX'
+assert_file_contains "$ROOT/.mise/tasks/deploy" 'GITHUB_TOKEN="$github_token"'
+if grep -Fq -- '--ask-sudo-password' "$ROOT/.mise/tasks/deploy"; then
+  fail 'deploy task still requests an interactive sudo password'
+fi
+assert_file_contains "$ROOT/.mise/tasks/deploy" 'run bootstrap first'
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
+assert_file_contains "$ROOT/.mise/tasks/deploy" 'MISE_CONFIG_FILE="$mise_config" GITHUB_TOKEN="$github_token" "$mise_bin" install'
+
+for task in "$ROOT/.mise/tasks/test/bootstrap" "$ROOT/.mise/tasks/test/deploy"; do
+  # Intentional literal shell source pattern.
+  # shellcheck disable=SC2016
+  assert_file_contains "$task" 'install_apple_container_test_signal_handlers "$NAME"'
+  assert_file_contains "$task" 'run_apple_container_test_command'
+done
+
+assert_file_contains "$ROOT/.mise/lib/apple-container.sh" "trap 'interrupt_apple_container_test INT' INT"
+assert_file_contains "$ROOT/.mise/lib/apple-container.sh" "trap 'interrupt_apple_container_test TERM' TERM"
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
+assert_file_contains "$ROOT/.mise/lib/apple-container.sh" 'container stop "$name"'
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
+assert_file_contains "$ROOT/.mise/lib/apple-container.sh" 'container delete --force "$name"'
+assert_file_contains "$ROOT/.mise/lib/apple-container.sh" "129) interrupt_apple_container_test HUP"
+assert_file_contains "$ROOT/.mise/lib/apple-container.sh" "130) interrupt_apple_container_test INT"
+assert_file_contains "$ROOT/.mise/lib/apple-container.sh" "141) interrupt_apple_container_test PIPE"
+assert_file_contains "$ROOT/.mise/lib/apple-container.sh" "143) interrupt_apple_container_test TERM"
+
 assert_file_contains "$ROOT/test/Containerfile" 'CMD ["/bin/bash"]'
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'Installing Maison repository and command'
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'ln -sfn "$managed_home/.maison/bin/maison"'

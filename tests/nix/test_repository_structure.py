@@ -96,6 +96,11 @@ def check_outputs_and_legacy_paths() -> None:
     apply_task = (ROOT / ".mise/tasks/apply").read_text()
     if 'MISE_CONFIG_FILE="$global_mise_config" mise install' not in apply_task:
         fail("apply must install tools from the Home Manager-managed global mise config")
+    deploy_task = (ROOT / ".mise/tasks/deploy").read_text()
+    if "run bootstrap first" not in deploy_task:
+        fail("deploy must require an already bootstrapped remote host")
+    if 'MISE_CONFIG_FILE="$mise_config" "$mise_bin" install' not in deploy_task:
+        fail("deploy must install remote tools from the Home Manager-managed global mise config")
     if (ROOT / "nix/modules/home/common/zellij.nix").exists():
         fail("removed Zellij Home Manager module still exists")
     if "formatter = pkgs.nixfmt-tree;" not in outputs:
