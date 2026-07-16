@@ -1,0 +1,201 @@
+#!/usr/bin/env bash
+# Maison is a thin, location-independent interface to the repository's mise tasks.
+#
+#USAGE about="Put your workstation in order."
+#USAGE long_about="Maison is a mise-driven workstation configuration manager for macOS and Linux."
+#USAGE arg "[command]..." help="Maison command and arguments"
+#USAGE flag "-h --help" help="Show Maison help or task-specific help"
+#USAGE flag "-V --version" help="Show the installed Maison revision"
+
+set -euo pipefail
+
+log_error() {
+  printf 'maison: %s\n' "$*" >&2
+}
+
+die() {
+  log_error "$*"
+  exit 1
+}
+
+maison_home="${MAISON_HOME:-${NIX_CONFIG_DIR:-$HOME/.maison}}"
+
+if [ ! -d "$maison_home" ]; then
+  die "installation not found at $maison_home; set MAISON_HOME or rerun bootstrap"
+fi
+if [ ! -f "$maison_home/mise.toml" ] || [ ! -f "$maison_home/flake.nix" ]; then
+  die "$maison_home does not look like a Maison installation"
+fi
+
+if command -v mise > /dev/null 2>&1; then
+  mise_bin="$(command -v mise)"
+elif [ -x "$HOME/.local/bin/mise" ]; then
+  mise_bin="$HOME/.local/bin/mise"
+else
+  die "mise is unavailable; rerun Maison bootstrap"
+fi
+
+export MISE_TRUSTED_CONFIG_PATHS="$maison_home${MISE_TRUSTED_CONFIG_PATHS:+:$MISE_TRUSTED_CONFIG_PATHS}"
+
+list_task_names() {
+  find "$maison_home/.mise/tasks" -type f -perm -u+x -print \
+    | sed "s#^$maison_home/.mise/tasks/##; s#/#:#g" \
+    | LC_ALL=C sort -u
+}
+
+list_command_paths() {
+  list_task_names | tr ':' ' '
+}
+
+resolve_task() {
+  local -a words=("$@")
+  local candidate="" best="" index best_count=0 task
+
+  for ((index = 0; index < ${#words[@]}; index++)); do
+    if [ -z "$candidate" ]; then
+      candidate="${words[index]}"
+    else
+      candidate+="${candidate:+:}${words[index]}"
+    fi
+
+    while IFS= read -r task; do
+      if [ "$candidate" = "$task" ]; then
+        best="$task"
+        best_count=$((index + 1))
+        break
+      fi
+    done < <(list_task_names)
+  done
+
+  [ -n "$best" ] || return 1
+  printf '%s\t%s\n' "$best" "$best_count"
+}
+
+generate_completion() {
+  case "$1" in
+    bash)
+      cat <<'COMPLETION'
+_maison_complete() {
+  local current
+  current="${COMP_WORDS[COMP_CWORD]}"
+  if [ "$COMP_CWORD" -eq 1 ]; then
+    COMPREPLY=($(compgen -W "$(maison __command-paths | awk '{print $1}' | sort -u) help tasks completion" -- "$current"))
+  fi
+}
+complete -F _maison_complete maison
+COMPLETION
+      ;;
+    zsh)
+      cat <<'COMPLETION'
+_maison() {
+  local -a tasks
+  tasks=("${(@f)$(maison __command-paths | awk '{print $1}' | sort -u)}")
+  _arguments '1:task:($tasks help tasks completion)' '*::argument:->args'
+}
+compdef _maison maison
+COMPLETION
+      ;;
+    fish)
+      cat <<'COMPLETION'
+complete -c maison -f -n '__fish_use_subcommand' -a '(maison __command-paths | awk \'{print $1}\' | sort -u)' -d 'Maison task'
+complete -c maison -f -n '__fish_use_subcommand' -a 'help tasks completion'
+COMPLETION
+      ;;
+    *) die "unsupported shell '$1'; expected bash, zsh, or fish" ;;
+  esac
+}
+
+show_help() {
+  cat <<'HELP'
+Maison — put your workstation in order
+
+Usage:
+  maison <command> [subcommand...] [arguments...]
+  maison help [command] [subcommand...]
+  maison tasks
+  maison completion <bash|zsh|fish>
+  maison --version
+
+Common tasks:
+  doctor                 Diagnose local configuration problems
+  plan                   Preview configuration changes
+  apply                  Build and apply the selected host
+  check                  Validate Maison and every configured host
+  update                 Update flake inputs and validate the result
+  bootstrap              Bootstrap or repair a host
+  deploy                 Deploy a Linux host over SSH
+  github auth            Configure GitHub API authentication
+  package search         Search package sources
+
+Task help and argument parsing are generated from each task's #USAGE metadata:
+  maison help package search
+  maison package search --help
+
+Enable shell completion with:
+  source <(maison completion bash)
+  source <(maison completion zsh)
+  maison completion fish > ~/.config/fish/completions/maison.fish
+
+Run `maison tasks` for the complete task list.
+HELP
+}
+
+case "${1:-}" in
+  "" | -h | --help)
+    show_help
+    exit 0
+    ;;
+  -V | --version)
+    if git -C "$maison_home" rev-parse --short HEAD > /dev/null 2>&1; then
+      printf 'maison %s\n' "$(git -C "$maison_home" rev-parse --short HEAD)"
+    else
+      printf 'maison unknown\n'
+    fi
+    exit 0
+    ;;
+  help)
+    shift
+    if [ "$#" -eq 0 ]; then
+      show_help
+      exit 0
+    fi
+    resolution="$(resolve_task "$@" || true)"
+    [ -n "$resolution" ] || die "unknown command '$*'"
+    task="${resolution%%$'\t'*}"
+    cd "$maison_home"
+    if [ "$task" = github:auth ] || [ "$task" = bootstrap ]; then
+      exec "$mise_bin" run --skip-tools "$task" --help
+    fi
+    exec "$mise_bin" run "$task" --help
+    ;;
+  tasks)
+    shift
+    cd "$maison_home"
+    exec "$mise_bin" tasks "$@"
+    ;;
+  completion)
+    [ "$#" -eq 2 ] || die "usage: maison completion <bash|zsh|fish>"
+    generate_completion "$2"
+    exit 0
+    ;;
+  __task-names)
+    list_task_names
+    exit 0
+    ;;
+  __command-paths)
+    list_command_paths
+    exit 0
+    ;;
+esac
+
+resolution="$(resolve_task "$@" || true)"
+[ -n "$resolution" ] || die "unknown command '$*'; run 'maison tasks' to list commands"
+task="${resolution%%$'\t'*}"
+consumed="${resolution##*$'\t'}"
+shift "$consumed"
+
+cd "$maison_home"
+if [ "$task" = github:auth ] || [ "$task" = bootstrap ]; then
+  exec "$mise_bin" run --skip-tools "$task" -- "$@"
+fi
+exec "$mise_bin" run "$task" -- "$@"

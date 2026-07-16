@@ -9,7 +9,7 @@ TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
-IMAGE="local/nix-config-test-linux:24.04"
+IMAGE="local/maison-test-linux:24.04"
 
 echo "==> Building Linux test image $IMAGE..."
 container build -f test/Containerfile -t "$IMAGE" .

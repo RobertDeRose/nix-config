@@ -14,14 +14,14 @@ source "$REPO_ROOT/.mise/lib/apple-container.sh"
 
 NAME="apple-ssh-test"
 install_apple_container_test_signal_handlers "$NAME"
-IMAGE="local/nix-config-test-linux:24.04"
+IMAGE="local/maison-test-linux:24.04"
 TARGET="tester"
 SSH_KEY="$HOME/.ssh/id_ed25519"
 PUBKEY_FILE="$HOME/.ssh/id_ed25519.pub"
 PUBKEY_DIR="$(dirname "$PUBKEY_FILE")"
 PUBKEY_NAME="$(basename "$PUBKEY_FILE")"
 KNOWN_HOSTS="$HOME/.ssh/known_hosts"
-STAGE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/nix-config-deploy.XXXXXX")"
+STAGE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/maison-deploy.XXXXXX")"
 
 cleanup() {
   rm -rf "$STAGE_DIR"

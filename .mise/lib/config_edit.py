@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small TOML-preserving editor and validator for nix-config inventories."""
+"""Small TOML-preserving editor and validator for Maison inventories."""
 
 from __future__ import annotations
 

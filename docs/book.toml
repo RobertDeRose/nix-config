@@ -1,5 +1,5 @@
 [book]
-title = "nix-config"
+title = "Maison"
 description = "Reproducible macOS and Linux system configuration with Nix flakes"
 authors = ["Robert DeRose"]
 language = "en"
@@ -11,6 +11,6 @@ build-dir = "../book"
 [output.html]
 default-theme = "navy"
 preferred-dark-theme = "navy"
-git-repository-url = "https://github.com/RobertDeRose/nix-config"
-edit-url-template = "https://github.com/RobertDeRose/nix-config/edit/main/docs/{path}"
+git-repository-url = "https://github.com/RobertDeRose/maison"
+edit-url-template = "https://github.com/RobertDeRose/maison/edit/main/docs/{path}"
 additional-css = ["theme/cobalt.css"]

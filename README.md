@@ -1,14 +1,15 @@
-# nix-config
+# Maison
 
-Nix-backed system management with a small mise command interface. The repository supports Apple Silicon and Intel macOS through nix-darwin, ARM64 and x86_64 non-NixOS Linux through system-manager, and user configuration through Home Manager.
+Maison is a mise-driven workstation configuration manager for macOS and Linux. Inspired by the mise-en-place philosophy, it keeps a machine’s tools, packages, dotfiles, system configuration, and deployment workflows organized and reproducible. The repository supports Apple Silicon and Intel macOS through nix-darwin, ARM64 and x86_64 non-NixOS Linux through system-manager, and user configuration through Home Manager.
 
 ```bash
-mise tasks
-mise run doctor
-mise run plan
-mise run apply
-mise run check
-mise run update
+maison tasks
+maison doctor
+maison github auth  # Configure GitHub API authentication when needed
+maison plan
+maison apply
+maison check
+maison update
 ```
 
 Routine use should not require knowing flake output names or platform-specific activation commands.
@@ -17,11 +18,11 @@ Routine use should not require knowing flake output names or platform-specific a
 
 | Change | Source of truth | Command |
 | --- | --- | --- |
-| Standalone developer tool | `mise.toml` `[tools]` | `mise run tool:add <tool>` |
-| Nix-managed package | `packages.toml` | `mise run package:add <package> [--profile <profile>]` |
-| macOS GUI application | `packages.toml` Homebrew casks | `mise run app:add <cask>` |
-| Git, Helix, Starship, Zsh, Pi, or OpenCode settings | `dotfiles/<application>/` | Edit the native file, then `mise run plan` |
-| Host, system, user, or profiles | `inventory.toml` | `mise run host:add <hostname> ...` |
+| Standalone developer tool | `mise.toml` `[tools]` | `maison tool add <tool>` |
+| Nix-managed package | `packages.toml` | `maison package add <package> [--profile <profile>]` |
+| macOS GUI application | `packages.toml` Homebrew casks | `maison app add <cask>` |
+| Git, Helix, Starship, Zsh, Pi, or OpenCode settings | `dotfiles/<application>/` | Edit the native file, then `maison plan` |
+| Host, system, user, or profiles | `inventory.toml` | `maison host add <hostname> ...` |
 | Host-specific exception | `hosts/<hostname>/system.nix` or `home.nix` | Create only when an exception is required |
 
 Package-source selection is documented in [`docs/package-policy.md`](docs/package-policy.md).
@@ -29,28 +30,28 @@ Package-source selection is documented in [`docs/package-policy.md`](docs/packag
 ## Public machine-management commands
 
 ```bash
-mise run doctor                         # Read-only machine diagnostics
-mise run plan [--host <hostname>]       # Read-only build preview
-mise run apply [--host <hostname>]      # Build the complete target, then activate
-mise run apply --no-activate            # Build without activation
-mise run check                          # Validate tasks, data, Nix, hosts, and tests
-mise run update [input]                 # Update the lockfile and validate hosts
-mise run rollback [--yes]               # Platform-aware rollback
-mise run deploy <destination> [host]    # Remote Linux deployment
+maison doctor                         # Read-only machine diagnostics
+maison plan [--host <hostname>]       # Read-only build preview
+maison apply [--host <hostname>]      # Build the complete target, then activate
+maison apply --no-activate            # Build without activation
+maison check                          # Validate tasks, data, Nix, hosts, and tests
+maison update [input]                 # Update the lockfile and validate hosts
+maison rollback [--yes]               # Platform-aware rollback
+maison deploy <destination> [host]    # Remote Linux deployment
 ```
 
-The former `nix:init`, `nix:switch`, `nix:debug`, `nix:dry-run`, `nix:deploy`, `nix:up`, and `add-host` names remain as hidden compatibility wrappers.
+The underlying mise tasks remain directly usable. The former `nix:init`, `nix:switch`, `nix:debug`, `nix:dry-run`, `nix:deploy`, `nix:up`, and `add-host` names remain as hidden compatibility wrappers.
 
 ## Fresh-machine bootstrap
 
-The root script performs only work required before mise is available. After installing and trusting mise, it delegates Nix/Lix installation, host validation, building, and activation to `mise run bootstrap`.
+The root script performs only work required before mise is available. After installing and trusting mise, it delegates Nix/Lix installation, host validation, building, and activation to `maison bootstrap`.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh \
-  | bash -s -- --host my-host --repo RobertDeRose/nix-config --ref main
+curl -fsSL https://raw.githubusercontent.com/RobertDeRose/maison/main/bootstrap.sh \
+  | bash -s -- --host my-host --repo RobertDeRose/maison --ref main
 ```
 
-From an existing clone:
+Maison installs to `~/.maison` and exposes `~/.local/bin/maison`. Task help is generated from the existing `#USAGE` metadata, and shell completion can be enabled with `maison completion <shell>`. From an existing clone:
 
 ```bash
 ./bootstrap.sh --host my-host
@@ -62,16 +63,16 @@ Re-running bootstrap is safe. Existing hosts are validated rather than recreated
 
 ```bash
 # A standalone developer tool managed by mise
-mise run tool:add usage --version latest
+maison tool add usage --version latest
 
 # A Nix package in an intent-oriented profile
-mise run package:add ripgrep --profile dev
+maison package add ripgrep --profile dev
 
 # A macOS Homebrew cask
-mise run app:add firefox
+maison app add firefox
 
 # A host
-mise run host:add build-server \
+maison host add build-server \
   --system x86_64-linux \
   --user rderose \
   --profiles base,dev,linux
@@ -124,9 +125,9 @@ The stable flake outputs remain:
 
 ## Validation and recovery
 
-`mise run check` is read-only and runs task metadata validation, Bash/Python checks, ShellCheck, shell formatting, Nix formatting and flake checks, TOML/inventory/ownership validation, every host evaluation, and regression tests. CI runs the same contract and builds same-system outputs.
+`maison check` is read-only and runs task metadata validation, Bash/Python checks, ShellCheck, shell formatting, Nix formatting and flake checks, TOML/inventory/ownership validation, every host evaluation, and regression tests. CI runs the same contract and builds same-system outputs.
 
-`mise run doctor` reports missing prerequisites, host/platform mismatches, daemon state, optional cache availability, task modes, repository dirtiness, and likely Home Manager link conflicts.
+`maison doctor` reports missing prerequisites, host/platform mismatches, daemon state, optional cache availability, task modes, repository dirtiness, and likely Home Manager link conflicts.
 
 See:
 

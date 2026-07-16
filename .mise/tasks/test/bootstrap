@@ -27,7 +27,7 @@ PROFILES="base,linux"
 if [ "${usage_dev:-false}" = true ]; then
   PROFILES="base,dev,linux"
 fi
-IMAGE="local/nix-config-test-linux:24.04"
+IMAGE="local/maison-test-linux:24.04"
 BRANCH="$(git branch --show-current)"
 ORIGIN_URL="$(git remote get-url origin)"
 

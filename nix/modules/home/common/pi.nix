@@ -28,7 +28,7 @@ in
   home.activation.backupOldPiOverlayExtension = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
     old_extension="$HOME/.pi/agent/extensions/interface-overlays.ts"
     if [ -e "$old_extension" ]; then
-      backup_dir="$HOME/.local/state/nix-config/backups/pi"
+      backup_dir="$HOME/.local/state/maison/backups/pi"
       timestamp="$(${pkgs.coreutils}/bin/date -u +%Y%m%dT%H%M%SZ)"
       mkdir -p "$backup_dir"
       backup_path="$backup_dir/interface-overlays.ts.$timestamp"

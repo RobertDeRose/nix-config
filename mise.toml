@@ -4,6 +4,7 @@ experimental = true
 env_shell_expand = true
 
 [tools]
+usage = "latest"
 python = "latest"
 hk = "latest"
 actionlint = "latest"

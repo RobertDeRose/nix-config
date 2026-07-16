@@ -1,4 +1,4 @@
-# nix-config
+# Maison
 
 This repository uses Nix as the system engine, Home Manager as the dotfile deployer, and mise as the stable user-facing command interface.
 

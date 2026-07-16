@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Bootstrap this repository far enough to hand machine setup to `mise run bootstrap`.
+# Install Maison and hand machine setup to its mise-backed bootstrap task.
 #
 # Usage:
 #   ./bootstrap.sh [--host HOST] [--repo OWNER/REPO|URL] [--ref REF] [--profiles LIST]
-#   curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh \
-#     | bash -s -- --host HOST --repo RobertDeRose/nix-config --ref main
+#   curl -fsSL https://raw.githubusercontent.com/RobertDeRose/maison/main/bootstrap.sh \
+#     | bash -s -- --host HOST --repo RobertDeRose/maison --ref main
 
 set -euo pipefail
 
@@ -15,7 +15,7 @@ die() {
 }
 
 host="$(hostname -s)"
-repo="${REPO:-RobertDeRose/nix-config}"
+repo="${REPO:-RobertDeRose/maison}"
 ref="${REF:-${BRANCH:-main}}"
 profiles="${PROFILES:-}"
 
@@ -113,17 +113,18 @@ case "$repo" in
   http://* | https://* | ssh://* | git@*) repo_url="$repo" ;;
   *) repo_url="https://github.com/${repo%.git}.git" ;;
 esac
-repo_name="$(basename "${repo_url%.git}")"
-
 repo_root=""
 if git_root="$(git rev-parse --show-toplevel 2> /dev/null)" &&
   [ -f "$git_root/mise.toml" ] &&
   [ -f "$git_root/flake.nix" ]; then
   repo_root="$git_root"
+elif [ -n "${MAISON_HOME:-}" ]; then
+  repo_root="$MAISON_HOME"
 elif [ -n "${NIX_CONFIG_DIR:-}" ]; then
+  # Compatibility with installations created before the Maison rename.
   repo_root="$NIX_CONFIG_DIR"
 else
-  repo_root="$PWD/$repo_name"
+  repo_root="$HOME/.maison"
 fi
 
 if [ ! -d "$repo_root/.git" ]; then
@@ -131,7 +132,7 @@ if [ ! -d "$repo_root/.git" ]; then
   log "Cloning $repo_url at $ref into $repo_root"
   git clone --branch "$ref" --single-branch "$repo_url" "$repo_root"
 elif [ ! -f "$repo_root/mise.toml" ] || [ ! -f "$repo_root/flake.nix" ]; then
-  die "$repo_root does not look like nix-config"
+  die "$repo_root does not look like Maison"
 else
   log "Using repository at $repo_root"
 fi
@@ -148,10 +149,14 @@ if ! command -v mise > /dev/null 2>&1; then
 fi
 command -v mise > /dev/null 2>&1 || die "mise installation did not place the executable on PATH"
 
+log "Installing Maison command"
+mkdir -p "$HOME/.local/bin"
+ln -sfn "$repo_root/bin/maison" "$HOME/.local/bin/maison"
+
 log "Trusting repository configuration"
 mise trust "$repo_root/mise.toml" > /dev/null
 
-log "Handing off to mise for host $host"
+log "Handing off to Maison for host $host"
 bootstrap_args=(--host "$host")
 [ -z "$profiles" ] || bootstrap_args+=(--profiles "$profiles")
 exec mise run --skip-tools bootstrap -- "${bootstrap_args[@]}"

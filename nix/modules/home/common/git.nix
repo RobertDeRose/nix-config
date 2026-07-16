@@ -33,7 +33,7 @@ in
   home.activation.backupExistingGitconfig = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
     legacy_config="$HOME/.gitconfig"
     if [ -e "$legacy_config" ] || [ -L "$legacy_config" ]; then
-      backup_dir="$HOME/.local/state/nix-config/backups/git"
+      backup_dir="$HOME/.local/state/maison/backups/git"
       timestamp="$(${pkgs.coreutils}/bin/date -u +%Y%m%dT%H%M%SZ)"
       mkdir -p "$backup_dir"
       backup_path="$backup_dir/gitconfig.$timestamp"
