@@ -1,11 +1,80 @@
-#!/usr/bin/env bash
+#!/usr/bin/env -S usage bash
 # Maison is a thin, location-independent interface to the repository's mise tasks.
 #
-#USAGE about="Put your workstation in order."
-#USAGE long_about="Maison is a mise-driven workstation configuration manager for macOS and Linux."
-#USAGE arg "[command]..." help="Maison command and arguments"
-#USAGE flag "-h --help" help="Show Maison help or task-specific help"
+#USAGE about "Put your workstation in order."
+#USAGE long_about "Maison is a mise-driven workstation configuration manager for macOS and Linux."
 #USAGE flag "-V --version" help="Show the installed Maison revision"
+#USAGE cmd "activate" help="Activate Maison shell integration" { arg "[args]..." }
+#USAGE cmd "apply" help="Build and apply the selected host" { arg "[args]..." }
+#USAGE cmd "bootstrap" help="Bootstrap or repair a host" { arg "[args]..." }
+#USAGE cmd "deploy" help="Deploy a Linux host over SSH" { arg "[args]..." }
+#USAGE cmd "doctor" help="Diagnose local configuration problems" { arg "[args]..." }
+#USAGE cmd "plan" help="Preview configuration changes" { arg "[args]..." }
+#USAGE cmd "rollback" help="Roll back the selected host" { arg "[args]..." }
+#USAGE cmd "update" help="Update flake inputs and validate the result" { arg "[args]..." }
+#USAGE cmd "tasks" help="List Maison tasks" { arg "[args]..." }
+#USAGE cmd "completion" help="Generate the Usage shell initialization" {
+#USAGE   arg "<shell>" { choices "bash" "zsh" "fish" }
+#USAGE }
+#USAGE cmd "github" help="Manage GitHub authentication" subcommand_required=#true {
+#USAGE   cmd "auth" help="Configure GitHub API authentication" { arg "[args]..." }
+#USAGE }
+#USAGE cmd "app" help="Manage applications" subcommand_required=#true {
+#USAGE   cmd "add" help="Add an application" { arg "[args]..." }
+#USAGE   cmd "remove" help="Remove an application" { arg "[args]..." }
+#USAGE }
+#USAGE cmd "cache" help="Manage the binary cache" subcommand_required=#true {
+#USAGE   cmd "package" help="Cache a package" { arg "[args]..." }
+#USAGE   cmd "status" help="Show cache status" { arg "[args]..." }
+#USAGE }
+#USAGE cmd "docs" help="Manage documentation" subcommand_required=#true {
+#USAGE   cmd "build" help="Build documentation" { arg "[args]..." }
+#USAGE   cmd "serve" help="Serve documentation" { arg "[args]..." }
+#USAGE }
+#USAGE cmd "host" help="Manage hosts" subcommand_required=#true {
+#USAGE   cmd "add" help="Add a host" { arg "[args]..." }
+#USAGE   cmd "list" help="List hosts" { arg "[args]..." }
+#USAGE   cmd "validate" help="Validate hosts" { arg "[args]..." }
+#USAGE }
+#USAGE cmd "iterm" help="Manage iTerm configuration" subcommand_required=#true {
+#USAGE   cmd "export" help="Export iTerm configuration" { arg "[args]..." }
+#USAGE }
+#USAGE cmd "nix" help="Manage Nix" subcommand_required=#true {
+#USAGE   cmd "clean" help="Clean Nix build artifacts" { arg "[args]..." }
+#USAGE   cmd "debug" help="Debug Nix configuration" { arg "[args]..." }
+#USAGE   cmd "deploy" help="Deploy with Nix" { arg "[args]..." }
+#USAGE   cmd "dry-run" help="Preview a Nix operation" { arg "[args]..." }
+#USAGE   cmd "fmt" help="Format Nix files" { arg "[args]..." }
+#USAGE   cmd "gc" help="Run Nix garbage collection" { arg "[args]..." }
+#USAGE   cmd "gcroot" help="Manage Nix GC roots" { arg "[args]..." }
+#USAGE   cmd "history" help="Show Nix generation history" { arg "[args]..." }
+#USAGE   cmd "init" help="Initialize Nix" { arg "[args]..." }
+#USAGE   cmd "repl" help="Open a Nix REPL" { arg "[args]..." }
+#USAGE   cmd "switch" help="Switch Nix generations" { arg "[args]..." }
+#USAGE   cmd "trust" help="Manage trusted Nix users" { arg "[args]..." }
+#USAGE   cmd "uninstall" help="Uninstall Nix" { arg "[args]..." }
+#USAGE   cmd "up" help="Update Nix inputs" { arg "[args]..." }
+#USAGE }
+#USAGE cmd "package" help="Manage packages" subcommand_required=#true {
+#USAGE   cmd "add" help="Add a package" { arg "[args]..." }
+#USAGE   cmd "remove" help="Remove a package" { arg "[args]..." }
+#USAGE   cmd "search" help="Search package sources" { arg "[args]..." }
+#USAGE   cmd "validate" help="Validate package ownership" { arg "[args]..." }
+#USAGE }
+#USAGE cmd "test" help="Run integration tests" subcommand_required=#true {
+#USAGE   cmd "bootstrap" help="Test bootstrap" { arg "[args]..." }
+#USAGE   cmd "deploy" help="Test deployment" { arg "[args]..." }
+#USAGE   cmd "image" help="Build the test image" { arg "[args]..." }
+#USAGE }
+#USAGE cmd "tool" help="Manage global mise tools" subcommand_required=#true {
+#USAGE   cmd "add" help="Add a global tool" { arg "[args]..." }
+#USAGE   cmd "remove" help="Remove a global tool" { arg "[args]..." }
+#USAGE }
+#USAGE cmd "github-auth" hide=#true { arg "[args]..." }
+#USAGE cmd "add-host" hide=#true { arg "[args]..." }
+#USAGE cmd "install-nix" hide=#true { arg "[args]..." }
+#USAGE cmd "__task-names" hide=#true
+#USAGE cmd "__command-paths" hide=#true
 
 set -euo pipefail
 
@@ -43,8 +112,19 @@ list_task_names() {
     | LC_ALL=C sort -u
 }
 
+list_public_task_names() {
+  local task compatibility
+  while IFS= read -r task; do
+    compatibility="${task//-/:}"
+    if [ "$compatibility" != "$task" ] && list_task_names | grep -Fxq "$compatibility"; then
+      continue
+    fi
+    printf '%s\n' "$task"
+  done < <(list_task_names)
+}
+
 list_command_paths() {
-  list_task_names | tr ':' ' '
+  list_public_task_names | tr ':' ' '
 }
 
 resolve_task() {
@@ -69,40 +149,6 @@ resolve_task() {
 
   [ -n "$best" ] || return 1
   printf '%s\t%s\n' "$best" "$best_count"
-}
-
-generate_completion() {
-  case "$1" in
-    bash)
-      cat <<'COMPLETION'
-_maison_complete() {
-  local current
-  current="${COMP_WORDS[COMP_CWORD]}"
-  if [ "$COMP_CWORD" -eq 1 ]; then
-    COMPREPLY=($(compgen -W "$(maison __command-paths | awk '{print $1}' | sort -u) help tasks completion" -- "$current"))
-  fi
-}
-complete -F _maison_complete maison
-COMPLETION
-      ;;
-    zsh)
-      cat <<'COMPLETION'
-_maison() {
-  local -a tasks
-  tasks=("${(@f)$(maison __command-paths | awk '{print $1}' | sort -u)}")
-  _arguments '1:task:($tasks help tasks completion)' '*::argument:->args'
-}
-compdef _maison maison
-COMPLETION
-      ;;
-    fish)
-      cat <<'COMPLETION'
-complete -c maison -f -n '__fish_use_subcommand' -a '(maison __command-paths | awk \'{print $1}\' | sort -u)' -d 'Maison task'
-complete -c maison -f -n '__fish_use_subcommand' -a 'help tasks completion'
-COMPLETION
-      ;;
-    *) die "unsupported shell '$1'; expected bash, zsh, or fish" ;;
-  esac
 }
 
 show_help() {
@@ -131,10 +177,7 @@ Task help and argument parsing are generated from each task's #USAGE metadata:
   maison help package search
   maison package search --help
 
-Enable shell completion with:
-  source <(maison completion bash)
-  source <(maison completion zsh)
-  maison completion fish > ~/.config/fish/completions/maison.fish
+Shell completion is enabled by the Usage completion initializer installed by Maison.
 
 Run `maison tasks` for the complete task list.
 HELP
@@ -175,8 +218,7 @@ case "${1:-}" in
     ;;
   completion)
     [ "$#" -eq 2 ] || die "usage: maison completion <bash|zsh|fish>"
-    generate_completion "$2"
-    exit 0
+    exec usage generate completion-init "$2"
     ;;
   __task-names)
     list_task_names
@@ -195,7 +237,29 @@ consumed="${resolution##*$'\t'}"
 shift "$consumed"
 
 cd "$maison_home"
-if [ "$task" = github:auth ] || [ "$task" = bootstrap ]; then
-  exec "$mise_bin" run --skip-tools "$task" -- "$@"
-fi
-exec "$mise_bin" run "$task" -- "$@"
+run_task() {
+  local output_file status
+  local -a command=("$mise_bin" run)
+
+  if [ "$task" = github:auth ] || [ "$task" = bootstrap ]; then
+    command+=(--skip-tools)
+  fi
+  command+=("$task" -- "$@")
+
+  output_file="$(mktemp "${TMPDIR:-/tmp}/maison-output.XXXXXX")"
+
+  set +e
+  "${command[@]}" > >(tee "$output_file") 2> >(tee -a "$output_file" >&2)
+  status=$?
+  set -e
+
+  if grep -Eqi 'rate limit exceeded|API rate limit|HTTP error 403|403 Forbidden|No GitHub token' "$output_file"; then
+    printf '\nmaison: GitHub authentication is required or the API rate limit was exceeded.\n' >&2
+    printf 'Run: maison github auth\n' >&2
+  fi
+
+  rm -f "$output_file"
+  return "$status"
+}
+
+run_task "$@"

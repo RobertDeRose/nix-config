@@ -89,6 +89,8 @@ assert_file_contains "$ROOT/.mise/tasks/deploy" '--nix-option accept-flake-confi
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'manager_args+=(--sudo)'
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'GitHub authentication is required for remote mise installation'
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'mktemp /tmp/maison-github-token.XXXXXX'
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'GITHUB_TOKEN="$github_token"'
 if grep -Fq -- '--ask-sudo-password' "$ROOT/.mise/tasks/deploy"; then
   fail 'deploy task still requests an interactive sudo password'
@@ -120,13 +122,30 @@ assert_file_contains "$ROOT/.mise/lib/apple-container.sh" "143) interrupt_apple_
 
 assert_file_contains "$ROOT/test/Containerfile" 'CMD ["/bin/bash"]'
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'Installing Maison repository and command'
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'ln -sfn "$managed_home/.maison/bin/maison"'
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
 assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'test -x "$HOME/.local/bin/maison"'
 
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
 assert_file_contains "$ROOT/bin/maison" 'run --skip-tools "$task"'
 assert_file_contains "$ROOT/bootstrap.sh" 'mise run --skip-tools bootstrap'
 assert_file_contains "$ROOT/.mise/lib/bootstrap.sh" 'mise run --skip-tools github:auth'
 assert_file_contains "$ROOT/.mise/tasks/bootstrap" 'Installing Maison project tools'
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'MISE_GITHUB_TOKEN="$github_token"'
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'trust "$managed_home/.maison/mise.toml"'
-assert_file_contains "$ROOT/.mise/tasks/deploy" '"$mise_bin" -C "$managed_home/.maison" install'
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
+assert_file_contains "$ROOT/.mise/tasks/deploy" '"$managed_home/.local/bin/mise" -C "$managed_home/.maison" install'
+assert_file_contains "$ROOT/.mise/tasks/deploy" 'Global mise tool installation failed; retrying'
+assert_file_contains "$ROOT/.mise/tasks/deploy" 'Maison project tool installation failed; retrying'
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
+assert_file_contains "$ROOT/.mise/tasks/deploy" 'ln -sfn "$usage_bin" "$managed_home/.local/bin/usage"'

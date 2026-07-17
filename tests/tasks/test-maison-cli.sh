@@ -15,16 +15,37 @@ mkdir -p "$tmp/home/.maison/.mise/tasks/github"
 printf '#!/usr/bin/env bash\n' > "$tmp/home/.maison/.mise/tasks/github/auth"
 chmod +x "$tmp/home/.maison/.mise/tasks/apply" "$tmp/home/.maison/.mise/tasks/bootstrap" "$tmp/home/.maison/.mise/tasks/github/auth"
 
+cat > "$tmp/bin/usage" << 'MOCK'
+#!/usr/bin/env bash
+set -euo pipefail
+case "${1:-}" in
+  bash)
+    shift
+    exec bash "$@"
+    ;;
+  generate)
+    printf 'usage-completion-init:%s\n' "${3:-}"
+    ;;
+  *)
+    exit 2
+    ;;
+esac
+MOCK
+chmod +x "$tmp/bin/usage"
+
 cat > "$tmp/bin/mise" << 'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "$*" >> "$MOCK_LOG/mise"
+if [ "${MOCK_RATE_LIMIT:-0}" = 1 ]; then
+  printf 'GitHub API returned 403 Forbidden: API rate limit exceeded\n'
+fi
 MOCK
 chmod +x "$tmp/bin/mise"
 
 HOME="$tmp/home" PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MAISON_HOME="$tmp/home/.maison" \
   "$ROOT/bin/maison" apply --host test-host
-assert_file_contains "$tmp/log/mise" 'run apply --host test-host'
+assert_file_contains "$tmp/log/mise" 'run apply -- --host test-host'
 
 HOME="$tmp/home" PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MAISON_HOME="$tmp/home/.maison" \
   "$ROOT/bin/maison" help apply
@@ -34,15 +55,14 @@ HOME="$tmp/home" PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MAISON_HOME="$tmp/hom
   "$ROOT/bin/maison" tasks
 assert_file_contains "$tmp/log/mise" 'tasks'
 
-assert_file_contains "$ROOT/bin/maison" '#USAGE about='
+assert_file_contains "$ROOT/bin/maison" '#!/usr/bin/env -S usage bash'
+assert_file_contains "$ROOT/bin/maison" '#USAGE about "Put your workstation in order."'
+assert_file_contains "$ROOT/bin/maison" '#USAGE cmd "github"'
 assert_file_contains "$ROOT/bin/maison" 'NIX_CONFIG_DIR'
 
 completion="$(HOME="$tmp/home" PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MAISON_HOME="$tmp/home/.maison" \
   "$ROOT/bin/maison" completion bash)"
-case "$completion" in
-  *'complete -F _maison_complete maison'*) ;;
-  *) fail 'bash completion was not generated' ;;
-esac
+assert_eq 'usage-completion-init:bash' "$completion" 'Usage completion initialization'
 
 HOME="$tmp/home" PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MAISON_HOME="$tmp/home/.maison" \
   "$ROOT/bin/maison" github auth
@@ -51,3 +71,7 @@ assert_file_contains "$tmp/log/mise" 'run --skip-tools github:auth --'
 HOME="$tmp/home" PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MAISON_HOME="$tmp/home/.maison" \
   "$ROOT/bin/maison" bootstrap --host test-host
 assert_file_contains "$tmp/log/mise" 'run --skip-tools bootstrap -- --host test-host'
+
+rate_limit_output="$(HOME="$tmp/home" PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MOCK_RATE_LIMIT=1 MAISON_HOME="$tmp/home/.maison" \
+  "$ROOT/bin/maison" apply 2>&1)"
+printf '%s\n' "$rate_limit_output" | grep -Fq 'Run: maison github auth' || fail 'Maison did not report GitHub authentication recovery'

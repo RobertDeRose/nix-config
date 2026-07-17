@@ -163,20 +163,20 @@ search_nixpkgs() {
   local stderr_file="$temp_dir/nixpkgs.stderr"
   local stdout_file="$temp_dir/nixpkgs.stdout"
 
-  if ! command -v nix > /dev/null 2>&1; then
-    printf 'Nix/Lix is unavailable\n'
+  if ! command -v nix-search > /dev/null 2>&1; then
+    printf 'nix-search is unavailable; run: mise install\n'
     return
   fi
 
-  if nix --quiet search nixpkgs "$query" \
+  if NO_COLOR=1 nix-search --channel unstable --max-results 40 --search "$query" \
     > "$stdout_file" 2> "$stderr_file"; then
     if [[ -s $stdout_file ]]; then
-      head -80 "$stdout_file"
+      cat "$stdout_file"
     else
       printf 'No nixpkgs matches\n'
     fi
   else
-    printf 'Nix search failed:\n'
+    printf 'nixpkgs search failed:\n'
     cat "$stderr_file"
   fi
 }

@@ -63,7 +63,9 @@ nix_command() {
   local flags=() flag
   while IFS= read -r flag; do flags+=("$flag"); done < <(nix_common_flags "$debug")
   stderr_file="$(mktemp "${TMPDIR:-/tmp}/maison-nix.XXXXXX")"
-  if ! nix "${flags[@]}" "$@" 2> >(tee "$stderr_file" >&2); then
+  if nix "${flags[@]}" "$@" 2> >(tee "$stderr_file" >&2); then
+    status=0
+  else
     status=$?
   fi
   if [ "$status" -ne 0 ] && grep -Eqi 'rate limit|HTTP error 403|403 Forbidden' "$stderr_file"; then

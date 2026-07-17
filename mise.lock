@@ -80,6 +80,40 @@ url = "https://github.com/Mic92/nixfmt-rs/releases/download/0.5.1/nixfmt-aarch64
 url_api = "https://api.github.com/repos/Mic92/nixfmt-rs/releases/assets/432909970"
 provenance = "github-attestations"
 
+[[tools."github:peterldowns/nix-search-cli"]]
+version = "0.3+commit.ab0d515"
+backend = "github:peterldowns/nix-search-cli"
+
+[tools."github:peterldowns/nix-search-cli"."platforms.linux-arm64"]
+checksum = "sha256:744cd686075c8a24e56a0f307ae7143ddd2ea3bc43d74b34ede026dffd6a50a4"
+url = "https://github.com/peterldowns/nix-search-cli/releases/download/v0.3%2Bcommit.ab0d515/nix-search-linux-arm64"
+url_api = "https://api.github.com/repos/peterldowns/nix-search-cli/releases/assets/312020951"
+
+[tools."github:peterldowns/nix-search-cli"."platforms.linux-arm64-musl"]
+checksum = "sha256:744cd686075c8a24e56a0f307ae7143ddd2ea3bc43d74b34ede026dffd6a50a4"
+url = "https://github.com/peterldowns/nix-search-cli/releases/download/v0.3%2Bcommit.ab0d515/nix-search-linux-arm64"
+url_api = "https://api.github.com/repos/peterldowns/nix-search-cli/releases/assets/312020951"
+
+[tools."github:peterldowns/nix-search-cli"."platforms.linux-x64"]
+checksum = "sha256:6a504436f00e82cf7c2d590f0f020fc14fd7ad83c3a60fe48d7baecc0fa3d61c"
+url = "https://github.com/peterldowns/nix-search-cli/releases/download/v0.3%2Bcommit.ab0d515/nix-search-linux-amd64"
+url_api = "https://api.github.com/repos/peterldowns/nix-search-cli/releases/assets/312020991"
+
+[tools."github:peterldowns/nix-search-cli"."platforms.linux-x64-musl"]
+checksum = "sha256:6a504436f00e82cf7c2d590f0f020fc14fd7ad83c3a60fe48d7baecc0fa3d61c"
+url = "https://github.com/peterldowns/nix-search-cli/releases/download/v0.3%2Bcommit.ab0d515/nix-search-linux-amd64"
+url_api = "https://api.github.com/repos/peterldowns/nix-search-cli/releases/assets/312020991"
+
+[tools."github:peterldowns/nix-search-cli"."platforms.macos-arm64"]
+checksum = "sha256:38a1bc59b7efe22f22654f7e3a3a82691e1b8a09b069d638e7f3724d1c726922"
+url = "https://github.com/peterldowns/nix-search-cli/releases/download/v0.3%2Bcommit.ab0d515/nix-search-darwin-arm64"
+url_api = "https://api.github.com/repos/peterldowns/nix-search-cli/releases/assets/312020914"
+
+[tools."github:peterldowns/nix-search-cli"."platforms.macos-x64"]
+checksum = "sha256:4686e0aa1f9d50827cd0bebfc3a903d0396a027a35a82a50cc92841b7c3cd300"
+url = "https://github.com/peterldowns/nix-search-cli/releases/download/v0.3%2Bcommit.ab0d515/nix-search-darwin-amd64"
+url_api = "https://api.github.com/repos/peterldowns/nix-search-cli/releases/assets/312020862"
+
 [[tools."github:rust-lang/mdbook"]]
 version = "0.5.2"
 backend = "github:rust-lang/mdbook"
@@ -393,3 +427,42 @@ url_api = "https://api.github.com/repos/tombi-toml/tombi/releases/assets/3913221
 checksum = "sha256:a08e144e55fa8b998e46bf2923c9d8fae1f454771c6411fd213febd9e182ae48"
 url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.16/tombi-cli-0.9.16-x86_64-pc-windows-msvc.zip"
 url_api = "https://api.github.com/repos/tombi-toml/tombi/releases/assets/391322183"
+
+[[tools.usage]]
+version = "3.5.3"
+backend = "aqua:jdx/usage"
+
+[tools.usage."platforms.linux-arm64"]
+checksum = "sha256:c5ee535f65cadca0a0883ce0073095e1a12fc749224a79a13d57e38cbcc88dd4"
+url = "https://github.com/jdx/usage/releases/download/v3.5.3/usage-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/jdx/usage/releases/assets/455875604"
+
+[tools.usage."platforms.linux-arm64-musl"]
+checksum = "sha256:c5ee535f65cadca0a0883ce0073095e1a12fc749224a79a13d57e38cbcc88dd4"
+url = "https://github.com/jdx/usage/releases/download/v3.5.3/usage-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/jdx/usage/releases/assets/455875604"
+
+[tools.usage."platforms.linux-x64"]
+checksum = "sha256:678114d182273bc8a1316f3528f1f8ded047ed56b41b822656de7046e16a6deb"
+url = "https://github.com/jdx/usage/releases/download/v3.5.3/usage-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/jdx/usage/releases/assets/455875471"
+
+[tools.usage."platforms.linux-x64-musl"]
+checksum = "sha256:678114d182273bc8a1316f3528f1f8ded047ed56b41b822656de7046e16a6deb"
+url = "https://github.com/jdx/usage/releases/download/v3.5.3/usage-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/jdx/usage/releases/assets/455875471"
+
+[tools.usage."platforms.macos-arm64"]
+checksum = "sha256:dc6628015c420f0e0384c95999266ca74dc19de8279b4d54667844286cf8fa13"
+url = "https://github.com/jdx/usage/releases/download/v3.5.3/usage-universal-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/jdx/usage/releases/assets/455875616"
+
+[tools.usage."platforms.macos-x64"]
+checksum = "sha256:dc6628015c420f0e0384c95999266ca74dc19de8279b4d54667844286cf8fa13"
+url = "https://github.com/jdx/usage/releases/download/v3.5.3/usage-universal-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/jdx/usage/releases/assets/455875616"
+
+[tools.usage."platforms.windows-x64"]
+checksum = "sha256:3cd7995171854518873f84bf60be17c8e331cad1ca180e03911fac414a7a6372"
+url = "https://github.com/jdx/usage/releases/download/v3.5.3/usage-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/jdx/usage/releases/assets/455876520"

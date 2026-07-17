@@ -17,3 +17,6 @@ book/
 __pycache__/
 *.pyc
 .build/
+
+# User-specific Maison/mise settings
+mise.local.toml

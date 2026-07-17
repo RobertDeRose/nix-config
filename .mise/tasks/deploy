@@ -23,7 +23,7 @@ destination="${usage_destination}"
 host="${usage_host:-}"
 debug="${usage_debug:-false}"
 if [ -z "$host" ]; then
-  host="$(ssh "$destination" hostname -s)"
+  host="$(ssh -T "$destination" hostname -s)"
   log_info "Detected remote hostname: $host"
 fi
 validate_hostname "$host" || die "invalid host name '$host'"
@@ -51,11 +51,11 @@ if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "$destination" true 2> /dev/null; 
   ssh-copy-id "$destination"
 fi
 
-if ! ssh "$destination" 'command -v nix >/dev/null 2>&1 && command -v nix-store >/dev/null 2>&1'; then
+if ! ssh -T "$destination" 'command -v nix >/dev/null 2>&1 && command -v nix-store >/dev/null 2>&1'; then
   die "remote host '$destination' is not bootstrapped: Nix/Lix is unavailable; run bootstrap first"
 fi
 
-if ! ssh "$destination" sh -s -- "$managed_user" << 'REMOTE_MISE_CHECK'; then
+if ! ssh -T "$destination" sh -s -- "$managed_user" << 'REMOTE_MISE_CHECK'; then
 set -eu
 managed_user="$1"
 managed_home="$(getent passwd "$managed_user" | cut -d: -f6)"
@@ -102,9 +102,11 @@ home_store_path="$(nix_command "$debug" path-info "$home_ref")"
 log_info "Copying Home Manager activation closure"
 nix_command "$debug" copy --to "ssh://$destination" "$home_store_path"
 log_info "Activating Home Manager for $managed_user"
-remote_token_file="$(ssh "$destination" 'umask 077; mktemp /tmp/maison-github-token.XXXXXX')"
-printf '%s' "$GITHUB_TOKEN" | ssh "$destination" "cat > '$remote_token_file'"
-ssh "$destination" sh -s -- "$managed_user" "$home_store_path/activate" "$remote_token_file" << 'REMOTE_HOME'
+remote_token_file="$(ssh -T "$destination" 'umask 077; mktemp /tmp/maison-github-token.XXXXXX')"
+# remote_token_file is intentionally expanded locally from a remote mktemp result.
+# shellcheck disable=SC2029
+printf '%s' "$GITHUB_TOKEN" | ssh -T "$destination" "cat > '$remote_token_file'"
+ssh -T "$destination" sh -s -- "$managed_user" "$home_store_path/activate" "$remote_token_file" << 'REMOTE_HOME'
 set -eu
 activate_user="$1"
 hm_activate="$2"
@@ -136,35 +138,54 @@ mise_config="$activate_home/.config/mise/config.toml"
 [ -x "$mise_bin" ] || { echo "mise is unavailable for $activate_user; run bootstrap first" >&2; exit 1; }
 [ -f "$mise_config" ] || { echo "Home Manager did not create the global mise config: $mise_config" >&2; exit 1; }
 
-run_mise_install() {
-  env USER="$activate_user" HOME="$activate_home" PATH="$activate_home/.local/bin:$activate_path" MISE_CONFIG_FILE="$mise_config" GITHUB_TOKEN="$github_token" "$mise_bin" install
+run_mise_install_once() {
+  if [ "$current_user" = "$activate_user" ]; then
+    env USER="$activate_user" HOME="$activate_home" PATH="$activate_home/.local/bin:$activate_path" MISE_CONFIG_FILE="$mise_config" GITHUB_TOKEN="$github_token" "$mise_bin" install
+  elif [ "$current_user" = root ] && command -v runuser >/dev/null 2>&1; then
+    runuser -u "$activate_user" -- env USER="$activate_user" HOME="$activate_home" PATH="$activate_home/.local/bin:$activate_path" MISE_CONFIG_FILE="$mise_config" GITHUB_TOKEN="$github_token" "$mise_bin" install
+  elif [ "$current_user" = root ]; then
+    GITHUB_TOKEN="$github_token" su -m -s /bin/sh "$activate_user" -c "USER='$activate_user' HOME='$activate_home' PATH='$activate_home/.local/bin:$activate_path' MISE_CONFIG_FILE='$mise_config' '$mise_bin' install"
+  else
+    sudo -u "$activate_user" env USER="$activate_user" HOME="$activate_home" PATH="$activate_home/.local/bin:$activate_path" MISE_CONFIG_FILE="$mise_config" GITHUB_TOKEN="$github_token" "$mise_bin" install
+  fi
 }
 
-if [ "$current_user" = "$activate_user" ]; then
-  run_mise_install
-elif [ "$current_user" = root ] && command -v runuser >/dev/null 2>&1; then
-  runuser -u "$activate_user" -- env USER="$activate_user" HOME="$activate_home" PATH="$activate_home/.local/bin:$activate_path" MISE_CONFIG_FILE="$mise_config" GITHUB_TOKEN="$github_token" "$mise_bin" install
-elif [ "$current_user" = root ]; then
-  GITHUB_TOKEN="$github_token" su -m -s /bin/sh "$activate_user" -c "USER='$activate_user' HOME='$activate_home' PATH='$activate_home/.local/bin:$activate_path' MISE_CONFIG_FILE='$mise_config' '$mise_bin' install"
-else
-  sudo -u "$activate_user" env USER="$activate_user" HOME="$activate_home" PATH="$activate_home/.local/bin:$activate_path" MISE_CONFIG_FILE="$mise_config" GITHUB_TOKEN="$github_token" "$mise_bin" install
-fi
+retry_mise_install() {
+  attempt=1
+  max_attempts=4
+  while ! run_mise_install_once; do
+    if [ "$attempt" -ge "$max_attempts" ]; then
+      echo "Global mise tool installation failed after $max_attempts attempts" >&2
+      return 1
+    fi
+    delay=$((attempt * 10))
+    echo "Global mise tool installation failed; retrying in ${delay}s ($attempt/$max_attempts)" >&2
+    sleep "$delay"
+    attempt=$((attempt + 1))
+  done
+}
+
+retry_mise_install
 REMOTE_HOME
 
 log_info "Installing Maison repository and command for $managed_user"
 maison_archive="$(mktemp "${TMPDIR:-/tmp}/maison-deploy.XXXXXX.tar.gz")"
-remote_maison_archive="$(ssh "$destination" 'umask 077; mktemp /tmp/maison-deploy.XXXXXX.tar.gz')"
-remote_maison_token_file="$(ssh "$destination" 'umask 077; mktemp /tmp/maison-github-token.XXXXXX')"
-printf '%s' "$GITHUB_TOKEN" | ssh "$destination" "cat > '$remote_maison_token_file'"
+remote_maison_archive="$(ssh -T "$destination" 'umask 077; mktemp /tmp/maison-deploy.XXXXXX.tar.gz')"
+remote_maison_token_file="$(ssh -T "$destination" 'umask 077; mktemp /tmp/maison-github-token.XXXXXX')"
+# remote_maison_token_file is intentionally expanded locally from a remote mktemp result.
+# shellcheck disable=SC2029
+printf '%s' "$GITHUB_TOKEN" | ssh -T "$destination" "cat > '$remote_maison_token_file'"
 cleanup_maison_archive() {
   rm -f "$maison_archive"
-  ssh "$destination" "rm -f '$remote_maison_archive' '$remote_maison_token_file'" > /dev/null 2>&1 || true
+  # Remote paths are intentionally expanded locally from remote mktemp results.
+  # shellcheck disable=SC2029
+  ssh -T "$destination" "rm -f '$remote_maison_archive' '$remote_maison_token_file'" > /dev/null 2>&1 || true
 }
 trap cleanup_maison_archive EXIT
 
-tar   --exclude='./.build'   --exclude='./result'   --exclude='./.hm-result'   --exclude='./.direnv'   -czf "$maison_archive"   -C "$REPO_ROOT" .
+tar --exclude='./.build' --exclude='./result' --exclude='./.hm-result' --exclude='./.direnv' -czf "$maison_archive" -C "$REPO_ROOT" .
 scp -q "$maison_archive" "$destination:$remote_maison_archive"
-ssh "$destination" sh -s -- "$managed_user" "$remote_maison_archive" "$remote_maison_token_file" << 'REMOTE_MAISON'
+ssh -T "$destination" sh -s -- "$managed_user" "$remote_maison_archive" "$remote_maison_token_file" << 'REMOTE_MAISON'
 set -eu
 managed_user="$1"
 archive="$2"
@@ -194,15 +215,37 @@ else
   sudo sh -c "rm -rf '$managed_home/.maison' && mv '$staging' '$managed_home/.maison' && mkdir -p '$managed_home/.local/bin' && ln -sfn '$managed_home/.maison/bin/maison' '$managed_home/.local/bin/maison' && chown -R '$managed_user:$managed_group' '$managed_home/.maison' '$managed_home/.local/bin/maison'"
 fi
 
+run_project_mise_install() {
+  env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
+    GITHUB_TOKEN="$github_token" MISE_GITHUB_TOKEN="$github_token" \
+    HOMEBREW_GITHUB_API_TOKEN="$github_token" \
+    "$managed_home/.local/bin/mise" -C "$managed_home/.maison" install
+}
+
+retry_project_mise_install() {
+  attempt=1
+  max_attempts=4
+  while ! run_project_mise_install; do
+    if [ "$attempt" -ge "$max_attempts" ]; then
+      echo "Maison project tool installation failed after $max_attempts attempts" >&2
+      return 1
+    fi
+    delay=$((attempt * 10))
+    echo "Maison project tool installation failed; retrying in ${delay}s ($attempt/$max_attempts)" >&2
+    sleep "$delay"
+    attempt=$((attempt + 1))
+  done
+}
+
 install_maison_tools() {
   mise_bin="$managed_home/.local/bin/mise"
   [ -x "$mise_bin" ] || { echo "mise is unavailable for $managed_user; run bootstrap first" >&2; exit 1; }
   env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
     "$mise_bin" trust "$managed_home/.maison/mise.toml"
-  env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
-    GITHUB_TOKEN="$github_token" MISE_GITHUB_TOKEN="$github_token" \
-    HOMEBREW_GITHUB_API_TOKEN="$github_token" \
-    "$mise_bin" -C "$managed_home/.maison" install
+  retry_project_mise_install
+  usage_bin="$(env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" "$mise_bin" -C "$managed_home/.maison" which usage)"
+  [ -x "$usage_bin" ] || { echo "Usage was not installed with the Maison project tools" >&2; exit 1; }
+  ln -sfn "$usage_bin" "$managed_home/.local/bin/usage"
 }
 
 if [ "$(id -un)" = "$managed_user" ]; then
@@ -210,20 +253,54 @@ if [ "$(id -un)" = "$managed_user" ]; then
 elif [ "$(id -u)" -eq 0 ] && command -v runuser >/dev/null 2>&1; then
   runuser -u "$managed_user" -- env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
     "$managed_home/.local/bin/mise" trust "$managed_home/.maison/mise.toml"
-  runuser -u "$managed_user" -- env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
+  attempt=1
+  max_attempts=4
+  until runuser -u "$managed_user" -- env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
     GITHUB_TOKEN="$github_token" MISE_GITHUB_TOKEN="$github_token" HOMEBREW_GITHUB_API_TOKEN="$github_token" \
-    "$managed_home/.local/bin/mise" -C "$managed_home/.maison" install
+    "$managed_home/.local/bin/mise" -C "$managed_home/.maison" install; do
+    [ "$attempt" -lt "$max_attempts" ] || { echo "Maison project tool installation failed after $max_attempts attempts" >&2; exit 1; }
+    delay=$((attempt * 10))
+    echo "Maison project tool installation failed; retrying in ${delay}s ($attempt/$max_attempts)" >&2
+    sleep "$delay"
+    attempt=$((attempt + 1))
+  done
+  usage_bin="$(runuser -u "$managed_user" -- env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" "$managed_home/.local/bin/mise" -C "$managed_home/.maison" which usage)"
+  [ -x "$usage_bin" ] || { echo "Usage was not installed with the Maison project tools" >&2; exit 1; }
+  ln -sfn "$usage_bin" "$managed_home/.local/bin/usage"
 elif [ "$(id -u)" -eq 0 ]; then
   su -m -s /bin/sh "$managed_user" -c "USER='$managed_user' HOME='$managed_home' PATH='$managed_home/.local/bin:$PATH' '$managed_home/.local/bin/mise' trust '$managed_home/.maison/mise.toml'"
-  GITHUB_TOKEN="$github_token" MISE_GITHUB_TOKEN="$github_token" HOMEBREW_GITHUB_API_TOKEN="$github_token" \
-    su -m -s /bin/sh "$managed_user" -c "USER='$managed_user' HOME='$managed_home' PATH='$managed_home/.local/bin:$PATH' '$managed_home/.local/bin/mise' -C '$managed_home/.maison' install"
+  attempt=1
+  max_attempts=4
+  until GITHUB_TOKEN="$github_token" MISE_GITHUB_TOKEN="$github_token" HOMEBREW_GITHUB_API_TOKEN="$github_token" \
+    su -m -s /bin/sh "$managed_user" -c "USER='$managed_user' HOME='$managed_home' PATH='$managed_home/.local/bin:$PATH' '$managed_home/.local/bin/mise' -C '$managed_home/.maison' install"; do
+    [ "$attempt" -lt "$max_attempts" ] || { echo "Maison project tool installation failed after $max_attempts attempts" >&2; exit 1; }
+    delay=$((attempt * 10))
+    echo "Maison project tool installation failed; retrying in ${delay}s ($attempt/$max_attempts)" >&2
+    sleep "$delay"
+    attempt=$((attempt + 1))
+  done
+  usage_bin="$(su -m -s /bin/sh "$managed_user" -c "USER='$managed_user' HOME='$managed_home' PATH='$managed_home/.local/bin:$PATH' '$managed_home/.local/bin/mise' -C '$managed_home/.maison' which usage")"
+  [ -x "$usage_bin" ] || { echo "Usage was not installed with the Maison project tools" >&2; exit 1; }
+  ln -sfn "$usage_bin" "$managed_home/.local/bin/usage"
 else
   sudo -u "$managed_user" env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
     "$managed_home/.local/bin/mise" trust "$managed_home/.maison/mise.toml"
-  sudo -u "$managed_user" env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
+  attempt=1
+  max_attempts=4
+  until sudo -u "$managed_user" env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
     GITHUB_TOKEN="$github_token" MISE_GITHUB_TOKEN="$github_token" HOMEBREW_GITHUB_API_TOKEN="$github_token" \
-    "$managed_home/.local/bin/mise" -C "$managed_home/.maison" install
+    "$managed_home/.local/bin/mise" -C "$managed_home/.maison" install; do
+    [ "$attempt" -lt "$max_attempts" ] || { echo "Maison project tool installation failed after $max_attempts attempts" >&2; exit 1; }
+    delay=$((attempt * 10))
+    echo "Maison project tool installation failed; retrying in ${delay}s ($attempt/$max_attempts)" >&2
+    sleep "$delay"
+    attempt=$((attempt + 1))
+  done
+  usage_bin="$(sudo -u "$managed_user" env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" "$managed_home/.local/bin/mise" -C "$managed_home/.maison" which usage)"
+  [ -x "$usage_bin" ] || { echo "Usage was not installed with the Maison project tools" >&2; exit 1; }
+  ln -sfn "$usage_bin" "$managed_home/.local/bin/usage"
 fi
+chown -h "$managed_user:$managed_group" "$managed_home/.local/bin/usage"
 REMOTE_MAISON
 trap - EXIT
 cleanup_maison_archive

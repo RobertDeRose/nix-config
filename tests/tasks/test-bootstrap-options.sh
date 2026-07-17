@@ -46,5 +46,11 @@ mkdir -p "$tmp/log"
 )
 assert_file_contains "$tmp/log/git" 'clone --branch cli-ref --single-branch https://github.com/cli/repo.git'
 assert_file_contains "$tmp/log/mise" 'trust'
-assert_file_contains "$tmp/log/mise" 'run bootstrap -- --host cli-host'
+assert_file_contains "$tmp/log/mise" 'run --skip-tools bootstrap -- --host cli-host'
 [ -L "$tmp/home/.local/bin/maison" ] || fail 'bootstrap did not install the Maison command'
+
+# Intentional literal shell source patterns.
+# shellcheck disable=SC2016
+assert_file_contains "$ROOT/.mise/tasks/bootstrap" 'usage_bin="$(mise which usage)"'
+# shellcheck disable=SC2016
+assert_file_contains "$ROOT/.mise/tasks/bootstrap" 'ln -sfn "$usage_bin" "$HOME/.local/bin/usage"'

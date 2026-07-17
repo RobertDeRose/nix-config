@@ -15,6 +15,9 @@
       source ${../../../../dotfiles/zsh/aliases.zsh}
       source ${../../../../dotfiles/zsh/interactive.zsh}
       source ${../../../../dotfiles/zsh/integrations.zsh}
+      if command -v usage >/dev/null 2>&1; then
+        source <(usage generate completion-init zsh)
+      fi
     '';
     plugins = [
       {

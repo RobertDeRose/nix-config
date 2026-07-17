@@ -52,6 +52,10 @@ read_required() {
 ensure_github_auth
 log_info "Installing Maison project tools"
 mise install
+usage_bin="$(mise which usage)"
+[ -x "$usage_bin" ] || die "Usage was not installed with the Maison project tools"
+mkdir -p "$HOME/.local/bin"
+ln -sfn "$usage_bin" "$HOME/.local/bin/usage"
 
 if ! inventory_has_host "$REPO_ROOT" "$host"; then
   log_info "Host '$host' is not in inventory; creating a configuration-only entry"

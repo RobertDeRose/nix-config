@@ -51,7 +51,7 @@ curl -fsSL https://raw.githubusercontent.com/RobertDeRose/maison/main/bootstrap.
   | bash -s -- --host my-host --repo RobertDeRose/maison --ref main
 ```
 
-Maison installs to `~/.maison` and exposes `~/.local/bin/maison`. Task help is generated from the existing `#USAGE` metadata, and shell completion can be enabled with `maison completion <shell>`. From an existing clone:
+Maison installs to `~/.maison` and exposes `~/.local/bin/maison`. Task help is generated from the existing `#USAGE` metadata, and shell completion is enabled automatically through Usage. From an existing clone:
 
 ```bash
 ./bootstrap.sh --host my-host

@@ -14,13 +14,13 @@ method="${usage_method:-}"
 client_id="${usage_client_id:-}"
 prompt_method() {
   local reply
-  cat >&2 <<'PROMPT'
+  cat >&2 << 'PROMPT'
 Choose a GitHub authentication method:
   1. GitHub App device flow through mise
   2. GitHub CLI login
 PROMPT
   printf 'Selection [1-2]: ' >&2
-  IFS= read -r reply < /dev/tty
+  IFS= read -e -r reply < /dev/tty
   case "$reply" in 1) printf 'app\n' ;; 2) printf 'gh\n' ;; *) die "invalid selection '$reply'" ;; esac
 }
 [ -n "$method" ] || method="$(prompt_method)"
@@ -29,12 +29,17 @@ case "$method" in
     if [ -z "$client_id" ]; then
       [ -r /dev/tty ] || die "--client-id is required without an interactive terminal"
       printf 'GitHub App client ID: ' >&2
-      IFS= read -r client_id < /dev/tty
+      IFS= read -e -r client_id < /dev/tty
     fi
     [ -n "$client_id" ] || die "GitHub App client ID cannot be empty"
-    mise settings set github.oauth_client_id "$client_id"
-    mise settings set github.oauth_scopes ""
-    mise settings set github.oauth_export_env GITHUB_TOKEN
+    local_config="$REPO_ROOT/mise.local.toml"
+    cat > "$local_config" << EOF
+[settings.github]
+oauth_client_id = "$client_id"
+oauth_scopes = ""
+oauth_export_env = "GITHUB_TOKEN"
+EOF
+    mise trust "$local_config"
     mise token github --oauth
     ;;
   gh)
