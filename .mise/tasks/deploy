@@ -38,6 +38,7 @@ validate_github_username "$github_user" || die "invalid GitHub username '$github
 
 load_nix_environment
 configure_github_access_token
+[ -n "${GITHUB_TOKEN:-}" ] || die "GitHub authentication is required for remote mise installation; set GITHUB_TOKEN or run gh auth login"
 log_info "Building all deployment outputs before modifying the remote host"
 build_host "$REPO_ROOT" "$host" "$debug"
 
@@ -107,6 +108,10 @@ ssh "$destination" sh -s -- "$managed_user" "$home_store_path/activate" "$remote
 set -eu
 activate_user="$1"
 hm_activate="$2"
+github_token_file="$3"
+github_token="$(cat "$github_token_file")"
+rm -f "$github_token_file"
+[ -n "$github_token" ] || { echo "GitHub token is unavailable for remote mise installation" >&2; exit 1; }
 current_user="$(id -un)"
 activate_home="$(getent passwd "$activate_user" | cut -d: -f6)"
 [ -n "$activate_home" ] || activate_home="/home/$activate_user"
@@ -145,3 +150,80 @@ else
   sudo -u "$activate_user" env USER="$activate_user" HOME="$activate_home" PATH="$activate_home/.local/bin:$activate_path" MISE_CONFIG_FILE="$mise_config" GITHUB_TOKEN="$github_token" "$mise_bin" install
 fi
 REMOTE_HOME
+
+log_info "Installing Maison repository and command for $managed_user"
+maison_archive="$(mktemp "${TMPDIR:-/tmp}/maison-deploy.XXXXXX.tar.gz")"
+remote_maison_archive="$(ssh "$destination" 'umask 077; mktemp /tmp/maison-deploy.XXXXXX.tar.gz')"
+remote_maison_token_file="$(ssh "$destination" 'umask 077; mktemp /tmp/maison-github-token.XXXXXX')"
+printf '%s' "$GITHUB_TOKEN" | ssh "$destination" "cat > '$remote_maison_token_file'"
+cleanup_maison_archive() {
+  rm -f "$maison_archive"
+  ssh "$destination" "rm -f '$remote_maison_archive' '$remote_maison_token_file'" > /dev/null 2>&1 || true
+}
+trap cleanup_maison_archive EXIT
+
+tar   --exclude='./.build'   --exclude='./result'   --exclude='./.hm-result'   --exclude='./.direnv'   -czf "$maison_archive"   -C "$REPO_ROOT" .
+scp -q "$maison_archive" "$destination:$remote_maison_archive"
+ssh "$destination" sh -s -- "$managed_user" "$remote_maison_archive" "$remote_maison_token_file" << 'REMOTE_MAISON'
+set -eu
+managed_user="$1"
+archive="$2"
+github_token_file="$3"
+github_token="$(cat "$github_token_file")"
+rm -f "$github_token_file"
+[ -n "$github_token" ] || { echo "GitHub token is unavailable for Maison project tool installation" >&2; exit 1; }
+managed_home="$(getent passwd "$managed_user" | cut -d: -f6)"
+[ -n "$managed_home" ] || managed_home="/home/$managed_user"
+managed_group="$(id -gn "$managed_user")"
+staging="$(mktemp -d /tmp/maison-install.XXXXXX)"
+trap 'rm -rf "$staging" "$archive"' EXIT HUP INT TERM
+tar -xzf "$archive" -C "$staging"
+
+install_maison() {
+  rm -rf "$managed_home/.maison"
+  mv "$staging" "$managed_home/.maison"
+  mkdir -p "$managed_home/.local/bin"
+  ln -sfn "$managed_home/.maison/bin/maison" "$managed_home/.local/bin/maison"
+  chown -R "$managed_user:$managed_group" "$managed_home/.maison" "$managed_home/.local/bin/maison"
+}
+
+if [ "$(id -u)" -eq 0 ]; then
+  install_maison
+else
+  command -v sudo >/dev/null 2>&1 || { echo "Maison installation requires root or sudo" >&2; exit 1; }
+  sudo sh -c "rm -rf '$managed_home/.maison' && mv '$staging' '$managed_home/.maison' && mkdir -p '$managed_home/.local/bin' && ln -sfn '$managed_home/.maison/bin/maison' '$managed_home/.local/bin/maison' && chown -R '$managed_user:$managed_group' '$managed_home/.maison' '$managed_home/.local/bin/maison'"
+fi
+
+install_maison_tools() {
+  mise_bin="$managed_home/.local/bin/mise"
+  [ -x "$mise_bin" ] || { echo "mise is unavailable for $managed_user; run bootstrap first" >&2; exit 1; }
+  env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
+    "$mise_bin" trust "$managed_home/.maison/mise.toml"
+  env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
+    GITHUB_TOKEN="$github_token" MISE_GITHUB_TOKEN="$github_token" \
+    HOMEBREW_GITHUB_API_TOKEN="$github_token" \
+    "$mise_bin" -C "$managed_home/.maison" install
+}
+
+if [ "$(id -un)" = "$managed_user" ]; then
+  install_maison_tools
+elif [ "$(id -u)" -eq 0 ] && command -v runuser >/dev/null 2>&1; then
+  runuser -u "$managed_user" -- env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
+    "$managed_home/.local/bin/mise" trust "$managed_home/.maison/mise.toml"
+  runuser -u "$managed_user" -- env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
+    GITHUB_TOKEN="$github_token" MISE_GITHUB_TOKEN="$github_token" HOMEBREW_GITHUB_API_TOKEN="$github_token" \
+    "$managed_home/.local/bin/mise" -C "$managed_home/.maison" install
+elif [ "$(id -u)" -eq 0 ]; then
+  su -m -s /bin/sh "$managed_user" -c "USER='$managed_user' HOME='$managed_home' PATH='$managed_home/.local/bin:$PATH' '$managed_home/.local/bin/mise' trust '$managed_home/.maison/mise.toml'"
+  GITHUB_TOKEN="$github_token" MISE_GITHUB_TOKEN="$github_token" HOMEBREW_GITHUB_API_TOKEN="$github_token" \
+    su -m -s /bin/sh "$managed_user" -c "USER='$managed_user' HOME='$managed_home' PATH='$managed_home/.local/bin:$PATH' '$managed_home/.local/bin/mise' -C '$managed_home/.maison' install"
+else
+  sudo -u "$managed_user" env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
+    "$managed_home/.local/bin/mise" trust "$managed_home/.maison/mise.toml"
+  sudo -u "$managed_user" env USER="$managed_user" HOME="$managed_home" PATH="$managed_home/.local/bin:$PATH" \
+    GITHUB_TOKEN="$github_token" MISE_GITHUB_TOKEN="$github_token" HOMEBREW_GITHUB_API_TOKEN="$github_token" \
+    "$managed_home/.local/bin/mise" -C "$managed_home/.maison" install
+fi
+REMOTE_MAISON
+trap - EXIT
+cleanup_maison_archive

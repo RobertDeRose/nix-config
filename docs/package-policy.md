@@ -31,7 +31,7 @@ Reassess this exception when all four tools have suitable, trusted mise backends
 
 ## Adding software
 
-Use `mise run package:search <name>` to inspect available source classes. Then use one explicit command:
+Use `maison package:search <name>` to inspect available source classes. Then use one explicit command:
 
 ```bash
 maison tool:add <tool>

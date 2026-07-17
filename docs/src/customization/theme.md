@@ -9,4 +9,4 @@ Static theme settings are edited in native files:
 | Ghostty | `nix/modules/home/common/ghostty.nix` |
 | Zed | `nix/modules/home/common/zed.nix` |
 
-System font packages remain in `nix/modules/darwin/fonts.nix`. After changing a theme, use `mise run plan` and `mise run apply`; Home Manager remains the deployment owner.
+System font packages remain in `nix/modules/darwin/fonts.nix`. After changing a theme, use `maison plan` and `maison apply`; Home Manager remains the deployment owner.

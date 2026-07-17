@@ -34,7 +34,7 @@ Do not place secrets in the inventory. New usernames must be portable lowercase,
 ## 3. Add the host
 
 ```bash
-mise run host:add build-server \
+maison host:add build-server \
   --system x86_64-linux \
   --user rderose \
   --profiles base,dev,linux
@@ -51,7 +51,7 @@ Use `--commit` only when an immediate local commit is intended. The command neve
 Most hosts need only the inventory entry. When a real exception exists:
 
 ```bash
-mise run host:add special-mac \
+maison host:add special-mac \
   --system aarch64-darwin \
   --user rderose \
   --profiles base,dev,mac \
@@ -78,7 +78,7 @@ maison plan --host build-server
 `plan --host` requires the selected host to match the current machine platform. Remote Linux hosts can be built and activated with:
 
 ```bash
-mise run deploy user@destination build-server
+maison deploy user@destination build-server
 ```
 
 ## 6. Apply or bootstrap
@@ -86,7 +86,7 @@ mise run deploy user@destination build-server
 On an already configured matching machine:
 
 ```bash
-mise run apply --host build-server
+maison apply --host build-server
 ```
 
 On a fresh machine:

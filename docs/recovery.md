@@ -5,7 +5,7 @@
 Validate discovery:
 
 ```bash
-mise tasks validate
+maison tasks validate
 ```
 
 Every file under `.mise/tasks/` must be executable, start with `#!/usr/bin/env bash`, and contain a `[MISE] description`. Repair a mode with:
@@ -30,7 +30,7 @@ Correct the named object, field, and value in `inventory.toml`. Do not add a fal
 Check:
 
 ```bash
-mise run doctor
+maison doctor
 ```
 
 On macOS, inspect and restart the `org.nixos.nix-daemon` launch daemon. On systemd Linux, inspect `nix-daemon.socket` and `nix-daemon.service`. Then source `/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh` and verify `nix --version`.
@@ -40,19 +40,19 @@ On macOS, inspect and restart the `org.nixos.nix-daemon` launch daemon. On syste
 `apply` completes all builds before activation. A build failure leaves the active configuration unchanged. Re-run with:
 
 ```bash
-mise run apply --debug --no-activate
+maison apply --debug --no-activate
 ```
 
 Fix the concise prevalidation error first. Use the raw Nix trace only after the host, platform, inventory, and ownership checks pass.
 
 ## Failed activation
 
-Run `mise run doctor`, then inspect the build links under `.build/`. A successful build can be retried without rebuilding by invoking the platform activation executable, but prefer `mise run apply` so validation remains consistent.
+Run `maison doctor`, then inspect the build links under `.build/`. A successful build can be retried without rebuilding by invoking the platform activation executable, but prefer `maison apply` so validation remains consistent.
 
 Rollback:
 
 ```bash
-mise run rollback
+maison rollback
 ```
 
 On Darwin this selects the previous nix-darwin generation. system-manager does not provide exact nix-darwin generation parity; rollback deactivates the current system-manager generation and does not automatically roll back Home Manager.
@@ -63,7 +63,7 @@ Darwin conflicts are backed up under `~/.hm_bkup/` preserving their relative pat
 
 ## Broken shell
 
-Open a recovery shell using a known system path such as `/bin/bash` or `/bin/zsh`. Inspect the native fragments in `dotfiles/zsh/` and the Home Manager shell module. Build with `mise run apply --no-activate` before reactivating.
+Open a recovery shell using a known system path such as `/bin/bash` or `/bin/zsh`. Inspect the native fragments in `dotfiles/zsh/` and the Home Manager shell module. Build with `maison apply --no-activate` before reactivating.
 
 ## Cache outage
 
@@ -74,7 +74,7 @@ Every non-local cache is acceleration, not a correctness dependency. Task-driven
 personal_cache = false
 ```
 
-Run `mise run plan` afterward. A cache outage may make a custom package build locally and therefore run slowly, but it must not make evaluation depend on that cache.
+Run `maison plan` afterward. A cache outage may make a custom package build locally and therefore run slowly, but it must not make evaluation depend on that cache.
 
 ## Bootstrap failure before mise
 
@@ -85,8 +85,8 @@ The root `bootstrap.sh` owns only prerequisites, clone/checkout selection, mise 
 Run from the clone:
 
 ```bash
-mise run doctor
-mise run bootstrap --host <hostname> --no-activate
+maison doctor
+maison bootstrap --host <hostname> --no-activate
 ```
 
 Provide `--system`, `--user`, `--profiles`, `--fullname`, `--email`, and `--github` when a missing host must be created noninteractively. CI/noninteractive execution never prompts for missing identity data.

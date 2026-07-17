@@ -23,6 +23,25 @@ PUBKEY_NAME="$(basename "$PUBKEY_FILE")"
 KNOWN_HOSTS="$HOME/.ssh/known_hosts"
 STAGE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/maison-deploy.XXXXXX")"
 
+github_token="${GITHUB_TOKEN:-}"
+if [ -z "$github_token" ] && command -v gh > /dev/null 2>&1; then
+  github_token="$(gh auth token 2> /dev/null || true)"
+fi
+if [ -z "$github_token" ]; then
+  cat >&2 << 'EOF'
+ERROR: test:deploy requires GitHub authentication.
+
+Set GITHUB_TOKEN in the environment or authenticate the GitHub CLI:
+
+  gh auth login
+
+The resolved token is passed to the remote mise installation so GitHub-backed
+tools use the authenticated API rate limit.
+EOF
+  exit 1
+fi
+export GITHUB_TOKEN="$github_token"
+
 cleanup() {
   rm -rf "$STAGE_DIR"
 }

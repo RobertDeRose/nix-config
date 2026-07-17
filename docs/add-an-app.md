@@ -5,7 +5,7 @@
 Use casks for ordinary macOS GUI applications:
 
 ```bash
-mise run app:add <cask>
+maison app:add <cask>
 ```
 
 The command adds the cask to `profiles.mac.homebrew.casks` in `packages.toml`, sorts the list, validates package ownership, and shows the diff.
@@ -13,7 +13,7 @@ The command adds the cask to `profiles.mac.homebrew.casks` in `packages.toml`, s
 Remove one with:
 
 ```bash
-mise run app:remove <cask>
+maison app:remove <cask>
 ```
 
 ## Homebrew formulae

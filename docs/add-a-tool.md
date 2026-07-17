@@ -12,13 +12,13 @@ Use this decision order:
 Inspect source options without choosing one automatically:
 
 ```bash
-mise run package:search <name>
+maison package search <name>
 ```
 
 ## Add a mise tool
 
 ```bash
-mise run tool:add <tool> --version latest
+maison tool add <tool> --version latest
 ```
 
 This updates `[tools]` in `mise.toml`, validates ownership, sorts the table, and shows a diff.
@@ -40,8 +40,8 @@ Unknown paths fail with the package, profile, system, invalid attribute path, an
 ## Remove software
 
 ```bash
-mise run tool:remove <tool>
-mise run package:remove <package> --profile <profile>
+maison tool:remove <tool>
+maison package:remove <package> --profile <profile>
 ```
 
 ## Ownership conflicts
@@ -49,3 +49,22 @@ mise run package:remove <package> --profile <profile>
 A package may have one owner. A deliberate temporary overlap must be added to `[[ownership.exceptions]]` in `packages.toml` with the exact owner set and a non-empty reason. `maison check:packages` rejects undocumented duplicates and unused exceptions.
 
 Module-coupled packages stay in the module and are recorded under `[module_owned]` for auditing; do not duplicate their declaration in a profile merely to make it visible.
+
+## GitHub API authentication
+
+Maison, mise, and Nix may query GitHub while resolving tools, flake inputs, and
+package metadata. Configure authentication with:
+
+```bash
+maison github auth
+```
+
+The command offers two local authentication methods:
+
+- A GitHub App with device flow enabled. Maison prompts for the App's public
+  client ID and stores it in the user's mise settings; it is not committed to
+  the Maison repository.
+- GitHub CLI authentication through `gh auth login`.
+
+When Maison detects a GitHub API rate-limit failure, it reports this command
+instead of leaving the user with only the underlying `403 Forbidden` response.

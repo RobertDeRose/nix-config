@@ -32,6 +32,8 @@
     "${config.home.homeDirectory}/.local/bin"
   ]
   ++ lib.optionals pkgs.stdenv.isLinux [
+    "/home/linuxbrew/.linuxbrew/bin"
+    "/home/linuxbrew/.linuxbrew/sbin"
     "/run/current-system/sw/bin"
     "${config.home.homeDirectory}/.nix-profile/bin"
     "${config.home.homeDirectory}/.local/state/nix/profiles/profile/bin"

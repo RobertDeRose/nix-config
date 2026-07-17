@@ -25,11 +25,22 @@ configure_github_access_token() {
   if [ -z "$token" ] && command -v mise > /dev/null 2>&1; then
     token="$(mise x gh -- gh auth token 2> /dev/null || true)"
   fi
+
   if [ -n "$token" ]; then
     export GITHUB_TOKEN="$token"
-    export NIX_CONFIG="${NIX_CONFIG:-}${NIX_CONFIG:+
-}access-tokens = github.com=$token"
+    case "${NIX_CONFIG:-}" in
+      *"access-tokens = github.com="*) ;;
+      *) export NIX_CONFIG="${NIX_CONFIG:-}${NIX_CONFIG:+
+}access-tokens = github.com=$token" ;;
+    esac
   fi
+}
+
+github_auth_required_message() {
+  printf 'GitHub authentication is required or the API rate limit was exceeded.
+' >&2
+  printf 'Run: maison github auth
+' >&2
 }
 
 nix_common_flags() {
@@ -47,11 +58,19 @@ nix_common_flags() {
 }
 
 nix_command() {
-  local debug="$1"
+  local debug="$1" status=0 stderr_file
   shift
   local flags=() flag
   while IFS= read -r flag; do flags+=("$flag"); done < <(nix_common_flags "$debug")
-  nix "${flags[@]}" "$@"
+  stderr_file="$(mktemp "${TMPDIR:-/tmp}/maison-nix.XXXXXX")"
+  if ! nix "${flags[@]}" "$@" 2> >(tee "$stderr_file" >&2); then
+    status=$?
+  fi
+  if [ "$status" -ne 0 ] && grep -Eqi 'rate limit|HTTP error 403|403 Forbidden' "$stderr_file"; then
+    github_auth_required_message
+  fi
+  rm -f "$stderr_file"
+  return "$status"
 }
 
 darwin_target_for_host() {

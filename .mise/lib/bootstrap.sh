@@ -94,9 +94,10 @@ ensure_github_auth() {
   if [ -z "$token" ] && command -v gh > /dev/null 2>&1; then
     token="$(gh auth token 2> /dev/null || true)"
   fi
+  [ -z "$token" ] || return 0
   if is_ci; then
-    die "GitHub CLI is not authenticated and interactive login is disabled in CI"
+    die "GitHub authentication is unavailable in CI; provide GITHUB_TOKEN"
   fi
-  log_info "Starting GitHub CLI authentication"
-  mise x gh -- gh auth login
+  log_info "Configuring GitHub authentication"
+  mise run --skip-tools github:auth
 }

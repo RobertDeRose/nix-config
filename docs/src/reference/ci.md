@@ -4,7 +4,7 @@
 
 `.github/workflows/ci.yml` has three contracts:
 
-1. `repository-checks` installs Nix and mise tools, then runs `mise run check`.
+1. `repository-checks` installs Nix and mise tools, then runs `maison check`.
 2. `build-configurations` runs on x86_64 Linux, ARM64 Linux, and macOS, builds exported packages for the runner system, and builds inventory hosts whose system matches that runner.
 3. `bootstrap-steps` exercises root `bootstrap.sh` on Linux and macOS with a disposable inventory host.
 

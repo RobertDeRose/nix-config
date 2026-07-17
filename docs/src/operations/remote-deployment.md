@@ -1,7 +1,7 @@
 # Remote deployment
 
 ```bash
-mise run deploy <user@host-or-ssh-alias> [inventory-host]
+maison deploy <user@host-or-ssh-alias> [inventory-host]
 ```
 
 When the inventory host is omitted, the task reads the remote short hostname. It validates that the selected inventory entry is Linux, builds system-manager, the system configuration, and Home Manager before remote changes, installs Lix only when missing, establishes daemon trust, activates system-manager, copies the Home Manager closure, and activates it as the managed user.

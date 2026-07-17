@@ -1,6 +1,6 @@
 # Task reference
 
-Run `mise tasks` for live discovery and `mise run <task> --help` for generated usage.
+Run `maison tasks` for live discovery and `maison <task> --help` for generated usage.
 
 ## Stable machine-management interface
 
