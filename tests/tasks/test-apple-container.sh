@@ -160,3 +160,11 @@ assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'test -x /home/linuxbrew/.l
 # Intentional literal shell source pattern.
 # shellcheck disable=SC2016
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'ln -sfn "$usage_bin" "$managed_home/.local/bin/usage"'
+
+assert_file_contains "$ROOT/bootstrap.sh" 'export LANG=C.UTF-8'
+assert_file_contains "$ROOT/bootstrap.sh" 'export LC_CTYPE=C.UTF-8'
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'test "$(locale charmap)" = "UTF-8"'
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" '[[ -o multibyte ]]'
+assert_file_contains "$ROOT/.mise/tasks/test/bootstrap" '[[ -o multibyte ]]'

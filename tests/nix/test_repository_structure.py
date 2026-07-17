@@ -125,6 +125,16 @@ def check_outputs_and_legacy_paths() -> None:
         fail("Maison Starship prompt must keep the Powerlevel10k-inspired two-line layout")
     if "" not in starship_text or "" not in starship_text:
         fail("Maison Starship prompt must retain Nerd Font Powerline styling")
+    if starship.get("character", {}).get("success_symbol") != "[❯](bold green)":
+        fail("Maison Starship prompt must use the Nerd Font-compatible input marker")
+
+    linux_system = (ROOT / "nix/modules/linux/system.nix").read_text()
+    if linux_system.count("LANG=C.UTF-8") < 2 or linux_system.count("LC_CTYPE=C.UTF-8") < 2:
+        fail("Linux system configuration must set C.UTF-8 in both locale files")
+    if '"default/locale"' not in linux_system or '"locale.conf"' not in linux_system:
+        fail("Linux system configuration must manage both default/locale and locale.conf")
+    if 'LANG = "C.UTF-8";' not in shell_module or 'LC_CTYPE = "C.UTF-8";' not in shell_module:
+        fail("Home Manager must export the UTF-8 locale for Linux shells")
 
     minimal_starship_path = ROOT / "dotfiles/starship/starship-minimal.toml"
     minimal_starship_text = minimal_starship_path.read_text()

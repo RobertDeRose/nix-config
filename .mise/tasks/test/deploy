@@ -122,6 +122,9 @@ remote_bootstrap_token_file="$(ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" 'umask 0
 printf '%s' "$GITHUB_TOKEN" | ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" "cat > '$remote_bootstrap_token_file'"
 ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" /bin/bash -s -- "$remote_bootstrap_token_file" << 'EOF'
 set -euo pipefail
+unset LC_ALL
+export LANG=C.UTF-8
+export LC_CTYPE=C.UTF-8
 github_token_file="$1"
 github_token="$(cat "$github_token_file")"
 rm -f "$github_token_file"
@@ -178,6 +181,12 @@ MISE_CONFIG_FILE="$HOME/.config/mise/config.toml" "$HOME/.local/bin/mise" --vers
 MISE_CONFIG_FILE="$HOME/.config/mise/config.toml" "$HOME/.local/bin/mise" exec -- wt --version
 test -x /home/linuxbrew/.linuxbrew/bin/brew
 /home/linuxbrew/.linuxbrew/bin/brew --version
+test "$(locale charmap)" = "UTF-8"
+test "$LANG" = "C.UTF-8"
+test "$LC_CTYPE" = "C.UTF-8"
+# The login-shell probe intentionally expands locale variables remotely.
+# shellcheck disable=SC2016
+zsh -lc 'test "$LANG" = C.UTF-8 && test "$LC_CTYPE" = C.UTF-8 && [[ -o multibyte ]]'
 "$HOME/.local/bin/maison" --help > /dev/null
 command -v maison
 EOF

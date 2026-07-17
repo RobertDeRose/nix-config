@@ -87,7 +87,11 @@ in
       replaceExisting = true;
     };
     "default/locale" = {
-      text = "LANG=en_US.UTF-8\n";
+      text = "LANG=C.UTF-8\nLC_CTYPE=C.UTF-8\n";
+      replaceExisting = true;
+    };
+    "locale.conf" = {
+      text = "LANG=C.UTF-8\nLC_CTYPE=C.UTF-8\n";
       replaceExisting = true;
     };
   };

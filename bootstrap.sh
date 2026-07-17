@@ -103,7 +103,12 @@ install_macos_prerequisites() {
 
 case "$(uname -s)" in
   Darwin) install_macos_prerequisites ;;
-  Linux) install_linux_prerequisites ;;
+  Linux)
+    unset LC_ALL
+    export LANG=C.UTF-8
+    export LC_CTYPE=C.UTF-8
+    install_linux_prerequisites
+    ;;
   *) die "unsupported operating system: $(uname -s)" ;;
 esac
 command -v git > /dev/null 2>&1 || die "git is unavailable"

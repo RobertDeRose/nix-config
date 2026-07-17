@@ -37,6 +37,11 @@ in
 
   xdg.configFile."starship/minimal.toml".source = starshipMinimalConfig;
 
+  home.sessionVariables = lib.optionalAttrs pkgs.stdenv.isLinux {
+    LANG = "C.UTF-8";
+    LC_CTYPE = "C.UTF-8";
+  };
+
   home.sessionPath = [
     "${config.home.homeDirectory}/.local/bin"
   ]

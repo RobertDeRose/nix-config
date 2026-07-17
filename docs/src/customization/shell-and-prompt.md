@@ -6,6 +6,8 @@ Maison uses a Powerlevel10k-inspired, two-line Starship prompt on macOS and Linu
 
 The terminal running the shell must use a Nerd Font. For SSH sessions, that means configuring the font in the local terminal emulator; the remote host does not need the font files installed.
 
+Linux hosts use `C.UTF-8` for both `LANG` and `LC_CTYPE`. Maison sets the locale in the system configuration, Home Manager session, and bootstrap environment so Zsh can decode pasted glyphs and calculate prompt widths consistently. `LC_ALL` remains unset so individual locale categories can still be overridden.
+
 The primary files are:
 
 | File | Purpose |

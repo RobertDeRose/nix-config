@@ -136,5 +136,10 @@ run_apple_container_test_command \
   NIX_INSTALLER_NO_SANDBOX=true \
   bash -lc "$bootstrap_command"
 
+# The login-shell probe intentionally expands locale variables inside the container.
+# shellcheck disable=SC2016
+container exec "$NAME" sudo -iu tester zsh -lc \
+  'test "$(locale charmap)" = UTF-8 && test "$LANG" = C.UTF-8 && test "$LC_CTYPE" = C.UTF-8 && [[ -o multibyte ]]'
+
 echo ""
 echo "Bootstrap test completed in container '$NAME'."
