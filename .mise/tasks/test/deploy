@@ -22,6 +22,13 @@ PUBKEY_DIR="$(dirname "$PUBKEY_FILE")"
 PUBKEY_NAME="$(basename "$PUBKEY_FILE")"
 KNOWN_HOSTS="$HOME/.ssh/known_hosts"
 STAGE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/maison-deploy.XXXXXX")"
+SSH_OPTIONS=(
+  -i "$SSH_KEY"
+  -o IdentitiesOnly=yes
+  -o StrictHostKeyChecking=no
+  -o UserKnownHostsFile=/dev/null
+  -o LogLevel=ERROR
+)
 
 github_token="${GITHUB_TOKEN:-}"
 if [ -z "$github_token" ] && command -v gh > /dev/null 2>&1; then
@@ -96,7 +103,7 @@ container exec "$NAME" sh -lc "cp /workspace/host-ssh/$PUBKEY_NAME /home/tester/
 echo "==> Waiting for SSH to accept connections..."
 SSH_READY=false
 for _ in $(seq 1 120); do
-  if ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=2 "$TARGET@$IP" true > /dev/null 2>&1; then
+  if ssh -T "${SSH_OPTIONS[@]}" -o ConnectTimeout=2 "$TARGET@$IP" true > /dev/null 2>&1; then
     SSH_READY=true
     break
   fi
@@ -109,11 +116,11 @@ if [ "$SSH_READY" != true ]; then
 fi
 
 echo "==> Installing bootstrap prerequisites on remote test target..."
-remote_bootstrap_token_file="$(ssh -T -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" 'umask 077; mktemp /tmp/maison-bootstrap-token.XXXXXX')"
+remote_bootstrap_token_file="$(ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" 'umask 077; mktemp /tmp/maison-bootstrap-token.XXXXXX')"
 # remote_bootstrap_token_file is intentionally expanded locally from a remote mktemp result.
 # shellcheck disable=SC2029
-printf '%s' "$GITHUB_TOKEN" | ssh -T -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" "cat > '$remote_bootstrap_token_file'"
-ssh -T -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" sh -s -- "$remote_bootstrap_token_file" << 'EOF'
+printf '%s' "$GITHUB_TOKEN" | ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" "cat > '$remote_bootstrap_token_file'"
+ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" /bin/bash -s -- "$remote_bootstrap_token_file" << 'EOF'
 set -euo pipefail
 github_token_file="$1"
 github_token="$(cat "$github_token_file")"
@@ -128,7 +135,7 @@ curl -sSfL https://install.lix.systems/lix | sh -s -- install
 EOF
 
 echo "==> Configuring trusted-users and PATH on remote target..."
-ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" << 'EOF'
+ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" /bin/bash -s << 'EOF'
 sudo sh -lc '
 mkdir -p /etc/nix /usr/local/bin
 touch /etc/nix/nix.custom.conf
@@ -161,7 +168,7 @@ echo "==> Running deployment test..."
 run_apple_container_test_command run_deploy_test
 
 echo "==> Verifying remote mise installation and global tools..."
-ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" << 'EOF'
+ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" /bin/bash -s << 'EOF'
 set -euo pipefail
 test -x "$HOME/.local/bin/mise"
 test -x "$HOME/.local/bin/maison"
@@ -170,7 +177,7 @@ test -f "$HOME/.maison/flake.nix"
 MISE_CONFIG_FILE="$HOME/.config/mise/config.toml" "$HOME/.local/bin/mise" --version
 MISE_CONFIG_FILE="$HOME/.config/mise/config.toml" "$HOME/.local/bin/mise" exec -- wt --version
 test -x /home/linuxbrew/.linuxbrew/bin/brew
-HOMEBREW_GITHUB_API_TOKEN="$GITHUB_TOKEN" /home/linuxbrew/.linuxbrew/bin/brew --version
+/home/linuxbrew/.linuxbrew/bin/brew --version
 "$HOME/.local/bin/maison" --help > /dev/null
 command -v maison
 EOF

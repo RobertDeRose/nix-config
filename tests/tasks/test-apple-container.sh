@@ -152,6 +152,10 @@ assert_file_contains "$ROOT/.mise/tasks/deploy" 'Homebrew for Linux is unavailab
 assert_file_contains "$ROOT/bootstrap.sh" 'install_linuxbrew_if_missing'
 assert_file_contains "$ROOT/bootstrap.sh" 'install_nix_or_lix_if_missing'
 assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'Bootstrap order is part of the deployment contract: Homebrew, mise, Nix/Lix.'
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" '/bin/bash -s -- "$remote_bootstrap_token_file"'
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" '-o LogLevel=ERROR'
 assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'test -x /home/linuxbrew/.linuxbrew/bin/brew'
 # Intentional literal shell source pattern.
 # shellcheck disable=SC2016
