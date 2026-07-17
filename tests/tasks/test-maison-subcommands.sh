@@ -4,6 +4,14 @@ repo_root="$(git rev-parse --show-toplevel)"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/home/.maison/.mise/tasks/package" "$tmp/bin"
+cat > "$tmp/bin/usage" << 'MOCK'
+#!/usr/bin/env bash
+set -euo pipefail
+[ "${1:-}" = bash ] || exit 2
+shift
+exec bash "$@"
+MOCK
+chmod +x "$tmp/bin/usage"
 cp "$repo_root/bin/maison" "$tmp/home/.maison/maison"
 touch "$tmp/home/.maison/mise.toml" "$tmp/home/.maison/flake.nix"
 printf '#!/usr/bin/env bash\n' > "$tmp/home/.maison/.mise/tasks/package/search"

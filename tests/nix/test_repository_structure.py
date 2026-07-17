@@ -85,6 +85,13 @@ def check_outputs_and_legacy_paths() -> None:
         fail("AI package outputs must be restricted to Darwin systems")
     mise = load_toml("mise.toml")
     packages = load_toml("packages.toml")
+    if mise.get("tools", {}).get("usage") != "3.5.5":
+        fail("mise.toml must pin Usage 3.5.5 for stable Maison parsing and completion")
+    shell_module = (ROOT / "nix/modules/home/common/shell.nix").read_text()
+    if "source <(maison completion zsh)" not in shell_module:
+        fail("Home Manager must load Maison-specific Zsh completion")
+    if "completion-init zsh" in shell_module:
+        fail("Home Manager must not install Usage's global Zsh fallback completion")
     worktrunk = "github:max-sixty/worktrunk"
     if worktrunk in mise.get("tools", {}):
         fail("repository-local mise.toml must not activate Worktrunk globally")

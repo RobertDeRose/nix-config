@@ -24,7 +24,7 @@ case "${1:-}" in
     exec bash "$@"
     ;;
   generate)
-    printf 'usage-completion-init:%s\n' "${3:-}"
+    printf 'usage-generate:%s\n' "$*"
     ;;
   *)
     exit 2
@@ -59,10 +59,15 @@ assert_file_contains "$ROOT/bin/maison" '#!/usr/bin/env -S usage bash'
 assert_file_contains "$ROOT/bin/maison" '#USAGE about "Put your workstation in order."'
 assert_file_contains "$ROOT/bin/maison" '#USAGE cmd "github"'
 assert_file_contains "$ROOT/bin/maison" 'NIX_CONFIG_DIR'
+assert_file_contains "$ROOT/bin/maison" 'usage generate completion "$2" maison'
+if grep -Fq -- 'completion-init' "$ROOT/bin/maison"; then
+  fail 'Maison still uses the global Usage completion fallback'
+fi
 
 completion="$(HOME="$tmp/home" PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MAISON_HOME="$tmp/home/.maison" \
   "$ROOT/bin/maison" completion bash)"
-assert_eq 'usage-completion-init:bash' "$completion" 'Usage completion initialization'
+expected_completion="usage-generate:generate completion bash maison -f $tmp/home/.maison/bin/maison"
+assert_eq "$expected_completion" "$completion" 'Maison per-command completion generation'
 
 HOME="$tmp/home" PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MAISON_HOME="$tmp/home/.maison" \
   "$ROOT/bin/maison" github auth

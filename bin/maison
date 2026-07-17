@@ -177,7 +177,7 @@ Task help and argument parsing are generated from each task's #USAGE metadata:
   maison help package search
   maison package search --help
 
-Shell completion is enabled by the Usage completion initializer installed by Maison.
+Shell completion is generated specifically for Maison through Usage.
 
 Run `maison tasks` for the complete task list.
 HELP
@@ -218,7 +218,7 @@ case "${1:-}" in
     ;;
   completion)
     [ "$#" -eq 2 ] || die "usage: maison completion <bash|zsh|fish>"
-    exec usage generate completion-init "$2"
+    exec usage generate completion "$2" maison -f "$maison_home/bin/maison"
     ;;
   __task-names)
     list_task_names

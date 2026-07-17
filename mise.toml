@@ -4,7 +4,7 @@ experimental = true
 env_shell_expand = true
 
 [tools]
-usage = "latest"
+usage = "3.5.5"
 python = "latest"
 hk = "latest"
 actionlint = "latest"
