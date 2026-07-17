@@ -109,8 +109,18 @@ if [ "$SSH_READY" != true ]; then
 fi
 
 echo "==> Installing bootstrap prerequisites on remote test target..."
-ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" << 'EOF'
+remote_bootstrap_token_file="$(ssh -T -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" 'umask 077; mktemp /tmp/maison-bootstrap-token.XXXXXX')"
+# remote_bootstrap_token_file is intentionally expanded locally from a remote mktemp result.
+# shellcheck disable=SC2029
+printf '%s' "$GITHUB_TOKEN" | ssh -T -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" "cat > '$remote_bootstrap_token_file'"
+ssh -T -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" sh -s -- "$remote_bootstrap_token_file" << 'EOF'
 set -euo pipefail
+github_token_file="$1"
+github_token="$(cat "$github_token_file")"
+rm -f "$github_token_file"
+
+# Bootstrap order is part of the deployment contract: Homebrew, mise, Nix/Lix.
+HOMEBREW_GITHUB_API_TOKEN="$github_token" NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 curl -sSfL https://mise.run | sh
 export NIX_INSTALLER_NO_CONFIRM=true
 export NIX_INSTALLER_ENABLE_FLAKES=true
@@ -159,6 +169,8 @@ test -f "$HOME/.maison/mise.toml"
 test -f "$HOME/.maison/flake.nix"
 MISE_CONFIG_FILE="$HOME/.config/mise/config.toml" "$HOME/.local/bin/mise" --version
 MISE_CONFIG_FILE="$HOME/.config/mise/config.toml" "$HOME/.local/bin/mise" exec -- wt --version
+test -x /home/linuxbrew/.linuxbrew/bin/brew
+HOMEBREW_GITHUB_API_TOKEN="$GITHUB_TOKEN" /home/linuxbrew/.linuxbrew/bin/brew --version
 "$HOME/.local/bin/maison" --help > /dev/null
 command -v maison
 EOF

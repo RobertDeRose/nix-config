@@ -146,6 +146,13 @@ assert_file_contains "$ROOT/.mise/tasks/deploy" 'trust "$managed_home/.maison/mi
 assert_file_contains "$ROOT/.mise/tasks/deploy" '"$managed_home/.local/bin/mise" -C "$managed_home/.maison" install'
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'Global mise tool installation failed; retrying'
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'Maison project tool installation failed; retrying'
+assert_file_contains "$ROOT/.mise/tasks/deploy" 'ssh_tty=(-T)'
+assert_file_contains "$ROOT/.mise/tasks/deploy" 'ssh -T -o BatchMode=yes'
+assert_file_contains "$ROOT/.mise/tasks/deploy" 'Homebrew for Linux is unavailable; run bootstrap first'
+assert_file_contains "$ROOT/bootstrap.sh" 'install_linuxbrew_if_missing'
+assert_file_contains "$ROOT/bootstrap.sh" 'install_nix_or_lix_if_missing'
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'Bootstrap order is part of the deployment contract: Homebrew, mise, Nix/Lix.'
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'test -x /home/linuxbrew/.linuxbrew/bin/brew'
 # Intentional literal shell source pattern.
 # shellcheck disable=SC2016
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'ln -sfn "$usage_bin" "$managed_home/.local/bin/usage"'

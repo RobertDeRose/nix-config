@@ -83,7 +83,19 @@ install_linuxbrew_if_missing() {
   else
     die "unsupported Linux package manager; install Homebrew prerequisites manually"
   fi
-  NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  local git_config_home
+  git_config_home="$(mktemp -d "${TMPDIR:-/tmp}/maison-linuxbrew-git.XXXXXX")"
+  trap 'rm -rf "$git_config_home"' RETURN
+  XDG_CONFIG_HOME="$git_config_home" \
+    GIT_CONFIG_GLOBAL=/dev/null \
+    GIT_CONFIG_SYSTEM=/dev/null \
+    HOMEBREW_BREW_GIT_REMOTE=https://github.com/Homebrew/brew.git \
+    HOMEBREW_CORE_GIT_REMOTE=https://github.com/Homebrew/homebrew-core.git \
+    HOMEBREW_GITHUB_API_TOKEN="${HOMEBREW_GITHUB_API_TOKEN:-${GITHUB_TOKEN:-}}" \
+    NONINTERACTIVE=1 \
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  rm -rf "$git_config_home"
+  trap - RETURN
   [ -x /home/linuxbrew/.linuxbrew/bin/brew ] || die "Homebrew installation did not create /home/linuxbrew/.linuxbrew/bin/brew"
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 }

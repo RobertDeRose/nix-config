@@ -46,7 +46,7 @@ log_info "Checking published GitHub SSH keys for $github_user"
 keys="$(curl -fsSL --connect-timeout 5 --max-time 10 "https://github.com/$github_user.keys")" || die "failed to fetch GitHub SSH keys for '$github_user'"
 [ -n "$keys" ] || die "GitHub user '$github_user' has no published SSH keys"
 
-if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "$destination" true 2> /dev/null; then
+if ! ssh -T -o BatchMode=yes -o ConnectTimeout=5 "$destination" true 2> /dev/null; then
   require_command ssh-copy-id
   ssh-copy-id "$destination"
 fi
@@ -65,10 +65,18 @@ REMOTE_MISE_CHECK
   die "remote host '$destination' is not bootstrapped: mise is unavailable for '$managed_user'; run bootstrap first"
 fi
 
+if ! ssh -T "$destination" 'test -x /home/linuxbrew/.linuxbrew/bin/brew'; then
+  die "remote host '$destination' is not bootstrapped: Homebrew for Linux is unavailable; run bootstrap first"
+fi
+
 ssh_user="$(ssh -G "$destination" | sed -n 's/^user //p' | head -n1)"
 [ -n "$ssh_user" ] || ssh_user="$(printf '%s' "$destination" | sed -n 's/@.*//p')"
 log_info "Ensuring remote Nix trusts SSH user ${ssh_user:-unknown}"
-ssh -t "$destination" 'bash -s' << 'REMOTE_TRUST'
+ssh_tty=(-T)
+if [ -t 0 ] && [ -t 1 ]; then
+  ssh_tty=(-t)
+fi
+ssh "${ssh_tty[@]}" "$destination" 'bash -s' << 'REMOTE_TRUST'
 set -euo pipefail
 trusted_user="$(id -un)"
 conf=/etc/nix/nix.conf

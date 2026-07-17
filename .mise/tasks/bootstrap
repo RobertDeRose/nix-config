@@ -46,6 +46,13 @@ read_required() {
   printf '%s\n' "$value"
 }
 
+# Direct `maison bootstrap` invocations may bypass the root bootstrap script.
+# Keep prerequisite setup idempotent and ordered before authentication or any
+# managed Git configuration: Homebrew first, then Nix/Lix. mise already exists
+# because it is executing this task.
+install_linuxbrew_if_missing
+install_nix_or_lix_if_missing
+
 # Authentication must be established before mise resolves the project tool
 # inventory. This allows bootstrap to run through `mise run --skip-tools` on a
 # fresh machine without creating a GitHub rate-limit deadlock.
@@ -73,8 +80,6 @@ fi
 
 require_inventory_host "$REPO_ROOT" "$host"
 validate_host_platform "$REPO_ROOT" "$host" "$(current_system)"
-install_nix_or_lix_if_missing
-install_linuxbrew_if_missing
 
 apply_args=(--host "$host")
 [ "${usage_no_activate:-false}" != true ] || apply_args+=(--no-activate)

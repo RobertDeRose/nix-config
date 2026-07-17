@@ -140,6 +140,16 @@ fi
 cd "$repo_root"
 export MISE_TRUSTED_CONFIG_PATHS="$repo_root${MISE_TRUSTED_CONFIG_PATHS:+:$MISE_TRUSTED_CONFIG_PATHS}"
 
+# Bootstrap platform prerequisites before Maison or Home Manager can install
+# managed Git configuration. The order is intentional: Homebrew, mise, Nix/Lix.
+# shellcheck source=.mise/lib/common.sh
+source "$repo_root/.mise/lib/common.sh"
+# shellcheck source=.mise/lib/platform.sh
+source "$repo_root/.mise/lib/platform.sh"
+# shellcheck source=.mise/lib/bootstrap.sh
+source "$repo_root/.mise/lib/bootstrap.sh"
+install_linuxbrew_if_missing
+
 if ! command -v mise > /dev/null 2>&1; then
   if [ ! -x "$HOME/.local/bin/mise" ]; then
     log "Installing mise"
@@ -148,6 +158,8 @@ if ! command -v mise > /dev/null 2>&1; then
   export PATH="$HOME/.local/bin:$PATH"
 fi
 command -v mise > /dev/null 2>&1 || die "mise installation did not place the executable on PATH"
+
+install_nix_or_lix_if_missing
 
 log "Installing Maison command"
 mkdir -p "$HOME/.local/bin"

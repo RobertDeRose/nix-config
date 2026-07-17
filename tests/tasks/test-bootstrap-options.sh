@@ -19,9 +19,12 @@ case "$1" in
     mkdir -p "$destination/.git"
     printf '[tools]\n' > "$destination/mise.toml"
     printf '{}\n' > "$destination/flake.nix"
-    mkdir -p "$destination/bin"
+    mkdir -p "$destination/bin" "$destination/.mise/lib"
     printf '#!/usr/bin/env bash\n' > "$destination/bin/maison"
     chmod +x "$destination/bin/maison"
+    printf 'log_info() { :; }\ndie() { printf "%%s\\n" "$*" >&2; exit 1; }\n' > "$destination/.mise/lib/common.sh"
+    printf 'current_os() { printf "linux\\n"; }\ncurrent_arch() { printf "aarch64\\n"; }\n' > "$destination/.mise/lib/platform.sh"
+    printf 'install_linuxbrew_if_missing() { :; }\ninstall_nix_or_lix_if_missing() { :; }\n' > "$destination/.mise/lib/bootstrap.sh"
     ;;
   *) exec "$REAL_GIT" "$@" ;;
 esac
@@ -54,3 +57,10 @@ assert_file_contains "$tmp/log/mise" 'run --skip-tools bootstrap -- --host cli-h
 assert_file_contains "$ROOT/.mise/tasks/bootstrap" 'usage_bin="$(mise which usage)"'
 # shellcheck disable=SC2016
 assert_file_contains "$ROOT/.mise/tasks/bootstrap" 'ln -sfn "$usage_bin" "$HOME/.local/bin/usage"'
+
+# Root bootstrap establishes platform prerequisites before delegating to Maison.
+brew_line="$(grep -n 'install_linuxbrew_if_missing' "$ROOT/bootstrap.sh" | head -n1 | cut -d: -f1)"
+mise_line="$(grep -n 'if ! command -v mise' "$ROOT/bootstrap.sh" | head -n1 | cut -d: -f1)"
+nix_line="$(grep -n 'install_nix_or_lix_if_missing' "$ROOT/bootstrap.sh" | head -n1 | cut -d: -f1)"
+[ "$brew_line" -lt "$mise_line" ] || fail 'bootstrap must install Homebrew before mise'
+[ "$mise_line" -lt "$nix_line" ] || fail 'bootstrap must install mise before Nix/Lix'
