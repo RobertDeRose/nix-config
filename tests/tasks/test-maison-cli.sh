@@ -58,7 +58,12 @@ assert_file_contains "$tmp/log/mise" 'tasks'
 assert_file_contains "$ROOT/bin/maison" '#!/usr/bin/env -S usage bash'
 assert_file_contains "$ROOT/bin/maison" '#USAGE about "Put your workstation in order."'
 assert_file_contains "$ROOT/bin/maison" '#USAGE cmd "github"'
+if grep -Fq -- 'subcommand_required=#true' "$ROOT/bin/maison"; then
+  fail 'Maison command groups still make Usage --help fail without a child command'
+fi
 assert_file_contains "$ROOT/bin/maison" 'NIX_CONFIG_DIR'
+# This assertion intentionally matches the literal "$2" in the Maison script.
+# shellcheck disable=SC2016
 assert_file_contains "$ROOT/bin/maison" 'usage generate completion "$2" maison'
 if grep -Fq -- 'completion-init' "$ROOT/bin/maison"; then
   fail 'Maison still uses the global Usage completion fallback'

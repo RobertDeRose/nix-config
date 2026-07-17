@@ -16,30 +16,30 @@
 #USAGE cmd "completion" help="Generate the Usage shell initialization" {
 #USAGE   arg "<shell>" { choices "bash" "zsh" "fish" }
 #USAGE }
-#USAGE cmd "github" help="Manage GitHub authentication" subcommand_required=#true {
+#USAGE cmd "github" help="Manage GitHub authentication" {
 #USAGE   cmd "auth" help="Configure GitHub API authentication" { arg "[args]..." }
 #USAGE }
-#USAGE cmd "app" help="Manage applications" subcommand_required=#true {
+#USAGE cmd "app" help="Manage applications" {
 #USAGE   cmd "add" help="Add an application" { arg "[args]..." }
 #USAGE   cmd "remove" help="Remove an application" { arg "[args]..." }
 #USAGE }
-#USAGE cmd "cache" help="Manage the binary cache" subcommand_required=#true {
+#USAGE cmd "cache" help="Manage the binary cache" {
 #USAGE   cmd "package" help="Cache a package" { arg "[args]..." }
 #USAGE   cmd "status" help="Show cache status" { arg "[args]..." }
 #USAGE }
-#USAGE cmd "docs" help="Manage documentation" subcommand_required=#true {
+#USAGE cmd "docs" help="Manage documentation" {
 #USAGE   cmd "build" help="Build documentation" { arg "[args]..." }
 #USAGE   cmd "serve" help="Serve documentation" { arg "[args]..." }
 #USAGE }
-#USAGE cmd "host" help="Manage hosts" subcommand_required=#true {
+#USAGE cmd "host" help="Manage hosts" {
 #USAGE   cmd "add" help="Add a host" { arg "[args]..." }
 #USAGE   cmd "list" help="List hosts" { arg "[args]..." }
 #USAGE   cmd "validate" help="Validate hosts" { arg "[args]..." }
 #USAGE }
-#USAGE cmd "iterm" help="Manage iTerm configuration" subcommand_required=#true {
+#USAGE cmd "iterm" help="Manage iTerm configuration" {
 #USAGE   cmd "export" help="Export iTerm configuration" { arg "[args]..." }
 #USAGE }
-#USAGE cmd "nix" help="Manage Nix" subcommand_required=#true {
+#USAGE cmd "nix" help="Manage Nix" {
 #USAGE   cmd "clean" help="Clean Nix build artifacts" { arg "[args]..." }
 #USAGE   cmd "debug" help="Debug Nix configuration" { arg "[args]..." }
 #USAGE   cmd "deploy" help="Deploy with Nix" { arg "[args]..." }
@@ -55,18 +55,18 @@
 #USAGE   cmd "uninstall" help="Uninstall Nix" { arg "[args]..." }
 #USAGE   cmd "up" help="Update Nix inputs" { arg "[args]..." }
 #USAGE }
-#USAGE cmd "package" help="Manage packages" subcommand_required=#true {
+#USAGE cmd "package" help="Manage packages" {
 #USAGE   cmd "add" help="Add a package" { arg "[args]..." }
 #USAGE   cmd "remove" help="Remove a package" { arg "[args]..." }
 #USAGE   cmd "search" help="Search package sources" { arg "[args]..." }
 #USAGE   cmd "validate" help="Validate package ownership" { arg "[args]..." }
 #USAGE }
-#USAGE cmd "test" help="Run integration tests" subcommand_required=#true {
+#USAGE cmd "test" help="Run integration tests" {
 #USAGE   cmd "bootstrap" help="Test bootstrap" { arg "[args]..." }
 #USAGE   cmd "deploy" help="Test deployment" { arg "[args]..." }
 #USAGE   cmd "image" help="Build the test image" { arg "[args]..." }
 #USAGE }
-#USAGE cmd "tool" help="Manage global mise tools" subcommand_required=#true {
+#USAGE cmd "tool" help="Manage global mise tools" {
 #USAGE   cmd "add" help="Add a global tool" { arg "[args]..." }
 #USAGE   cmd "remove" help="Remove a global tool" { arg "[args]..." }
 #USAGE }
