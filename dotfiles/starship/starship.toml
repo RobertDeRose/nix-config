@@ -1,36 +1,46 @@
-continuation_prompt = "[ ▶▶](fg:lightgreen) "
-format = "[╭──](fg:current_line)$os$directory$git_branch$fill$nodejs$rust$python$c$cmd_duration$shell$time$username$line_break[╰─](fg:current_line)$character"
-palette = "ayu_mirage"
+"$schema" = "https://starship.rs/config-schema.json"
 
-[palettes.ayu_mirage]
-background = "#1F2430"
-black = "#191E2A"
-blue = "#73D0FF"
-box = "#44475A"
-brightblue = "#59C2FF"
-current_line = "#44475A"
-cyan = "#95E6CB"
-foreground = "#CBCCC6"
-green = "#AAD94C"
-lavender = "#D4BFFF"
-lightgreen = "#D5FF80"
-maroon = "#F28779"
-orange = "#FFAD66"
-orangeyellow = "#FFD173"
-peach = "#FFCC66"
-pink = "#F29E74"
-primary = "#1F2430"
-purple = "#D4BFFF"
-red = "#F28779"
-sapphire = "#5CCFE6"
-sky = "#73D0FF"
-teal = "#95E6CB"
-white = "#FFFFFF"
-yellow = "#FFD173"
+add_newline = true
+command_timeout = 750
+continuation_prompt = "[│ ](fg:overlay0)"
+format = """
+[╭─](fg:overlay0)$os$username$hostname$directory$git_branch$git_status$nix_shell$package$c$golang$nodejs$python$rust$cmd_duration$shell$time$status$jobs
+[╰─](fg:overlay0)$character"""
+palette = "catppuccin_macchiato"
+right_format = ""
+scan_timeout = 30
+
+[palettes.catppuccin_macchiato]
+rosewater = "#f4dbd6"
+flamingo = "#f0c6c6"
+pink = "#f5bde6"
+mauve = "#c6a0f6"
+red = "#ed8796"
+maroon = "#ee99a0"
+peach = "#f5a97f"
+yellow = "#eed49f"
+green = "#a6da95"
+teal = "#8bd5ca"
+sky = "#91d7e3"
+sapphire = "#7dc4e4"
+blue = "#8aadf4"
+lavender = "#b7bdf8"
+text = "#cad3f5"
+subtext1 = "#b8c0e0"
+subtext0 = "#a5adcb"
+overlay2 = "#939ab7"
+overlay1 = "#8087a2"
+overlay0 = "#6e738d"
+surface2 = "#5b6078"
+surface1 = "#494d64"
+surface0 = "#363a4f"
+base = "#24273a"
+mantle = "#1e2030"
+crust = "#181926"
 
 [os]
 disabled = false
-format = "(fg:current_line)[](fg:foreground)[$symbol](fg:primary bg:foreground)[](fg:foreground)"
+format = "[](fg:blue)[$symbol](fg:base bg:blue)[](fg:blue) "
 
 [os.symbols]
 Alpine = ""
@@ -66,64 +76,120 @@ Ubuntu = ""
 Unknown = ""
 Windows = ""
 
+[username]
+format = "[](fg:mauve)[](fg:base bg:mauve)[](fg:mauve bg:surface0)[ $user](fg:text bg:surface0)[](fg:surface0) "
+show_always = true
+
+[hostname]
+format = "[](fg:sapphire)[󰒋](fg:base bg:sapphire)[](fg:sapphire bg:surface0)[ $hostname](fg:text bg:surface0)[](fg:surface0) "
+ssh_only = true
+trim_at = "."
+
 [directory]
-format = "[─](fg:current_line)[](fg:blue)[󰷏](fg:primary bg:blue)[](fg:blue bg:box)[ $read_only$truncation_symbol$path](fg:foreground bg:box)[](fg:box)"
-home_symbol = " "
-read_only = "󱧵 "
+format = "[](fg:blue)[](fg:base bg:blue)[](fg:blue bg:surface0)[ $path](fg:text bg:surface0)[$read_only](fg:red bg:surface0)[](fg:surface0) "
+home_symbol = "~"
+read_only = " "
 read_only_style = ""
-truncation_length = 2
-truncation_symbol = " "
-
-[character]
-format = "[$symbol](fg:current_line) "
-error_symbol = "[!](fg:bold red)"
-success_symbol = '[\$](fg:lightgreen)'
-
-[fill]
-style = "fg:current_line"
-symbol = "─"
-
-[sudo]
-disabled = true
-format = "[$symbol](yellow)"
-symbol = ""
-
-[c]
-format = "[─](fg:current_line)[](fg:blue)[$symbol](fg:primary bg:blue)[](fg:blue bg:box)[ $version](fg:foreground bg:box)[](fg:box)"
-symbol = " C"
-
-[cmd_duration]
-format = "[─](fg:current_line)[](fg:orange)[](fg:primary bg:orange)[](fg:orange bg:box)[ $duration ](fg:foreground bg:box)[](fg:box)"
-min_time = 500
+truncate_to_repo = false
+truncation_length = 4
+truncation_symbol = "…/"
 
 [git_branch]
-format = "[─](fg:current_line)[](fg:green)[$symbol](fg:primary bg:green)[](fg:green bg:box)[ $branch](fg:foreground bg:box)[](fg:box)"
-symbol = " "
+format = "[](fg:green)[](fg:base bg:green)[](fg:green bg:surface0)[ $branch](fg:text bg:surface0)[](fg:surface0) "
+symbol = ""
+truncation_length = 36
+truncation_symbol = "…"
+
+[git_status]
+ahead = "⇡${count}"
+behind = "⇣${count}"
+conflicted = "=${count}"
+deleted = "×${count}"
+diverged = "⇕⇡${ahead_count}⇣${behind_count}"
+format = "[](fg:yellow)[](fg:base bg:yellow)[](fg:yellow bg:surface0)[ $all_status$ahead_behind](fg:text bg:surface0)[](fg:surface0) "
+modified = "!${count}"
+renamed = "»${count}"
+staged = "+${count}"
+stashed = "≡${count}"
+untracked = "?${count}"
+up_to_date = ""
+
+[nix_shell]
+format = "[](fg:mauve)[$symbol](fg:base bg:mauve)[](fg:mauve bg:surface0)[ $state( $name)](fg:text bg:surface0)[](fg:surface0) "
+heuristic = true
+impure_msg = "impure"
+pure_msg = "pure"
+symbol = ""
+unknown_msg = "shell"
+
+[package]
+format = "[](fg:pink)[$symbol](fg:base bg:pink)[](fg:pink bg:surface0)[ $version](fg:text bg:surface0)[](fg:surface0) "
+symbol = "󰏗"
+
+[c]
+format = "[](fg:sapphire)[$symbol](fg:base bg:sapphire)[](fg:sapphire bg:surface0)[ $version](fg:text bg:surface0)[](fg:surface0) "
+symbol = ""
+
+[golang]
+format = "[](fg:sky)[$symbol](fg:base bg:sky)[](fg:sky bg:surface0)[ $version](fg:text bg:surface0)[](fg:surface0) "
+symbol = ""
 
 [nodejs]
-format = "[─](fg:current_line)[](fg:green)[$symbol](fg:primary bg:green)[](fg:green bg:box)[ $version](fg:foreground bg:box)[](fg:box)"
-symbol = "󰎙 Node.js"
+format = "[](fg:green)[$symbol](fg:base bg:green)[](fg:green bg:surface0)[ $version](fg:text bg:surface0)[](fg:surface0) "
+symbol = ""
 
 [python]
-format = "[─](fg:current_line)[](fg:brightblue)[$symbol](fg:primary bg:brightblue)[](fg:brightblue bg:box)[ $version](fg:foreground bg:box)[](fg:box)"
+format = "[](fg:yellow)[$symbol](fg:base bg:yellow)[](fg:yellow bg:surface0)[ ${pyenv_prefix}${version}( $virtualenv)](fg:text bg:surface0)[](fg:surface0) "
 symbol = ""
 
 [rust]
-format = "[─](fg:current_line)[](fg:red)[$symbol](fg:primary bg:red)[](fg:red bg:box)[ $version](fg:foreground bg:box)[](fg:box)"
-symbol = ""
+format = "[](fg:peach)[$symbol](fg:base bg:peach)[](fg:peach bg:surface0)[ $version](fg:text bg:surface0)[](fg:surface0) "
+symbol = ""
+
+[cmd_duration]
+format = "[](fg:peach)[󱎫](fg:base bg:peach)[](fg:peach bg:surface0)[ $duration](fg:text bg:surface0)[](fg:surface0) "
+min_time = 1000
+show_milliseconds = false
+
 
 [shell]
+bash_indicator = "bash"
 disabled = false
 fish_indicator = "fish"
-format = "[─](fg:current_line)[](fg:blue)[](fg:primary bg:blue)[](fg:blue bg:box)[ $indicator](fg:foreground bg:box)[](fg:box)"
-powershell_indicator = "powershell"
+format = "[](fg:teal)[](fg:base bg:teal)[](fg:teal bg:surface0)[ $indicator](fg:text bg:surface0)[](fg:surface0) "
+ion_indicator = "ion"
+powershell_indicator = "pwsh"
 unknown_indicator = "shell"
+xonsh_indicator = "xonsh"
+zsh_indicator = "zsh"
 
 [time]
 disabled = false
-format = "[─](fg:current_line)[](fg:purple)[󰦖](fg:primary bg:purple)[](fg:purple bg:box)[ $time](fg:foreground bg:box)[](fg:box)"
+format = "[](fg:rosewater)[](fg:base bg:rosewater)[](fg:rosewater bg:surface0)[ $time](fg:text bg:surface0)[](fg:surface0) "
 time_format = "%H:%M"
 
-[username]
-format = "[─](fg:current_line)[](fg:sapphire)[](fg:primary bg:sapphire)[](fg:sapphire bg:box)[ $user](fg:foreground bg:box)[](fg:box)"
-show_always = true
+[status]
+disabled = false
+format = "[](fg:red)[$symbol](fg:base bg:red)[](fg:red bg:surface0)[ $status](fg:text bg:surface0)[](fg:surface0) "
+map_symbol = true
+not_executable_symbol = ""
+not_found_symbol = ""
+recognize_signal_code = true
+sigint_symbol = "󰜺"
+signal_symbol = ""
+symbol = ""
+
+[jobs]
+format = "[](fg:lavender)[$symbol](fg:base bg:lavender)[](fg:lavender bg:surface0)[ $number](fg:text bg:surface0)[](fg:surface0) "
+number_threshold = 1
+symbol = ""
+symbol_threshold = 1
+
+[character]
+error_symbol = "[❯](bold red)"
+format = "$symbol "
+success_symbol = "[❯](bold green)"
+vimcmd_replace_one_symbol = "[❮](bold peach)"
+vimcmd_replace_symbol = "[❮](bold peach)"
+vimcmd_symbol = "[❮](bold lavender)"
+vimcmd_visual_symbol = "[❮](bold yellow)"

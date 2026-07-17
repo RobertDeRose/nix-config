@@ -92,16 +92,48 @@ def check_outputs_and_legacy_paths() -> None:
         fail("Home Manager must load Maison-specific Zsh completion")
     if "completion-init zsh" in shell_module:
         fail("Home Manager must not install Usage's global Zsh fallback completion")
-    if "starship-linux.toml" not in shell_module or "pkgs.stdenv.isLinux" not in shell_module:
-        fail("Home Manager must select the terminal-safe Starship prompt on Linux")
-    linux_starship_path = ROOT / "dotfiles/starship/starship-linux.toml"
-    linux_starship_text = linux_starship_path.read_text()
-    if any(ord(character) > 127 for character in linux_starship_text):
-        fail("Linux Starship configuration must remain ASCII-only")
-    linux_starship = load_toml("dotfiles/starship/starship-linux.toml")
-    linux_format = linux_starship.get("format", "")
-    if "$fill" in linux_format or "$line_break" in linux_format or linux_starship.get("right_format"):
-        fail("Linux Starship prompt must not use width-sensitive fill, line breaks, or right alignment")
+    if "dotfiles/starship/starship.toml" not in shell_module:
+        fail("Home Manager must use the shared Maison Starship prompt")
+    starship_binding = shell_module.split("starshipConfig", 1)[1].split("in", 1)[0]
+    if "starship-linux.toml" in shell_module or "pkgs.stdenv.isLinux" in starship_binding:
+        fail("Home Manager must not select a separate Linux Starship prompt")
+    if 'xdg.configFile."starship/minimal.toml"' not in shell_module:
+        fail("Home Manager must install the minimal Starship recovery prompt")
+
+    starship_text = (ROOT / "dotfiles/starship/starship.toml").read_text()
+    starship = load_toml("dotfiles/starship/starship.toml")
+    if starship.get("palette") != "catppuccin_macchiato":
+        fail("Maison Starship must use the Catppuccin Macchiato palette")
+    expected_macchiato = {
+        "base": "#24273a",
+        "text": "#cad3f5",
+        "blue": "#8aadf4",
+        "green": "#a6da95",
+        "yellow": "#eed49f",
+        "red": "#ed8796",
+        "mauve": "#c6a0f6",
+        "peach": "#f5a97f",
+    }
+    palette = starship.get("palettes", {}).get("catppuccin_macchiato", {})
+    for color, expected in expected_macchiato.items():
+        if palette.get(color) != expected:
+            fail(f"Maison Starship Macchiato color {color} must be {expected}")
+    starship_format = starship.get("format", "")
+    if "$fill" in starship_format or starship.get("right_format"):
+        fail("Maison Starship prompt must not use width-sensitive fill or right alignment")
+    if "\n" not in starship_format:
+        fail("Maison Starship prompt must keep the Powerlevel10k-inspired two-line layout")
+    if "" not in starship_text or "" not in starship_text:
+        fail("Maison Starship prompt must retain Nerd Font Powerline styling")
+
+    minimal_starship_path = ROOT / "dotfiles/starship/starship-minimal.toml"
+    minimal_starship_text = minimal_starship_path.read_text()
+    if any(ord(character) > 127 for character in minimal_starship_text):
+        fail("Minimal Starship recovery prompt must remain ASCII-only")
+    minimal_starship = load_toml("dotfiles/starship/starship-minimal.toml")
+    minimal_format = minimal_starship.get("format", "")
+    if "$fill" in minimal_format or minimal_starship.get("right_format"):
+        fail("Minimal Starship recovery prompt must not use fill or right alignment")
     worktrunk = "github:max-sixty/worktrunk"
     if worktrunk in mise.get("tools", {}):
         fail("repository-local mise.toml must not activate Worktrunk globally")

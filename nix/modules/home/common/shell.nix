@@ -6,11 +6,8 @@
   ...
 }:
 let
-  starshipConfig =
-    if pkgs.stdenv.isLinux then
-      ../../../../dotfiles/starship/starship-linux.toml
-    else
-      ../../../../dotfiles/starship/starship.toml;
+  starshipConfig = ../../../../dotfiles/starship/starship.toml;
+  starshipMinimalConfig = ../../../../dotfiles/starship/starship-minimal.toml;
 in
 {
   programs.zsh = {
@@ -37,6 +34,8 @@ in
       }
     ];
   };
+
+  xdg.configFile."starship/minimal.toml".source = starshipMinimalConfig;
 
   home.sessionPath = [
     "${config.home.homeDirectory}/.local/bin"
