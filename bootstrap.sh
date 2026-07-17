@@ -9,7 +9,7 @@
 set -euo pipefail
 
 log() { printf '==> %s\n' "$*"; }
-die() {
+bootstrap_die() {
   printf 'error: %s\n' "$*" >&2
   exit 1
 }
@@ -22,22 +22,22 @@ profiles="${PROFILES:-}"
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --host)
-      [ "$#" -ge 2 ] || die "--host requires a value"
+      [ "$#" -ge 2 ] || bootstrap_die "--host requires a value"
       host="$2"
       shift 2
       ;;
     --repo)
-      [ "$#" -ge 2 ] || die "--repo requires a value"
+      [ "$#" -ge 2 ] || bootstrap_die "--repo requires a value"
       repo="$2"
       shift 2
       ;;
     --ref)
-      [ "$#" -ge 2 ] || die "--ref requires a value"
+      [ "$#" -ge 2 ] || bootstrap_die "--ref requires a value"
       ref="$2"
       shift 2
       ;;
     --profiles)
-      [ "$#" -ge 2 ] || die "--profiles requires a value"
+      [ "$#" -ge 2 ] || bootstrap_die "--profiles requires a value"
       profiles="$2"
       shift 2
       ;;
@@ -49,7 +49,7 @@ while [ "$#" -gt 0 ]; do
       shift
       break
       ;;
-    -*) die "unknown option: $1" ;;
+    -*) bootstrap_die "unknown option: $1" ;;
     *)
       # Preserve the original positional hostname interface.
       host="$1"
@@ -57,13 +57,13 @@ while [ "$#" -gt 0 ]; do
       ;;
   esac
 done
-[ "$#" -eq 0 ] || die "unexpected argument: $1"
+[ "$#" -eq 0 ] || bootstrap_die "unexpected argument: $1"
 
 run_root() {
   if [ "$(id -u)" -eq 0 ]; then
     "$@"
   else
-    command -v sudo > /dev/null 2>&1 || die "sudo is required to install platform prerequisites"
+    command -v sudo > /dev/null 2>&1 || bootstrap_die "sudo is required to install platform prerequisites"
     sudo "$@"
   fi
 }
@@ -83,12 +83,12 @@ install_linux_prerequisites() {
   elif command -v zypper > /dev/null 2>&1; then
     run_root zypper --non-interactive install git curl ca-certificates
   else
-    die "install git and curl, then rerun bootstrap.sh"
+    bootstrap_die "install git and curl, then rerun bootstrap.sh"
   fi
 }
 
 install_macos_prerequisites() {
-  command -v xcode-select > /dev/null 2>&1 || die "xcode-select is unavailable"
+  command -v xcode-select > /dev/null 2>&1 || bootstrap_die "xcode-select is unavailable"
   if xcode-select -p > /dev/null 2>&1; then
     return 0
   fi
@@ -97,7 +97,7 @@ install_macos_prerequisites() {
   touch "$marker"
   product="$(softwareupdate -l 2> /dev/null | awk '/\*.*Command Line/ { sub(/^[^C]*/, ""); value=$0 } END { print value }')"
   rm -f "$marker"
-  [ -n "$product" ] || die "no Command Line Tools update was found; run 'xcode-select --install'"
+  [ -n "$product" ] || bootstrap_die "no Command Line Tools update was found; run 'xcode-select --install'"
   run_root softwareupdate -i "$product" --verbose
 }
 
@@ -109,10 +109,10 @@ case "$(uname -s)" in
     export LC_CTYPE=C.UTF-8
     install_linux_prerequisites
     ;;
-  *) die "unsupported operating system: $(uname -s)" ;;
+  *) bootstrap_die "unsupported operating system: $(uname -s)" ;;
 esac
-command -v git > /dev/null 2>&1 || die "git is unavailable"
-command -v curl > /dev/null 2>&1 || die "curl is unavailable"
+command -v git > /dev/null 2>&1 || bootstrap_die "git is unavailable"
+command -v curl > /dev/null 2>&1 || bootstrap_die "curl is unavailable"
 
 case "$repo" in
   http://* | https://* | ssh://* | git@*) repo_url="$repo" ;;
@@ -133,11 +133,11 @@ else
 fi
 
 if [ ! -d "$repo_root/.git" ]; then
-  [ ! -e "$repo_root" ] || die "$repo_root exists but is not a Git repository"
+  [ ! -e "$repo_root" ] || bootstrap_die "$repo_root exists but is not a Git repository"
   log "Cloning $repo_url at $ref into $repo_root"
   git clone --branch "$ref" --single-branch "$repo_url" "$repo_root"
 elif [ ! -f "$repo_root/mise.toml" ] || [ ! -f "$repo_root/flake.nix" ]; then
-  die "$repo_root does not look like Maison"
+  bootstrap_die "$repo_root does not look like Maison"
 else
   log "Using repository at $repo_root"
 fi
@@ -162,7 +162,7 @@ if ! command -v mise > /dev/null 2>&1; then
   fi
   export PATH="$HOME/.local/bin:$PATH"
 fi
-command -v mise > /dev/null 2>&1 || die "mise installation did not place the executable on PATH"
+command -v mise > /dev/null 2>&1 || bootstrap_die "mise installation did not place the executable on PATH"
 
 install_nix_or_lix_if_missing
 

@@ -50,6 +50,7 @@ mkdir -p "$tmp/log"
 assert_file_contains "$tmp/log/git" 'clone --branch cli-ref --single-branch https://github.com/cli/repo.git'
 assert_file_contains "$tmp/log/mise" 'trust'
 assert_file_contains "$tmp/log/mise" 'run --skip-tools bootstrap -- --host cli-host'
+assert_file_contains "$ROOT/bootstrap.sh" 'bootstrap_die() {'
 [ -L "$tmp/home/.local/bin/maison" ] || fail 'bootstrap did not install the Maison command'
 
 # Intentional literal shell source patterns.
