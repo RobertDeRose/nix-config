@@ -5,6 +5,13 @@
   lib,
   ...
 }:
+let
+  starshipConfig =
+    if pkgs.stdenv.isLinux then
+      ../../../../dotfiles/starship/starship-linux.toml
+    else
+      ../../../../dotfiles/starship/starship.toml;
+in
 {
   programs.zsh = {
     enable = true;
@@ -50,6 +57,6 @@
     enable = true;
     enableBashIntegration = true;
     enableZshIntegration = true;
-    settings = builtins.fromTOML (builtins.readFile ../../../../dotfiles/starship/starship.toml);
+    settings = builtins.fromTOML (builtins.readFile starshipConfig);
   };
 }

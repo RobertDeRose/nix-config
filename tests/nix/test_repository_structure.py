@@ -92,6 +92,16 @@ def check_outputs_and_legacy_paths() -> None:
         fail("Home Manager must load Maison-specific Zsh completion")
     if "completion-init zsh" in shell_module:
         fail("Home Manager must not install Usage's global Zsh fallback completion")
+    if "starship-linux.toml" not in shell_module or "pkgs.stdenv.isLinux" not in shell_module:
+        fail("Home Manager must select the terminal-safe Starship prompt on Linux")
+    linux_starship_path = ROOT / "dotfiles/starship/starship-linux.toml"
+    linux_starship_text = linux_starship_path.read_text()
+    if any(ord(character) > 127 for character in linux_starship_text):
+        fail("Linux Starship configuration must remain ASCII-only")
+    linux_starship = load_toml("dotfiles/starship/starship-linux.toml")
+    linux_format = linux_starship.get("format", "")
+    if "$fill" in linux_format or "$line_break" in linux_format or linux_starship.get("right_format"):
+        fail("Linux Starship prompt must not use width-sensitive fill, line breaks, or right alignment")
     worktrunk = "github:max-sixty/worktrunk"
     if worktrunk in mise.get("tools", {}):
         fail("repository-local mise.toml must not activate Worktrunk globally")
