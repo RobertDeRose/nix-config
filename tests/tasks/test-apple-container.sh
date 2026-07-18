@@ -107,9 +107,24 @@ assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'exec -- wt --version'
 assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'gh auth token'
 assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'requires GitHub authentication'
 assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'export GITHUB_TOKEN='
-assert_file_contains "$ROOT/.mise/tasks/test/deploy" "ensure_apple_test_container \"\$NAME\""
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'ensure_apple_test_container "$NAME"'
 assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'Reusing bootstrap prerequisites from existing deploy test container'
-if grep -Fq "container delete --force \"\$NAME\"" "$ROOT/.mise/tasks/test/deploy"; then
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'if ! apple_container_exists "$NAME"; then'
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'Preparing deterministic staged repo copy for deploy test'
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'mise run host:validate'
+if grep -Fq 'mise run host:add' "$ROOT/.mise/tasks/test/deploy"; then
+  fail 'deploy integration task still runs the redundant host:add evaluation'
+fi
+if grep -Fq '# [MISE] depends=["test:image"]' "$ROOT/.mise/tasks/test/deploy"; then
+  fail 'deploy integration task still rebuilds the test image before reusing its container'
+fi
+# Intentional literal shell source pattern.
+# shellcheck disable=SC2016
+if grep -Fq 'container delete --force "$NAME"' "$ROOT/.mise/tasks/test/deploy"; then
   fail 'deploy integration task still deletes its reusable container before each run'
 fi
 assert_file_contains "$ROOT/.mise/tasks/deploy" '--nix-option accept-flake-config true'

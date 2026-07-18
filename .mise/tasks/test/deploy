@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # [MISE] description="Run Apple Container remote deployment validation"
 # [MISE] quiet=true
-# [MISE] depends=["test:image"]
 
 set -euo pipefail
 
@@ -59,26 +58,44 @@ if [ ! -f "$SSH_KEY" ] || [ ! -f "$PUBKEY_FILE" ]; then
   exit 1
 fi
 
-echo "==> Preparing staged repo copy for deploy test..."
+if ! apple_container_exists "$NAME"; then
+  echo "==> No reusable Apple container '$NAME' exists; building the Linux test image..."
+  mise run test:image
+fi
+
+echo "==> Preparing deterministic staged repo copy for deploy test..."
 rsync -a --delete \
   --exclude .git \
+  --exclude .build \
   --exclude result \
   --exclude .hm-result \
   "$REPO_ROOT/" "$STAGE_DIR/"
 git -C "$STAGE_DIR" init -q
-git -C "$STAGE_DIR" add -A
+git -C "$STAGE_DIR" config user.name "Maison Deploy Test"
+git -C "$STAGE_DIR" config user.email "maison-deploy-test@localhost"
+cat >> "$STAGE_DIR/inventory.toml" << 'EOF'
+
+[users.tester]
+username = "tester"
+full_name = "Container Test User"
+email = "tester@localhost"
+github = "RobertDeRose"
+
+[hosts.apple-ssh-test]
+system = "aarch64-linux"
+user = "tester"
+profiles = ["base", "linux"]
+EOF
 mise trust "$STAGE_DIR/mise.toml" > /dev/null
 (
   cd "$STAGE_DIR"
-  mise run host:add -- apple-ssh-test \
-    --system aarch64-linux \
-    --user tester \
-    --profiles base,linux \
-    --fullname "Container Test User" \
-    --email tester@localhost \
-    --github RobertDeRose
+  mise run host:validate
 )
 git -C "$STAGE_DIR" add -A
+env \
+  GIT_AUTHOR_DATE=2000-01-01T00:00:00Z \
+  GIT_COMMITTER_DATE=2000-01-01T00:00:00Z \
+  git -C "$STAGE_DIR" commit -qm 'test: stage deploy fixture'
 
 ensure_apple_test_container "$NAME" \
   --cap-add ALL \
@@ -112,12 +129,11 @@ if [ "$SSH_READY" != true ]; then
   exit 1
 fi
 
-if ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" /bin/bash -s << 'EOF'
+if ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" /bin/bash -s << 'EOF'; then
 test -x /home/linuxbrew/.linuxbrew/bin/brew &&
   test -x "$HOME/.local/bin/mise" &&
   test -x /nix/var/nix/profiles/default/bin/nix
 EOF
-then
   echo "==> Reusing bootstrap prerequisites from existing deploy test container..."
 else
   echo "==> Installing bootstrap prerequisites on remote test target..."
