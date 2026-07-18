@@ -107,9 +107,9 @@ assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'exec -- wt --version'
 assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'gh auth token'
 assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'requires GitHub authentication'
 assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'export GITHUB_TOKEN='
-assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'ensure_apple_test_container "$NAME"'
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" "ensure_apple_test_container \"\$NAME\""
 assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'Reusing bootstrap prerequisites from existing deploy test container'
-if grep -Fq 'container delete --force "$NAME"' "$ROOT/.mise/tasks/test/deploy"; then
+if grep -Fq "container delete --force \"\$NAME\"" "$ROOT/.mise/tasks/test/deploy"; then
   fail 'deploy integration task still deletes its reusable container before each run'
 fi
 assert_file_contains "$ROOT/.mise/tasks/deploy" '--nix-option accept-flake-config true'
