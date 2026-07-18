@@ -7,7 +7,14 @@ maison test:bootstrap
 maison test:deploy
 ```
 
-`test:bootstrap` exercises the pushed branch through the real root bootstrap boundary in a disposable Linux container. `test:deploy` creates a staged inventory host with `host:add`, installs Nix in a disposable SSH target, and runs the canonical `deploy` task. Local uncommitted or unpushed changes are not included in the bootstrap URL test.
+`test:bootstrap` exercises the pushed branch through the real root bootstrap
+boundary in a disposable Linux container. `test:deploy` creates a staged inventory
+host with `host:add`, prepares an SSH target, and runs the canonical `deploy`
+task. The deploy test reuses its named container and installed bootstrap
+prerequisites across successful runs; it creates the container only when absent
+and starts it when stopped. Interrupting either test still stops and deletes its
+container. Local uncommitted or unpushed changes are not included in the
+bootstrap URL test.
 
 The test tasks launch systemd explicitly as PID 1 with the capabilities and
 `/run` and `/tmp` tmpfs mounts required by Apple Container. The image sets

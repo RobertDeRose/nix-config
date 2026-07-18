@@ -23,6 +23,9 @@ case "$1" in
       stopped)
         printf '%s\n' '[{"status":{"state":"stopped","networks":[]}}]'
         ;;
+      missing)
+        exit 1
+        ;;
       *)
         printf '%s\n' '[{"status":{"state":"starting","networks":[]}}]'
         ;;
@@ -33,6 +36,8 @@ case "$1" in
     ;;
   logs)
     printf '%s\n' 'mock container logs'
+    ;;
+  run | start)
     ;;
   *)
     exit 2
@@ -54,6 +59,23 @@ if PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MOCK_STATE=running MOCK_EXEC_FAIL=t
   wait_for_apple_container test 1 0 > /dev/null 2>&1; then
   fail 'unresponsive running Apple container unexpectedly became ready'
 fi
+
+: > "$tmp/log/calls"
+PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MOCK_STATE=running \
+  ensure_apple_test_container reusable --cap-add ALL image command > /dev/null
+if grep -Eq '^(run|start) ' "$tmp/log/calls"; then
+  fail 'running Apple container was recreated or restarted'
+fi
+
+: > "$tmp/log/calls"
+PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MOCK_STATE=stopped \
+  ensure_apple_test_container reusable --cap-add ALL image command > /dev/null
+assert_file_contains "$tmp/log/calls" 'start reusable'
+
+: > "$tmp/log/calls"
+PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MOCK_STATE=missing \
+  ensure_apple_test_container reusable --cap-add ALL image command > /dev/null
+assert_file_contains "$tmp/log/calls" 'run -d --name reusable --cap-add ALL image command'
 
 for task in "$ROOT/.mise/tasks/test/bootstrap" "$ROOT/.mise/tasks/test/deploy"; do
   assert_file_contains "$task" '--cap-add ALL'
@@ -85,6 +107,11 @@ assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'exec -- wt --version'
 assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'gh auth token'
 assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'requires GitHub authentication'
 assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'export GITHUB_TOKEN='
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'ensure_apple_test_container "$NAME"'
+assert_file_contains "$ROOT/.mise/tasks/test/deploy" 'Reusing bootstrap prerequisites from existing deploy test container'
+if grep -Fq 'container delete --force "$NAME"' "$ROOT/.mise/tasks/test/deploy"; then
+  fail 'deploy integration task still deletes its reusable container before each run'
+fi
 assert_file_contains "$ROOT/.mise/tasks/deploy" '--nix-option accept-flake-config true'
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'manager_args+=(--sudo)'
 assert_file_contains "$ROOT/.mise/tasks/deploy" 'GitHub authentication is required for remote mise installation'

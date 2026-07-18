@@ -80,10 +80,7 @@ mise trust "$STAGE_DIR/mise.toml" > /dev/null
 )
 git -C "$STAGE_DIR" add -A
 
-echo "==> Recreating Apple deploy test container '$NAME'..."
-container delete --force "$NAME" > /dev/null 2>&1 || true
-container run -d \
-  --name "$NAME" \
+ensure_apple_test_container "$NAME" \
   --cap-add ALL \
   --tmpfs /run \
   --tmpfs /tmp \
@@ -91,7 +88,7 @@ container run -d \
   --dns 8.8.8.8 \
   -v "$PUBKEY_DIR:/workspace/host-ssh" \
   "$IMAGE" \
-  /lib/systemd/systemd --system > /dev/null
+  /lib/systemd/systemd --system
 
 echo "==> Waiting for Apple container '$NAME' to become ready..."
 wait_for_apple_container "$NAME"
@@ -115,12 +112,20 @@ if [ "$SSH_READY" != true ]; then
   exit 1
 fi
 
-echo "==> Installing bootstrap prerequisites on remote test target..."
-remote_bootstrap_token_file="$(ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" 'umask 077; mktemp /tmp/maison-bootstrap-token.XXXXXX')"
-# remote_bootstrap_token_file is intentionally expanded locally from a remote mktemp result.
-# shellcheck disable=SC2029
-printf '%s' "$GITHUB_TOKEN" | ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" "cat > '$remote_bootstrap_token_file'"
-ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" /bin/bash -s -- "$remote_bootstrap_token_file" << 'EOF'
+if ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" /bin/bash -s << 'EOF'
+test -x /home/linuxbrew/.linuxbrew/bin/brew &&
+  test -x "$HOME/.local/bin/mise" &&
+  test -x /nix/var/nix/profiles/default/bin/nix
+EOF
+then
+  echo "==> Reusing bootstrap prerequisites from existing deploy test container..."
+else
+  echo "==> Installing bootstrap prerequisites on remote test target..."
+  remote_bootstrap_token_file="$(ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" 'umask 077; mktemp /tmp/maison-bootstrap-token.XXXXXX')"
+  # remote_bootstrap_token_file is intentionally expanded locally from a remote mktemp result.
+  # shellcheck disable=SC2029
+  printf '%s' "$GITHUB_TOKEN" | ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" "cat > '$remote_bootstrap_token_file'"
+  ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" /bin/bash -s -- "$remote_bootstrap_token_file" << 'EOF'
 set -euo pipefail
 unset LC_ALL
 export LANG=C.UTF-8
@@ -130,12 +135,19 @@ github_token="$(cat "$github_token_file")"
 rm -f "$github_token_file"
 
 # Bootstrap order is part of the deployment contract: Homebrew, mise, Nix/Lix.
-HOMEBREW_GITHUB_API_TOKEN="$github_token" NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-curl -sSfL https://mise.run | sh
-export NIX_INSTALLER_NO_CONFIRM=true
-export NIX_INSTALLER_ENABLE_FLAKES=true
-curl -sSfL https://install.lix.systems/lix | sh -s -- install
+if [ ! -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+  HOMEBREW_GITHUB_API_TOKEN="$github_token" NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+if [ ! -x "$HOME/.local/bin/mise" ]; then
+  curl -sSfL https://mise.run | sh
+fi
+if [ ! -x /nix/var/nix/profiles/default/bin/nix ]; then
+  export NIX_INSTALLER_NO_CONFIRM=true
+  export NIX_INSTALLER_ENABLE_FLAKES=true
+  curl -sSfL https://install.lix.systems/lix | sh -s -- install
+fi
 EOF
+fi
 
 echo "==> Configuring trusted-users and PATH on remote target..."
 ssh -T "${SSH_OPTIONS[@]}" "$TARGET@$IP" /bin/bash -s << 'EOF'
