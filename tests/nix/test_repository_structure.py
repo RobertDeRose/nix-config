@@ -123,10 +123,17 @@ def check_outputs_and_legacy_paths() -> None:
         fail("Maison Starship prompt must not use width-sensitive fill or right alignment")
     if "\n" not in starship_format:
         fail("Maison Starship prompt must keep the Powerlevel10k-inspired two-line layout")
-    if "" not in starship_text or "" not in starship_text:
-        fail("Maison Starship prompt must retain Nerd Font Powerline styling")
-    if starship.get("character", {}).get("success_symbol") != "[❯](bold green)":
-        fail("Maison Starship prompt must use the Nerd Font-compatible input marker")
+    if "" not in starship_text or "" not in starship_format or "" not in starship_text:
+        fail("Maison Starship prompt must retain connected Nerd Font Powerline styling")
+    if "$shell" in starship_format or "shell" in starship:
+        fail("Maison Starship prompt must not display the shell name")
+    if "$status" in starship_format or "status" in starship:
+        fail("Maison Starship prompt must encode command status only in the prompt character")
+    character = starship.get("character", {})
+    if character.get("success_symbol") != r"[\$](bold green)":
+        fail("Maison Starship prompt must use a green dollar sign after successful commands")
+    if character.get("error_symbol") != r"[\$](bold red)":
+        fail("Maison Starship prompt must use a red dollar sign after failed commands")
 
     linux_system = (ROOT / "nix/modules/linux/system.nix").read_text()
     if linux_system.count("LANG=C.UTF-8") < 2 or linux_system.count("LC_CTYPE=C.UTF-8") < 2:

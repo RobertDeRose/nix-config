@@ -4,7 +4,28 @@ add_newline = true
 command_timeout = 750
 continuation_prompt = "[│ ](fg:overlay0)"
 format = """
-[╭─](fg:overlay0)$os$username$hostname$directory$git_branch$git_status$nix_shell$package$c$golang$nodejs$python$rust$cmd_duration$shell$time$status$jobs
+[╭─](fg:overlay0)\
+[](fg:surface0)\
+$os\
+$username\
+$hostname\
+[](fg:surface0 bg:surface1)\
+$directory\
+$git_branch\
+$git_status\
+$nix_shell\
+$package\
+$c\
+$golang\
+$nodejs\
+$python\
+$rust\
+[](fg:surface1 bg:surface2)\
+$cmd_duration\
+$time\
+$jobs\
+[ ](bg:surface2)\
+[](fg:surface2)
 [╰─](fg:overlay0)$character"""
 palette = "catppuccin_macchiato"
 right_format = ""
@@ -40,7 +61,7 @@ crust = "#181926"
 
 [os]
 disabled = false
-format = "[](fg:blue)[$symbol](fg:base bg:blue)[](fg:blue) "
+format = "[ $symbol](fg:mauve bg:surface0)"
 
 [os.symbols]
 Alpine = ""
@@ -77,16 +98,16 @@ Unknown = ""
 Windows = ""
 
 [username]
-format = "[](fg:mauve)[](fg:base bg:mauve)[](fg:mauve bg:surface0)[ $user](fg:text bg:surface0)[](fg:surface0) "
+format = "[ $user](fg:text bg:surface0)"
 show_always = true
 
 [hostname]
-format = "[](fg:sapphire)[󰒋](fg:base bg:sapphire)[](fg:sapphire bg:surface0)[ $hostname](fg:text bg:surface0)[](fg:surface0) "
+format = "[@$hostname ](fg:sapphire bg:surface0)"
 ssh_only = true
 trim_at = "."
 
 [directory]
-format = "[](fg:blue)[](fg:base bg:blue)[](fg:blue bg:surface0)[ $path](fg:text bg:surface0)[$read_only](fg:red bg:surface0)[](fg:surface0) "
+format = "[ ](fg:blue bg:surface1)[ $path](fg:text bg:surface1)[$read_only](fg:red bg:surface1)"
 home_symbol = "~"
 read_only = " "
 read_only_style = ""
@@ -95,7 +116,7 @@ truncation_length = 4
 truncation_symbol = "…/"
 
 [git_branch]
-format = "[](fg:green)[](fg:base bg:green)[](fg:green bg:surface0)[ $branch](fg:text bg:surface0)[](fg:surface0) "
+format = "[ ](fg:green bg:surface1)[ $branch](fg:text bg:surface1)"
 symbol = ""
 truncation_length = 36
 truncation_symbol = "…"
@@ -106,7 +127,7 @@ behind = "⇣${count}"
 conflicted = "=${count}"
 deleted = "×${count}"
 diverged = "⇕⇡${ahead_count}⇣${behind_count}"
-format = "[](fg:yellow)[](fg:base bg:yellow)[](fg:yellow bg:surface0)[ $all_status$ahead_behind](fg:text bg:surface0)[](fg:surface0) "
+format = "[ $all_status$ahead_behind](fg:yellow bg:surface1)"
 modified = "!${count}"
 renamed = "»${count}"
 staged = "+${count}"
@@ -115,7 +136,7 @@ untracked = "?${count}"
 up_to_date = ""
 
 [nix_shell]
-format = "[](fg:mauve)[$symbol](fg:base bg:mauve)[](fg:mauve bg:surface0)[ $state( $name)](fg:text bg:surface0)[](fg:surface0) "
+format = "[ $symbol](fg:mauve bg:surface1)[ $state( $name)](fg:subtext1 bg:surface1)"
 heuristic = true
 impure_msg = "impure"
 pure_msg = "pure"
@@ -123,72 +144,49 @@ symbol = ""
 unknown_msg = "shell"
 
 [package]
-format = "[](fg:pink)[$symbol](fg:base bg:pink)[](fg:pink bg:surface0)[ $version](fg:text bg:surface0)[](fg:surface0) "
+format = "[ $symbol](fg:pink bg:surface1)[ $version](fg:subtext1 bg:surface1)"
 symbol = "󰏗"
 
 [c]
-format = "[](fg:sapphire)[$symbol](fg:base bg:sapphire)[](fg:sapphire bg:surface0)[ $version](fg:text bg:surface0)[](fg:surface0) "
+format = "[ $symbol](fg:sapphire bg:surface1)[ $version](fg:subtext1 bg:surface1)"
 symbol = ""
 
 [golang]
-format = "[](fg:sky)[$symbol](fg:base bg:sky)[](fg:sky bg:surface0)[ $version](fg:text bg:surface0)[](fg:surface0) "
+format = "[ $symbol](fg:sky bg:surface1)[ $version](fg:subtext1 bg:surface1)"
 symbol = ""
 
 [nodejs]
-format = "[](fg:green)[$symbol](fg:base bg:green)[](fg:green bg:surface0)[ $version](fg:text bg:surface0)[](fg:surface0) "
+format = "[ $symbol](fg:green bg:surface1)[ $version](fg:subtext1 bg:surface1)"
 symbol = ""
 
 [python]
-format = "[](fg:yellow)[$symbol](fg:base bg:yellow)[](fg:yellow bg:surface0)[ ${pyenv_prefix}${version}( $virtualenv)](fg:text bg:surface0)[](fg:surface0) "
+format = "[ $symbol](fg:yellow bg:surface1)[ ${pyenv_prefix}${version}( $virtualenv)](fg:subtext1 bg:surface1)"
 symbol = ""
 
 [rust]
-format = "[](fg:peach)[$symbol](fg:base bg:peach)[](fg:peach bg:surface0)[ $version](fg:text bg:surface0)[](fg:surface0) "
+format = "[ $symbol](fg:peach bg:surface1)[ $version](fg:subtext1 bg:surface1)"
 symbol = ""
 
 [cmd_duration]
-format = "[](fg:peach)[󱎫](fg:base bg:peach)[](fg:peach bg:surface0)[ $duration](fg:text bg:surface0)[](fg:surface0) "
+format = "[ 󱎫](fg:peach bg:surface2)[ $duration](fg:subtext1 bg:surface2)"
 min_time = 1000
 show_milliseconds = false
 
-
-[shell]
-bash_indicator = "bash"
-disabled = false
-fish_indicator = "fish"
-format = "[](fg:teal)[](fg:base bg:teal)[](fg:teal bg:surface0)[ $indicator](fg:text bg:surface0)[](fg:surface0) "
-ion_indicator = "ion"
-powershell_indicator = "pwsh"
-unknown_indicator = "shell"
-xonsh_indicator = "xonsh"
-zsh_indicator = "zsh"
-
 [time]
 disabled = false
-format = "[](fg:rosewater)[](fg:base bg:rosewater)[](fg:rosewater bg:surface0)[ $time](fg:text bg:surface0)[](fg:surface0) "
+format = "[ ](fg:rosewater bg:surface2)[ $time](fg:text bg:surface2)"
 time_format = "%H:%M"
 
-[status]
-disabled = false
-format = "[](fg:red)[$symbol](fg:base bg:red)[](fg:red bg:surface0)[ $status](fg:text bg:surface0)[](fg:surface0) "
-map_symbol = true
-not_executable_symbol = ""
-not_found_symbol = ""
-recognize_signal_code = true
-sigint_symbol = "󰜺"
-signal_symbol = ""
-symbol = ""
-
 [jobs]
-format = "[](fg:lavender)[$symbol](fg:base bg:lavender)[](fg:lavender bg:surface0)[ $number](fg:text bg:surface0)[](fg:surface0) "
+format = "[ ](fg:lavender bg:surface2)[ $number](fg:subtext1 bg:surface2)"
 number_threshold = 1
-symbol = ""
+symbol = ""
 symbol_threshold = 1
 
 [character]
-error_symbol = "[❯](bold red)"
+error_symbol = '[\$](bold red)'
 format = "$symbol "
-success_symbol = "[❯](bold green)"
+success_symbol = '[\$](bold green)'
 vimcmd_replace_one_symbol = "[❮](bold peach)"
 vimcmd_replace_symbol = "[❮](bold peach)"
 vimcmd_symbol = "[❮](bold lavender)"
