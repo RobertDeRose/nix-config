@@ -6,14 +6,20 @@ source "$ROOT/tests/tasks/_testlib.bash"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/home/.maison/.mise/tasks" "$tmp/home/.local/bin" "$tmp/bin" "$tmp/log"
+mkdir -p "$tmp/home/.maison/.mise/tasks/tool" "$tmp/home/.local/bin" "$tmp/bin" "$tmp/log"
 printf '[tools]\n' > "$tmp/home/.maison/mise.toml"
 printf '{}\n' > "$tmp/home/.maison/flake.nix"
 printf '#!/usr/bin/env bash\n' > "$tmp/home/.maison/.mise/tasks/apply"
 printf '#!/usr/bin/env bash\n' > "$tmp/home/.maison/.mise/tasks/bootstrap"
+# These assertions intentionally write literal variables into mock scripts.
+# shellcheck disable=SC2016
+printf '#!/usr/bin/env bash\n#USAGE arg "<tool>"\n' > "$tmp/home/.maison/.mise/tasks/tool/add"
+printf '#!/usr/bin/env bash\n#USAGE arg "<tool>"\n' > "$tmp/home/.maison/.mise/tasks/tool/remove"
 mkdir -p "$tmp/home/.maison/.mise/tasks/github"
 printf '#!/usr/bin/env bash\n' > "$tmp/home/.maison/.mise/tasks/github/auth"
-chmod +x "$tmp/home/.maison/.mise/tasks/apply" "$tmp/home/.maison/.mise/tasks/bootstrap" "$tmp/home/.maison/.mise/tasks/github/auth"
+chmod +x "$tmp/home/.maison/.mise/tasks/apply" "$tmp/home/.maison/.mise/tasks/bootstrap" \
+  "$tmp/home/.maison/.mise/tasks/github/auth" "$tmp/home/.maison/.mise/tasks/tool/add" \
+  "$tmp/home/.maison/.mise/tasks/tool/remove"
 
 cat > "$tmp/bin/usage" << 'MOCK'
 #!/usr/bin/env bash
@@ -65,6 +71,9 @@ assert_file_contains "$ROOT/bin/maison" 'NIX_CONFIG_DIR'
 # This assertion intentionally matches the literal "$2" in the Maison script.
 # shellcheck disable=SC2016
 assert_file_contains "$ROOT/bin/maison" 'usage generate completion "$2" maison'
+# This assertion intentionally matches literal shell variables.
+# shellcheck disable=SC2016
+assert_file_contains "$ROOT/bin/maison" 'usage bash "$maison_home/.mise/tasks/${task/:/\/}"'
 if grep -Fq -- 'completion-init' "$ROOT/bin/maison"; then
   fail 'Maison still uses the global Usage completion fallback'
 fi
@@ -82,6 +91,10 @@ HOME="$tmp/home" PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MAISON_HOME="$tmp/hom
   "$ROOT/bin/maison" bootstrap --host test-host
 assert_file_contains "$tmp/log/mise" 'run --skip-tools bootstrap -- --host test-host'
 
+HOME="$tmp/home" PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MAISON_HOME="$tmp/home/.maison" \
+  "$ROOT/bin/maison" tool add node@24
+HOME="$tmp/home" PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MAISON_HOME="$tmp/home/.maison" \
+  "$ROOT/bin/maison" tool remove node@24
 rate_limit_output="$(HOME="$tmp/home" PATH="$tmp/bin:$PATH" MOCK_LOG="$tmp/log" MOCK_RATE_LIMIT=1 MAISON_HOME="$tmp/home/.maison" \
   "$ROOT/bin/maison" apply 2>&1)"
 printf '%s\n' "$rate_limit_output" | grep -Fq 'Run: maison github auth' || fail 'Maison did not report GitHub authentication recovery'

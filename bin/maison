@@ -87,7 +87,32 @@ die() {
   exit 1
 }
 
-maison_home="${MAISON_HOME:-${NIX_CONFIG_DIR:-$HOME/.maison}}"
+resolve_script_maison_home() {
+  local script_path="${BASH_SOURCE[0]}" script_dir link_target
+
+  while [ -L "$script_path" ]; do
+    script_dir="$(cd -P "$(dirname "$script_path")" > /dev/null 2>&1 && pwd)"
+    link_target="$(readlink "$script_path")"
+    case "$link_target" in
+      /*) script_path="$link_target" ;;
+      *) script_path="$script_dir/$link_target" ;;
+    esac
+  done
+
+  script_dir="$(cd -P "$(dirname "$script_path")" > /dev/null 2>&1 && pwd)"
+  cd "$script_dir/.." > /dev/null 2>&1 && pwd
+}
+
+script_maison_home="$(resolve_script_maison_home || true)"
+if [ -n "${MAISON_HOME:-}" ]; then
+  maison_home="$MAISON_HOME"
+elif [ -n "${NIX_CONFIG_DIR:-}" ]; then
+  maison_home="$NIX_CONFIG_DIR"
+elif [ -f "$script_maison_home/mise.toml" ] && [ -f "$script_maison_home/flake.nix" ]; then
+  maison_home="$script_maison_home"
+else
+  maison_home="$HOME/.maison"
+fi
 
 if [ ! -d "$maison_home" ]; then
   die "installation not found at $maison_home; set MAISON_HOME or rerun bootstrap"
@@ -206,9 +231,11 @@ case "${1:-}" in
     [ -n "$resolution" ] || die "unknown command '$*'"
     task="${resolution%%$'\t'*}"
     cd "$maison_home"
-    if [ "$task" = github:auth ] || [ "$task" = bootstrap ]; then
-      exec "$mise_bin" run --skip-tools "$task" --help
-    fi
+    case "$task" in
+      github:auth | bootstrap | tool:add | tool:remove)
+        exec "$mise_bin" run --skip-tools "$task" --help
+        ;;
+    esac
     exec "$mise_bin" run "$task" --help
     ;;
   tasks)
@@ -237,13 +264,23 @@ consumed="${resolution##*$'\t'}"
 shift "$consumed"
 
 cd "$maison_home"
+
+# Tool configuration must remain repairable when an invalid entry prevents
+# mise from resolving the project configuration at all.
+case "$task" in
+  tool:add | tool:remove)
+    exec env -u usage_tool -u usage_version \
+      usage bash "$maison_home/.mise/tasks/${task/:/\/}" "$@"
+    ;;
+esac
+
 run_task() {
   local output_file status
   local -a command=("$mise_bin" run)
 
-  if [ "$task" = github:auth ] || [ "$task" = bootstrap ]; then
-    command+=(--skip-tools)
-  fi
+  case "$task" in
+    github:auth | bootstrap | tool:add | tool:remove) command+=(--skip-tools) ;;
+  esac
   command+=("$task" -- "$@")
 
   output_file="$(mktemp "${TMPDIR:-/tmp}/maison-output.XXXXXX")"

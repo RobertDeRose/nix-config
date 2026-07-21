@@ -56,3 +56,16 @@ fi
 require_command mise
 log_info "Installing globally configured mise tools"
 MISE_CONFIG_FILE="$global_mise_config" mise install
+
+log_info "Installing Maison command"
+mkdir -p "$HOME/.local/bin"
+usage_bin="$(mise -C "$REPO_ROOT" which usage 2> /dev/null || true)"
+if [ ! -x "$usage_bin" ]; then
+  log_info "Installing Maison CLI runtime"
+  mise -C "$REPO_ROOT" install usage
+  usage_bin="$(mise -C "$REPO_ROOT" which usage)"
+fi
+[ -x "$usage_bin" ] || die "Usage was not installed with the Maison project tools"
+ln -sfn "$usage_bin" "$HOME/.local/bin/usage"
+ln -sfn "$REPO_ROOT/bin/maison" "$HOME/.local/bin/maison"
+"$HOME/.local/bin/maison" --version > /dev/null

@@ -80,6 +80,49 @@ url = "https://github.com/Mic92/nixfmt-rs/releases/download/0.5.1/nixfmt-aarch64
 url_api = "https://api.github.com/repos/Mic92/nixfmt-rs/releases/assets/432909970"
 provenance = "github-attestations"
 
+[[tools.codex]]
+version = "0.144.6"
+backend = "npm:@openai/codex"
+
+[[tools."github:ctxrs/ctx"]]
+version = "0.24.0"
+backend = "github:ctxrs/ctx"
+
+[tools."github:ctxrs/ctx"."platforms.linux-arm64"]
+checksum = "sha256:db91e6fa22c45b2aae8a24554cf1e0e52c7e19f14afd07ef72a28a343509aa14"
+url = "https://github.com/ctxrs/ctx/releases/download/v0.24.0/ctx-linux-aarch64"
+url_api = "https://api.github.com/repos/ctxrs/ctx/releases/assets/471142381"
+
+[tools."github:ctxrs/ctx"."platforms.linux-arm64-musl"]
+checksum = "sha256:db91e6fa22c45b2aae8a24554cf1e0e52c7e19f14afd07ef72a28a343509aa14"
+url = "https://github.com/ctxrs/ctx/releases/download/v0.24.0/ctx-linux-aarch64"
+url_api = "https://api.github.com/repos/ctxrs/ctx/releases/assets/471142381"
+
+[tools."github:ctxrs/ctx"."platforms.linux-x64"]
+checksum = "sha256:ff726f3d48fc7c84ecfd02d0d47d4afdd4212ebc053e0257f50e832e9e0609e4"
+url = "https://github.com/ctxrs/ctx/releases/download/v0.24.0/ctx-linux-x64"
+url_api = "https://api.github.com/repos/ctxrs/ctx/releases/assets/471142375"
+
+[tools."github:ctxrs/ctx"."platforms.linux-x64-musl"]
+checksum = "sha256:ff726f3d48fc7c84ecfd02d0d47d4afdd4212ebc053e0257f50e832e9e0609e4"
+url = "https://github.com/ctxrs/ctx/releases/download/v0.24.0/ctx-linux-x64"
+url_api = "https://api.github.com/repos/ctxrs/ctx/releases/assets/471142375"
+
+[tools."github:ctxrs/ctx"."platforms.macos-arm64"]
+checksum = "sha256:a79910f2dd6e4a59e67a7bb4b5dd1549450719031477ff5fc04f0493142402e4"
+url = "https://github.com/ctxrs/ctx/releases/download/v0.24.0/ctx-macos-arm64"
+url_api = "https://api.github.com/repos/ctxrs/ctx/releases/assets/471142385"
+
+[tools."github:ctxrs/ctx"."platforms.macos-x64"]
+checksum = "sha256:92a8e95180167b1f6a4153eee67a3436ef00a5370acacb2b6e60b22ae5deacd4"
+url = "https://github.com/ctxrs/ctx/releases/download/v0.24.0/ctx-macos-x64"
+url_api = "https://api.github.com/repos/ctxrs/ctx/releases/assets/471142384"
+
+[tools."github:ctxrs/ctx"."platforms.windows-x64"]
+checksum = "sha256:cd501e3a5f670ab56b9c0289c179351af1d93eb63fbb18c5a018c5e9c52d630b"
+url = "https://github.com/ctxrs/ctx/releases/download/v0.24.0/ctx-windows-x64.exe"
+url_api = "https://api.github.com/repos/ctxrs/ctx/releases/assets/471142376"
+
 [[tools."github:peterldowns/nix-search-cli"]]
 version = "0.3+commit.ab0d515"
 backend = "github:peterldowns/nix-search-cli"
@@ -233,6 +276,38 @@ url = "https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-windows-amd64.
 url_api = "https://api.github.com/repos/jqlang/jq/releases/assets/268981509"
 provenance = "github-attestations"
 
+[[tools.node]]
+version = "24.18.0"
+backend = "core:node"
+
+[tools.node."platforms.linux-arm64"]
+checksum = "sha256:6b4484c2190274175df9aa8f28e2d758a819cb1c1fe6ab481e2f95b463ab8508"
+url = "https://nodejs.org/dist/v24.18.0/node-v24.18.0-linux-arm64.tar.gz"
+
+[tools.node."platforms.linux-arm64-musl"]
+checksum = "sha256:b1c6c2dc31b46dd8fb2322f4fe75b07e775c5120bc37251deeea28f529d4567b"
+url = "https://unofficial-builds.nodejs.org/download/release/v24.18.0/node-v24.18.0-linux-arm64-musl.tar.gz"
+
+[tools.node."platforms.linux-x64"]
+checksum = "sha256:783130984963db7ba9cbd01089eaf2c2efb055c7c1693c943174b967b3050cb8"
+url = "https://nodejs.org/dist/v24.18.0/node-v24.18.0-linux-x64.tar.gz"
+
+[tools.node."platforms.linux-x64-musl"]
+checksum = "sha256:ea58409911e141ec6b19d9178efa2d9185a13295005b1cbf5521b3157eed1d95"
+url = "https://unofficial-builds.nodejs.org/download/release/v24.18.0/node-v24.18.0-linux-x64-musl.tar.gz"
+
+[tools.node."platforms.macos-arm64"]
+checksum = "sha256:e1a97e14c99c803e96c7339403282ea05a499c32f8d83defe9ef5ec66f979ed1"
+url = "https://nodejs.org/dist/v24.18.0/node-v24.18.0-darwin-arm64.tar.gz"
+
+[tools.node."platforms.macos-x64"]
+checksum = "sha256:dfd0dbd3e721503434df7b7205e719f61b3a3a31b2bcf9729b8b91fea240f080"
+url = "https://nodejs.org/dist/v24.18.0/node-v24.18.0-darwin-x64.tar.gz"
+
+[tools.node."platforms.windows-x64"]
+checksum = "sha256:0ae68406b42d7725661da979b1403ec9926da205c6770827f33aac9d8f26e821"
+url = "https://nodejs.org/dist/v24.18.0/node-v24.18.0-win-x64.zip"
+
 [[tools.pkl]]
 version = "0.31.1"
 backend = "aqua:apple/pkl"
@@ -277,38 +352,38 @@ version = "3.13.14"
 backend = "core:python"
 
 [tools.python."platforms.linux-arm64"]
-checksum = "sha256:e931d7a393f54902503f8745ceb35420e7dd50a067e78e5f45c71404f7a15b30"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260623/cpython-3.13.14+20260623-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
+checksum = "sha256:8d5ac68458a4df9bc3c349d607da2674d8390ad26162482b17215563e45aca83"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260718/cpython-3.13.14+20260718-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.linux-arm64-musl"]
-checksum = "sha256:530453a8d47dcf234dbdebb8fdc8fb7277e1edc0f1b6e326e7a80e064318f019"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260623/cpython-3.13.14+20260623-aarch64-unknown-linux-musl-install_only_stripped.tar.gz"
+checksum = "sha256:4d43ada1f37d09c118b4a205b5baafd03bac279b07cdedd382aa1a4367f8c15f"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260718/cpython-3.13.14+20260718-aarch64-unknown-linux-musl-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.linux-x64"]
-checksum = "sha256:459ed79967acc207bef2ff5124dac35d74d5108528e37b15395d14e2922f2c92"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260623/cpython-3.13.14+20260623-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
+checksum = "sha256:571a710c62520b26dbadbd16e8850e24565c01dea94440223bc16caa21614021"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260718/cpython-3.13.14+20260718-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.linux-x64-musl"]
-checksum = "sha256:88a95f01ab0cb402822f803facea2f938d9b4cfe08da3d866629ac21c62c1f83"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260623/cpython-3.13.14+20260623-x86_64-unknown-linux-musl-install_only_stripped.tar.gz"
+checksum = "sha256:0dbfe4b9c043f81a60953245a2735594f6b09308031086ceac15511f4c0af193"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260718/cpython-3.13.14+20260718-x86_64-unknown-linux-musl-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.macos-arm64"]
-checksum = "sha256:795a5aeeb050f00aa8a2214d779bad9f1b9113edb6923317a80c042a11a087d7"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260623/cpython-3.13.14+20260623-aarch64-apple-darwin-install_only_stripped.tar.gz"
+checksum = "sha256:06469835e1b0f73bcdb6c498a1d60ce579cc43a980754490a6f1e30062f43850"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260718/cpython-3.13.14+20260718-aarch64-apple-darwin-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.macos-x64"]
-checksum = "sha256:fdbe7198fb32f24ab99c67cb68cb265615e0bb6cb6586ffccb629ef9ca868420"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260623/cpython-3.13.14+20260623-x86_64-apple-darwin-install_only_stripped.tar.gz"
+checksum = "sha256:93ec3863e3265ed87382a9216d2e973b47ab7ef330b496c0249bfc2bfc164cee"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260718/cpython-3.13.14+20260718-x86_64-apple-darwin-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.windows-x64"]
-checksum = "sha256:7c3159205dda0289a47e6dd1226c4e5800b1f99a03146cdc25a41fed8ef74f5a"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260623/cpython-3.13.14+20260623-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
+checksum = "sha256:91ea0cd883295458fa766eae36241df3ecc21f7029814189707d54b450e55c69"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260718/cpython-3.13.14+20260718-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [[tools.shellcheck]]
@@ -429,40 +504,40 @@ url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.16/tombi-cli-0
 url_api = "https://api.github.com/repos/tombi-toml/tombi/releases/assets/391322183"
 
 [[tools.usage]]
-version = "3.5.3"
+version = "3.5.5"
 backend = "aqua:jdx/usage"
 
 [tools.usage."platforms.linux-arm64"]
-checksum = "sha256:c5ee535f65cadca0a0883ce0073095e1a12fc749224a79a13d57e38cbcc88dd4"
-url = "https://github.com/jdx/usage/releases/download/v3.5.3/usage-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/jdx/usage/releases/assets/455875604"
+checksum = "sha256:d5c8f76b3280f614a26d91994369e73c6cf9daa94e9086130c2d5564308f9ecb"
+url = "https://github.com/jdx/usage/releases/download/v3.5.5/usage-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/jdx/usage/releases/assets/476575899"
 
 [tools.usage."platforms.linux-arm64-musl"]
-checksum = "sha256:c5ee535f65cadca0a0883ce0073095e1a12fc749224a79a13d57e38cbcc88dd4"
-url = "https://github.com/jdx/usage/releases/download/v3.5.3/usage-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/jdx/usage/releases/assets/455875604"
+checksum = "sha256:d5c8f76b3280f614a26d91994369e73c6cf9daa94e9086130c2d5564308f9ecb"
+url = "https://github.com/jdx/usage/releases/download/v3.5.5/usage-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/jdx/usage/releases/assets/476575899"
 
 [tools.usage."platforms.linux-x64"]
-checksum = "sha256:678114d182273bc8a1316f3528f1f8ded047ed56b41b822656de7046e16a6deb"
-url = "https://github.com/jdx/usage/releases/download/v3.5.3/usage-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/jdx/usage/releases/assets/455875471"
+checksum = "sha256:29d1502233a931d1b4e42392c529dc928c41c2813db9b737eabe6eb9a03ba9e3"
+url = "https://github.com/jdx/usage/releases/download/v3.5.5/usage-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/jdx/usage/releases/assets/476575875"
 
 [tools.usage."platforms.linux-x64-musl"]
-checksum = "sha256:678114d182273bc8a1316f3528f1f8ded047ed56b41b822656de7046e16a6deb"
-url = "https://github.com/jdx/usage/releases/download/v3.5.3/usage-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/jdx/usage/releases/assets/455875471"
+checksum = "sha256:29d1502233a931d1b4e42392c529dc928c41c2813db9b737eabe6eb9a03ba9e3"
+url = "https://github.com/jdx/usage/releases/download/v3.5.5/usage-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/jdx/usage/releases/assets/476575875"
 
 [tools.usage."platforms.macos-arm64"]
-checksum = "sha256:dc6628015c420f0e0384c95999266ca74dc19de8279b4d54667844286cf8fa13"
-url = "https://github.com/jdx/usage/releases/download/v3.5.3/usage-universal-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/jdx/usage/releases/assets/455875616"
+checksum = "sha256:eeccdad9008024f227fa3dd2f40e094e439c2bd8802cfeea58ed911973f3266c"
+url = "https://github.com/jdx/usage/releases/download/v3.5.5/usage-universal-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/jdx/usage/releases/assets/476575330"
 
 [tools.usage."platforms.macos-x64"]
-checksum = "sha256:dc6628015c420f0e0384c95999266ca74dc19de8279b4d54667844286cf8fa13"
-url = "https://github.com/jdx/usage/releases/download/v3.5.3/usage-universal-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/jdx/usage/releases/assets/455875616"
+checksum = "sha256:eeccdad9008024f227fa3dd2f40e094e439c2bd8802cfeea58ed911973f3266c"
+url = "https://github.com/jdx/usage/releases/download/v3.5.5/usage-universal-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/jdx/usage/releases/assets/476575330"
 
 [tools.usage."platforms.windows-x64"]
-checksum = "sha256:3cd7995171854518873f84bf60be17c8e331cad1ca180e03911fac414a7a6372"
-url = "https://github.com/jdx/usage/releases/download/v3.5.3/usage-x86_64-pc-windows-msvc.zip"
-url_api = "https://api.github.com/repos/jdx/usage/releases/assets/455876520"
+checksum = "sha256:36759e6540bd1c368d30393708deea9ca6db898ed212fe271bec82507129f532"
+url = "https://github.com/jdx/usage/releases/download/v3.5.5/usage-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/jdx/usage/releases/assets/476576776"

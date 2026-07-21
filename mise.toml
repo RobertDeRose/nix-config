@@ -4,18 +4,21 @@ experimental = true
 env_shell_expand = true
 
 [tools]
-usage = "3.5.5"
-python = "latest"
-hk = "latest"
 actionlint = "latest"
+"aqua:Mic92/nixfmt-rs" = "latest"
+codex = "latest"
+"github:ctxrs/ctx" = "latest"
+"github:peterldowns/nix-search-cli" = "latest"
+"github:rust-lang/mdbook" = "latest"
+hk = "latest"
 jq = "latest"
+node = ["24", "lts"]
 pkl = "latest"
+python = "latest"
 shellcheck = "latest"
 shfmt = "latest"
 tombi = "latest"
-"aqua:Mic92/nixfmt-rs" = "latest"
-"github:rust-lang/mdbook" = "latest"
-"github:peterldowns/nix-search-cli" = "latest"
+usage = "3.5.5"
 
 [env]
 HK_MISE = 1

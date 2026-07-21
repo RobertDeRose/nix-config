@@ -3,9 +3,9 @@
 #
 #USAGE arg "<tool>" help="Configured mise tool name"
 
-# usage_* variables are injected by mise's file-task argument parser.
+# usage_tool is injected by mise or `usage bash`. Maison uses the latter so a
+# broken tool entry cannot block configuration edits.
 # shellcheck disable=SC2154
-
 set -euo pipefail
 TASK_FILE="${BASH_SOURCE[0]}"
 REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"

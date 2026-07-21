@@ -100,20 +100,53 @@ def toml_key(value: str) -> str:
     return value if re.fullmatch(r"[A-Za-z0-9_-]+", value) else json.dumps(value)
 
 
+def split_tool_version(tool: str) -> tuple[str, str | None]:
+    name, separator, version = tool.rpartition("@")
+    if separator and name and version:
+        return name, version
+    return tool, None
+
+
 def rewrite_tools(path: Path, tool: str, version: str | None, remove: bool) -> None:
     data = load_toml(path)
     tools = dict(data.get("tools", {}))
-    if remove:
-        if tool not in tools:
-            raise ConfigError(f"tool {tool!r} is not present in mise.toml")
-        del tools[tool]
-    else:
-        tools[tool] = version or "latest"
+    name, embedded_version = split_tool_version(tool)
 
-    for name, configured in tools.items():
-        if not isinstance(configured, str):
+    if remove:
+        if name not in tools:
+            raise ConfigError(f"tool {name!r} is not present in mise.toml")
+        if embedded_version is None:
+            del tools[name]
+        else:
+            configured = tools[name]
+            versions = [configured] if isinstance(configured, str) else list(configured)
+            if embedded_version not in versions:
+                raise ConfigError(f"version {embedded_version!r} is not configured for tool {name!r}")
+            versions.remove(embedded_version)
+            if not versions:
+                del tools[name]
+            else:
+                tools[name] = versions[0] if len(versions) == 1 else versions
+    else:
+        selected_version = embedded_version or version or "latest"
+        configured = tools.get(name)
+        if configured is None:
+            tools[name] = selected_version
+        else:
+            versions = [configured] if isinstance(configured, str) else list(configured)
+            if selected_version in versions:
+                raise ConfigError(f"version {selected_version!r} is already configured for tool {name!r}")
+            tools[name] = [*versions, selected_version]
+
+    for configured_name, configured in tools.items():
+        valid = isinstance(configured, str) or (
+            isinstance(configured, list)
+            and configured
+            and all(isinstance(item, str) for item in configured)
+        )
+        if not valid:
             raise ConfigError(
-                f"mise.toml: [tools].{name} uses a structured value; edit it manually to preserve its options"
+                f"mise.toml: [tools].{configured_name} uses an unsupported structured value; edit it manually to preserve its options"
             )
 
     lines = path.read_text().splitlines(keepends=True)
@@ -133,7 +166,8 @@ def rewrite_tools(path: Path, tool: str, version: str | None, remove: bool) -> N
 
 def canonical_tool(name: str) -> str:
     candidate = name.split(":", 1)[-1]
-    return candidate.rstrip("/").rsplit("/", 1)[-1]
+    candidate = candidate.rstrip("/").rsplit("/", 1)[-1]
+    return split_tool_version(candidate)[0]
 
 
 def canonical_homebrew(name: str) -> str:
