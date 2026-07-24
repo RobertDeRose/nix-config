@@ -1,71 +1,21 @@
 #!/usr/bin/env bash
-# [MISE] description="Update flake inputs and validate every host"
-#
-#USAGE arg "[input]" help="One input to update; omit to update all inputs"
-
+# [MISE] description="Update Nix inputs transactionally, then upgrade the mise user layer"
+# [MISE] interactive=true
+#USAGE arg "[input]" help="Optional single flake input"
 set -euo pipefail
-
-TASK_FILE="${BASH_SOURCE[0]}"
-REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-source "$REPO_ROOT/.mise/lib/common.sh"
-source "$REPO_ROOT/.mise/lib/git.sh"
-source "$REPO_ROOT/.mise/lib/nix.sh"
+root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+cd "$root"
+source "$root/.mise/lib/common.sh"
+source "$root/.mise/lib/nix.sh"
 load_nix_environment
-
-if git_is_dirty "$REPO_ROOT"; then
-  log_warn "working tree was already dirty; update will preserve its exact pre-update flake.lock on failure"
-fi
-
+configure_github_access_token
 before="$(mktemp)"
-transaction_complete=false
 cp flake.lock "$before"
-
-cleanup() {
-  local status=$?
-  if [ "$transaction_complete" != true ] && [ -f "$before" ]; then
-    cp "$before" flake.lock
-  fi
-  rm -f "$before"
-  return "$status"
-}
-trap cleanup EXIT
-
-restore_lockfile() {
-  cp "$before" flake.lock
-}
-
+trap 'status=$?; [ $status -eq 0 ] || cp "$before" flake.lock; rm -f "$before"; exit $status' EXIT
 if [ -n "${usage_input:-}" ]; then
-  log_info "Updating flake input: ${usage_input}"
-  if NIX_SUPPRESS_DIRTY_WARNING=true nix_command false flake update "${usage_input}"; then
-    :
-  else
-    status=$?
-    restore_lockfile
-    log_error "flake input update failed; restored the previous flake.lock"
-    exit "$status"
-  fi
+  nix_command flake update "$usage_input"
 else
-  log_info "Updating flake inputs"
-  if NIX_SUPPRESS_DIRTY_WARNING=true nix_command false flake update; then
-    :
-  else
-    status=$?
-    restore_lockfile
-    log_error "flake input update failed; restored the previous flake.lock"
-    exit "$status"
-  fi
+  nix_command flake update
 fi
-
-printf '\nLockfile diff:\n'
-git --no-pager diff -- flake.lock
-
-if NIX_SUPPRESS_DIRTY_WARNING=true mise run check:hosts; then
-  transaction_complete=true
-  log_info "Updated flake.lock and validated every configured host"
-else
-  status=$?
-  restore_lockfile
-  log_error "host validation failed; restored the previous flake.lock"
-  exit "$status"
-fi
+mise run check
+mise run user:update

@@ -54,6 +54,17 @@ let
       features = {
         personalCache = rawFeatures.personal_cache or false;
       };
+      rawDeploy = raw.deploy or { };
+      deploy = {
+        enable = rawDeploy.enable or false;
+        hostname = rawDeploy.hostname or name;
+        sshUser = rawDeploy.ssh_user or "root";
+        userSshUser = rawDeploy.user_ssh_user or users.${userName}.username;
+        repoPath = rawDeploy.repo_path or "/home/${users.${userName}.username}/.maison";
+        remoteBuild = rawDeploy.remote_build or false;
+        autoRollback = rawDeploy.auto_rollback or true;
+        magicRollback = rawDeploy.magic_rollback or true;
+      };
     in
     if !validation.validHostname name then
       fail "host '${name}' has an invalid hostname; expected one DNS label"
@@ -77,6 +88,7 @@ let
           profileList
           userName
           features
+          deploy
           ;
         profiles = profileList;
         user = users.${userName};

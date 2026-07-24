@@ -1,14 +1,5 @@
 #!/usr/bin/env bash
-# [MISE] description="Deprecated: forward to deploy"
+# [MISE] description="Compatibility alias for system:deploy"
 # [MISE] hide=true
-#
-#USAGE arg "<destination>" help="SSH destination"
-#USAGE arg "[host]" help="Inventory host name"
-#USAGE flag "-d --debug" help="Show verbose Nix output and traces"
-
 set -euo pipefail
-
-TASK_FILE="${BASH_SOURCE[0]}"
-REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-exec mise run deploy -- "$@"
+exec mise run "system:deploy" -- "$@"

@@ -1,0 +1,5 @@
+[dotfiles]
+"~/Library/Application Support/iTerm2/mise-managed/com.googlecode.iterm2.plist" = { source = "config/iterm2/com.googlecode.iterm2.plist", mode = "copy" }
+"~/Library/Services/Open in Ghostty.workflow" = { source = "files/workflows/Open in Ghostty.workflow", mode = "copy" }
+"~/Library/Services/Open in cmux.workflow" = { source = "files/workflows/Open in cmux.workflow", mode = "copy" }
+"~/Library/Services/Open in iTerm2.workflow" = { source = "files/workflows/Open in iTerm2.workflow", mode = "copy" }

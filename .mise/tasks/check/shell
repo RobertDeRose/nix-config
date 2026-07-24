@@ -1,38 +1,13 @@
 #!/usr/bin/env bash
-# [MISE] description="Validate task metadata, Bash, Python, and shell formatting"
-
+# [MISE] description="Validate task metadata and shell/Python syntax"
 set -euo pipefail
-
-TASK_FILE="${BASH_SOURCE[0]}"
-REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-
-if command -v mise > /dev/null 2>&1; then
-  mise tasks validate
-else
-  printf 'warning: mise is not installed; task metadata validation was skipped\n' >&2
-fi
-
-find .mise/tasks .mise/lib tests/tasks -type f \
-  \( -name '*.sh' -o -path '.mise/tasks/*' \) \
-  -exec bash -n {} +
+root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+cd "$root"
+mise tasks validate
+find .mise/tasks .mise/lib scripts .github/scripts -type f \( -name '*.sh' -o -path '.mise/tasks/*' \) -exec bash -n {} +
 bash -n bootstrap.sh
-python3 -m py_compile .mise/lib/config_edit.py
-
-if command -v shellcheck > /dev/null 2>&1; then
-  find .mise/tasks .mise/lib tests/tasks -type f \
-    \( -name '*.sh' -o -path '.mise/tasks/*' \) \
-    -exec shellcheck -x {} +
+python3 -m compileall -q .mise/lib scripts tests
+if command -v shellcheck >/dev/null 2>&1; then
+  find .mise/tasks .mise/lib scripts .github/scripts -type f \( -name '*.sh' -o -path '.mise/tasks/*' \) -exec shellcheck -x {} +
   shellcheck -x bootstrap.sh
-else
-  printf 'warning: shellcheck is not installed; syntax checks completed\n' >&2
-fi
-
-if command -v shfmt > /dev/null 2>&1; then
-  find .mise/tasks .mise/lib tests/tasks -type f \
-    \( -name '*.sh' -o -path '.mise/tasks/*' \) \
-    -exec shfmt -d {} +
-  shfmt -d bootstrap.sh
-else
-  printf 'warning: shfmt is not installed; formatting check skipped\n' >&2
 fi

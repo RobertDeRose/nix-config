@@ -1,30 +1,11 @@
 #!/usr/bin/env bash
-# [MISE] description="Remove a macOS Homebrew cask"
-#
-#USAGE arg "<cask>" help="Homebrew cask token"
-#USAGE flag "--profile <profile>" help="macOS profile" default="mac"
-
-# usage_* variables are injected by mise's file-task argument parser.
-# shellcheck disable=SC2154
-
+# [MISE] description="Remove a macOS Homebrew cask declaration"
+#USAGE arg "<cask>" help="Cask token"
 set -euo pipefail
-TASK_FILE="${BASH_SOURCE[0]}"
-REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-source "$REPO_ROOT/.mise/lib/common.sh"
-source "$REPO_ROOT/.mise/lib/packages.sh"
-profile="${usage_profile:-mac}"
-[ "$profile" = mac ] || die "Homebrew casks are currently supported only by the mac profile"
-backup="$(mktemp "${TMPDIR:-/tmp}/packages.toml.XXXXXX")"
-cp packages.toml "$backup"
-restore() {
-  cp "$backup" packages.toml
-  rm -f "$backup"
-}
-trap restore ERR INT TERM
-config_editor "$REPO_ROOT" array --file packages.toml --section "profiles.$profile.homebrew" --key casks --value "${usage_cask}" --remove
-validate_package_change "$REPO_ROOT"
-trap - ERR INT TERM
-rm -f "$backup"
-printf '\nConfiguration diff:\n'
-git --no-pager diff -- packages.toml
+root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+package="brew-cask:${usage_cask}"
+python3 "$root/.mise/lib/config_edit.py" package \
+  --file "$root/config/mise/config.macos-arm64.toml" \
+  --name "$package" \
+  --remove
+printf 'Removed %s from the macOS config. The installed application was intentionally left in place.\n' "$package"

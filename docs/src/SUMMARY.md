@@ -1,35 +1,14 @@
 # Summary
 
 [Introduction](./introduction.md)
-
-- [Bootstrapping](./operations/bootstrapping.md)
-
-## Architecture
-
-- [Overview](./architecture/overview.md)
-  - [Module Composition](./architecture/module-composition.md)
-  - [Host Inventory](./architecture/host-discovery.md)
-  - [Nix Toolchain](./architecture/nix-toolchain.md)
-
-## Customization
-
-- [Per-Host Overrides](./customization/per-host-overrides.md)
-- [Adding a New Host](./customization/adding-a-host.md)
-- [Shell & Prompt](./customization/shell-and-prompt.md)
-- [Theme Consistency](./customization/theme.md)
-
-## Operations
-
-- [Day-to-Day Commands](./operations/day-to-day.md)
-- [Remote Deployment](./operations/remote-deployment.md)
-- [Linux Builder](./operations/linux-builder.md)
-- [Apple Container Testing](./operations/apple-container-testing.md)
-
-## Reference
-
-- [Task Reference](./reference/tasks.md)
-- [Module Reference](./reference/modules.md)
-- [Project Structure](./reference/project-structure.md)
-- [Git Hooks](./reference/git-hooks.md)
-- [CI Pipeline](./reference/ci.md)
-- [Troubleshooting](./reference/troubleshooting.md)
+[Architecture](./architecture.md)
+[Migration Contract](./migration-contract.md)
+[Operations](./operations.md)
+[Remote Deployment](./deployment.md)
+[Recovery](./recovery.md)
+[Package Policy](./package-policy.md)
+[Task Reference](./task-reference.md)
+[Adding a Host](./add-a-host.md)
+[Adding a Tool](./add-a-tool.md)
+[Adding an App](./add-an-app.md)
+[Refactor Report](./refactor-report.md)

@@ -1,29 +1,16 @@
 #!/usr/bin/env bash
-# [MISE] description="Add or update a standalone developer tool managed by mise"
-#
-#USAGE arg "<tool>" help="Mise tool or backend-qualified tool name"
-#USAGE flag "--version <version>" help="Version constraint" default="latest"
-
-# usage_* variables are injected by mise or `usage bash`. Maison uses the
-# latter so a broken tool entry cannot block configuration edits.
-# shellcheck disable=SC2154
+# [MISE] description="Add and install a global mise tool"
+#USAGE arg "<tool>" help="Backend-qualified tool name"
+#USAGE arg "[version]" default="latest" help="Version"
 set -euo pipefail
-TASK_FILE="${BASH_SOURCE[0]}"
-REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-source "$REPO_ROOT/.mise/lib/common.sh"
-source "$REPO_ROOT/.mise/lib/packages.sh"
-
-backup="$(mktemp "${TMPDIR:-/tmp}/mise.toml.XXXXXX")"
-cp mise.toml "$backup"
-restore() {
-  cp "$backup" mise.toml
-  rm -f "$backup"
-}
-trap restore ERR INT TERM
-config_editor "$REPO_ROOT" tool "${usage_tool}" --version "${usage_version:-latest}"
-validate_package_inventory "$REPO_ROOT"
-trap - ERR INT TERM
-rm -f "$backup"
-printf '\nConfiguration diff:\n'
-git --no-pager diff -- mise.toml
+root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+version="${usage_version:-latest}"
+config="$root/config/mise/config.toml"
+python3 "$root/.mise/lib/config_edit.py" tool --file "$config" --name "${usage_tool}" --version "$version"
+suffix="${usage_tool##*@}"
+if [[ "${usage_tool}" == *@* && "$suffix" != */* ]]; then
+  install_spec="${usage_tool}"
+else
+  install_spec="${usage_tool}@${version}"
+fi
+MISE_GLOBAL_CONFIG_FILE="$config" mise install "$install_spec"

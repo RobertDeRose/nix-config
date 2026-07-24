@@ -16,3 +16,18 @@ if [[ -n ${MANPATH:-} ]]; then
   extra_manpath=(${(s/:/)MANPATH})
   manpath=($default_manpath $extra_manpath)
 fi
+
+if command -v direnv >/dev/null 2>&1; then
+  eval "$(direnv hook zsh)"
+fi
+
+for integration in \
+  /opt/homebrew/opt/fzf/shell/key-bindings.zsh \
+  /home/linuxbrew/.linuxbrew/opt/fzf/shell/key-bindings.zsh; do
+  [[ -r $integration ]] && source "$integration" && break
+done
+for integration in \
+  /opt/homebrew/opt/fzf/shell/completion.zsh \
+  /home/linuxbrew/.linuxbrew/opt/fzf/shell/completion.zsh; do
+  [[ -r $integration ]] && source "$integration" && break
+done

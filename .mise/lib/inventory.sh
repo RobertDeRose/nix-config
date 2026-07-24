@@ -204,3 +204,41 @@ inventory_host_feature() {
   file="$(inventory_path "$root")"
   inventory_field "$file" "hosts.$host.features" "$feature"
 }
+
+inventory_host_deploy_field() {
+  local root="$1" host="$2" field="$3" file
+  require_inventory_file "$root" || return 1
+  file="$(inventory_path "$root")"
+  inventory_field "$file" "hosts.$host.deploy" "$field"
+}
+
+inventory_deploy_hostname() {
+  local root="$1" host="$2" value
+  value="$(inventory_host_deploy_field "$root" "$host" hostname)"
+  [ -n "$value" ] || value="$host"
+  printf '%s\n' "$value"
+}
+
+inventory_deploy_ssh_user() {
+  local root="$1" host="$2" value
+  value="$(inventory_host_deploy_field "$root" "$host" ssh_user)"
+  [ -n "$value" ] || value=root
+  printf '%s\n' "$value"
+}
+
+inventory_deploy_user_ssh_user() {
+  local root="$1" host="$2" value
+  value="$(inventory_host_deploy_field "$root" "$host" user_ssh_user)"
+  [ -n "$value" ] || value="$(inventory_host_username "$root" "$host")"
+  printf '%s\n' "$value"
+}
+
+inventory_deploy_repo_path() {
+  local root="$1" host="$2" value username
+  value="$(inventory_host_deploy_field "$root" "$host" repo_path)"
+  if [ -z "$value" ]; then
+    username="$(inventory_host_username "$root" "$host")"
+    value="/home/$username/.maison"
+  fi
+  printf '%s\n' "$value"
+}

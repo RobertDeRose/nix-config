@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# [MISE] description="Upgrade mise-managed user tools and packages"
+# [MISE] interactive=true
+set -euo pipefail
+root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+config="$HOME/.config/mise/config.toml"
+[ -f "$config" ] || config="$root/config/mise/config.toml"
+(
+  cd "$HOME"
+  MISE_AUTO_ENV=true MISE_GLOBAL_CONFIG_FILE="$config" mise outdated || true
+  MISE_AUTO_ENV=true MISE_GLOBAL_CONFIG_FILE="$config" mise upgrade
+  MISE_AUTO_ENV=true MISE_GLOBAL_CONFIG_FILE="$config" mise bootstrap packages upgrade
+)

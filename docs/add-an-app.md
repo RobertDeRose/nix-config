@@ -1,59 +1,13 @@
 # Add a macOS application
 
-## Homebrew casks
-
-Use casks for ordinary macOS GUI applications:
+Apple Silicon applications are declared in `config/mise/config.macos-arm64.toml`.
 
 ```bash
-maison app:add <cask>
+maison app add ghostty
+maison user plan
+maison user apply
 ```
 
-The command adds the cask to `profiles.mac.homebrew.casks` in `packages.toml`, sorts the list, validates package ownership, and shows the diff.
+Mac App Store entries use numeric `mas:` identifiers in the same file. System-wide fonts remain in `nix/modules/darwin/fonts.nix`. Casks that install OS integrations, such as FUSE-T, require an explicit nix-darwin module review instead of being added to the mise user package list.
 
-Remove one with:
-
-```bash
-maison app:remove <cask>
-```
-
-## Homebrew formulae
-
-Formulae are explicit data in `packages.toml`:
-
-```toml
-[profiles.mac.homebrew]
-brews = [
-  "owner/tap/formula",
-]
-```
-
-Use a formula only for macOS-specific software or when the Homebrew bottle is intentionally preferred over a costly/unreliable Nix build. Record cross-source duplication as an ownership exception.
-
-## Mac App Store applications
-
-MAS entries map a display name to the numeric App Store ID:
-
-```toml
-[profiles.mac.mas]
-"Application Name" = 123456789
-```
-
-MAS is for Mac App Store applications only. IDs must be unique integers.
-
-## Platform-specific casks
-
-Put architecture-specific casks under the system table:
-
-```toml
-[profiles.mac.homebrew.systems]
-aarch64-darwin = ["application"]
-```
-
-## Validate and preview
-
-```bash
-maison check:packages
-maison plan
-```
-
-Homebrew activation does not auto-update, auto-upgrade, or prune applications. The configuration installs declared items without silently removing unrelated software.
+Mise's built-in Homebrew backend does not supply Intel macOS parity. Do not add an Intel host until its package fallback is explicit.

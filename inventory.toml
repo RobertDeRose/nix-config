@@ -31,3 +31,13 @@ profiles = ["base", "dev", "linux"]
 
 [hosts.dev-som.features]
 personal_cache = true
+
+[hosts.dev-som.deploy]
+enable = true
+hostname = "dev-som.checkpoint-device.com"
+ssh_user = "root"
+user_ssh_user = "rderose"
+repo_path = "/home/rderose/.maison"
+remote_build = false
+auto_rollback = true
+magic_rollback = true

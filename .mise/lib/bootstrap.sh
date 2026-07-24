@@ -62,43 +62,6 @@ sandbox = false"
   verify_nix || die "Nix/Lix installation completed but the nix command is not functional"
 }
 
-install_linuxbrew_if_missing() {
-  [ "$(current_os)" = linux ] || return 0
-  if command -v brew > /dev/null 2>&1 || [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
-    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv 2> /dev/null || true)"
-    return 0
-  fi
-  log_info "Installing Homebrew for Linux"
-  if command -v apt-get > /dev/null 2>&1; then
-    sudo apt-get update
-    sudo apt-get install -y build-essential procps curl file git
-  elif command -v dnf > /dev/null 2>&1; then
-    sudo dnf group install -y development-tools
-    sudo dnf install -y procps-ng curl file git
-  elif command -v pacman > /dev/null 2>&1; then
-    sudo pacman -Sy --needed --noconfirm base-devel procps-ng curl file git
-  elif command -v zypper > /dev/null 2>&1; then
-    sudo zypper --non-interactive install -t pattern devel_basis
-    sudo zypper --non-interactive install procps curl file git
-  else
-    die "unsupported Linux package manager; install Homebrew prerequisites manually"
-  fi
-  local git_config_home
-  git_config_home="$(mktemp -d "${TMPDIR:-/tmp}/maison-linuxbrew-git.XXXXXX")"
-  trap 'rm -rf "$git_config_home"' RETURN
-  XDG_CONFIG_HOME="$git_config_home" \
-    GIT_CONFIG_GLOBAL=/dev/null \
-    GIT_CONFIG_SYSTEM=/dev/null \
-    HOMEBREW_BREW_GIT_REMOTE=https://github.com/Homebrew/brew.git \
-    HOMEBREW_CORE_GIT_REMOTE=https://github.com/Homebrew/homebrew-core.git \
-    HOMEBREW_GITHUB_API_TOKEN="${HOMEBREW_GITHUB_API_TOKEN:-${GITHUB_TOKEN:-}}" \
-    NONINTERACTIVE=1 \
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  rm -rf "$git_config_home"
-  trap - RETURN
-  [ -x /home/linuxbrew/.linuxbrew/bin/brew ] || die "Homebrew installation did not create /home/linuxbrew/.linuxbrew/bin/brew"
-  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-}
 
 ensure_github_auth() {
   local token=""

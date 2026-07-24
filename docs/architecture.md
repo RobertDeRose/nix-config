@@ -1,125 +1,121 @@
 # Architecture
 
-## Design goal
+## Principle
 
-Nix remains the system-management engine. Mise is the stable human-facing command layer. Home Manager remains the owner of user configuration and dotfile deployment. Routine changes are made in explicit TOML inventories or native application files rather than in flake wiring.
-
-## Ownership boundaries
-
-### Nix-family tooling
-
-Nix, Lix, nix-darwin, system-manager, and Home Manager own system state, users, permissions, sudoers, SSH, services, shell integration, activation dependencies, reproducible closures, and Nix development environments.
-
-### Mise
-
-Mise owns command discovery, task help and argument parsing, repository validation tools, suitable standalone developer tools, and dispatch into `.mise/lib/`. Substantial task bodies are executable files under `.mise/tasks/`; helper libraries under `.mise/lib/` are not task-discovery paths.
-
-### Home Manager
-
-Home Manager deploys checked-in native configuration from `dotfiles/`. Static settings are not translated into Nix unless a module option is required. Host/user-dependent values remain small generated fragments.
-
-### Homebrew and MAS
-
-Homebrew owns macOS GUI applications, macOS-specific formulae, and selected bottled binaries. MAS owns Mac App Store IDs. Neither owns Linux software.
-
-## Data flow
+Maison separates configuration by privilege boundary, not by operating system or package ecosystem:
 
 ```text
-inventory.toml
-      │
-      ▼
-host constructor ──► profiles ──► platform modules
-      │
-      ├────────────► Home Manager
-      ├────────────► nix-darwin
-      └────────────► system-manager
+Nix/Lix system layer
+├── nix-darwin on macOS
+├── system-manager on Linux
+├── nh for local Darwin builds/switches
+└── deploy-rs for remote Linux deployment
+
+mise user layer
+├── tools and runtimes
+├── ordinary Homebrew formulae/casks and MAS apps
+├── dotfiles and Tera templates
+├── current-user macOS defaults
+└── user services
 ```
 
-`inventory.toml` is parsed once by `nix/lib/inventory.nix`. Validation produces structured `host` and `user` records. `nix/lib/mk-darwin-host.nix` and `mk-linux-host.nix` select profile module lists and preserve the public output names.
+## Nix system layer
 
-Shell tasks read the same inventory through `.mise/lib/inventory.sh`. `plan`, `apply`, `deploy`, `doctor`, and host commands therefore share host names, systems, users, profile rules, and error behavior with Nix evaluation.
+The flake exports `darwinConfigurations`, `systemConfigs`, and `deploy`.
 
-## Inventory
+### macOS
 
-The inventory contains:
+nix-darwin owns:
 
-- `schema` version.
-- Optional defaults.
-- Explicit users and identity metadata.
-- Explicit hosts and Nix systems.
-- Intent-oriented profile lists.
-- Optional host feature flags such as the personal cache.
+- Nix/Lix daemon configuration and caches.
+- Primary-user registration and system shell registration.
+- Apple Watch and Touch ID authentication for sudo.
+- Login-window policy.
+- Caps Lock-to-Escape key remapping.
+- Host identity, time zone, and system services.
+- System-wide fonts and OS-integrated installers such as FUSE-T.
+- Native Homebrew only for those OS-integrated casks.
+- `nh`, `deploy-rs`, and `nixd` as administration tools.
 
-Missing hosts, missing users, unsupported systems, unknown profiles, and platform-incompatible profiles fail before raw Nix traces are shown. There is no silent default identity. The existing uppercase Darwin account is an explicit, Darwin-only compatibility exception; newly created accounts must be portable lowercase names.
+Ordinary applications and interactive CLI packages do not belong in `environment.systemPackages`.
 
-Host override files are optional:
+### Linux
+
+system-manager owns:
+
+- Hostname, locale, time zone, and managed user.
+- Sudoers and SSH daemon includes.
+- Root-owned Nix configuration.
+- GitHub-backed authorized-key refresh.
+- System services, their closure dependencies, and the minimal `curl`/Git/tar bootstrap toolchain needed before mise exists.
+
+`/nix/var/nix/profiles/system-manager-profiles/system-manager` is the canonical Linux system profile.
+
+## nh
+
+Darwin planning and activation use:
+
+```bash
+nh darwin build  . -H <host>
+nh darwin switch . -H <host>
+```
+
+The tasks fall back to `nix run .#nh` before the system profile has installed `nh`.
+
+system-manager has no native `nh system` command in this branch. Linux local application remains a small adapter around the pinned system-manager CLI. This keeps the proposed future `nh` contribution isolated from the migration.
+
+## deploy-rs
+
+Each deploy-enabled Linux inventory host becomes `deploy.nodes.<host>`. The `system` profile:
+
+- Uses the canonical system-manager profile path.
+- Runs as root.
+- Activates the exact closure selected by deploy-rs through `$PROFILE/bin/activate`.
+- Enables `autoRollback` and `magicRollback` from inventory.
+
+The deployment schema and activation paths are included in flake checks.
+
+## mise user layer
+
+The repository-level `mise.toml` owns dotfile deployment and repository validation tools. It installs a global user configuration under `~/.config/mise/`.
+
+The global user configuration owns:
+
+- Versioned tools in `[tools]`.
+- Platform packages in `[bootstrap.packages]`.
+- Current-user macOS preferences.
+- User environment variables.
+
+Application configuration remains in native formats under `dotfiles/`; Tera is used only when host/user/platform interpolation is required.
+
+## macOS defaults boundary
+
+Mise may write current-user preference domains such as Dock, Finder, trackpad, screenshots, and application preferences.
+
+Mise must not own:
+
+- `sudo defaults` domains.
+- `/Library/Preferences` policy.
+- Login-window or authentication policy.
+- PAM configuration.
+- Host-scoped `defaults -currentHost` values.
+
+Those remain in nix-darwin even when an equivalent raw defaults key exists.
+
+## Package platforms
+
+Mise's built-in Homebrew backend is used for ordinary user-facing packages on Apple Silicon macOS and Linux. Those declarations live in `config.macos-arm64.toml` and `config.linux.toml`. System-wide fonts and FUSE-T remain in nix-darwin; FUSE-T uses the minimal Nix-managed native Homebrew exception in `nix/modules/darwin/homebrew-system.nix`.
+
+`config.macos-x64.toml` deliberately does not claim package parity. Adding an Intel host requires choosing native Homebrew, another mise package manager, or explicit platform exceptions before activation.
+
+## Transactions
+
+System and user application are deliberately separate:
 
 ```text
-hosts/<hostname>/system.nix
-hosts/<hostname>/home.nix
+maison apply
+  1. system:apply  (Nix generation semantics)
+  2. user:apply    (mise convergence semantics)
 ```
 
-They contain exceptions only. System, user, and profile metadata are not duplicated there.
-
-## Profiles
-
-The profile registry in `nix/lib/profiles.nix` exposes `darwinModules`, `linuxModules`, and `homeModules` for four profiles:
-
-- `base`: shared shell, Git, basic utilities, and common Home Manager state.
-- `dev`: editor and developer integrations.
-- `mac`: nix-darwin, macOS defaults, Homebrew, MAS, fonts, and desktop-specific Home Manager state.
-- `linux`: system-manager users, sudoers, SSH, services, packages, and Linux Home Manager state.
-
-Profiles express machine purpose. Low-level reusable implementation remains under `nix/modules/`; there is no profile per application.
-
-## Package resolution
-
-`packages.toml` declares ordinary profile and host package lists. `nix/lib/packages.nix` selects entries for the host system, and `nix/lib/resolve-package.nix` resolves dotted nixpkgs attribute paths. Unknown or non-derivation attributes identify the package, profile, system, invalid path, and search command.
-
-Module-coupled packages remain beside the module and are listed under `[module_owned]` for ownership auditing. Temporary duplicate ownership requires an exact owner set and written reason. The Python validator in `.mise/lib/config_edit.py` checks sorting, duplicates, inventory references, and exceptions.
-
-The personal Cachix cache is opt-in per host. All configured caches are acceleration only: substitute failures fall back to local builds, and read-only host evaluation avoids package-specific caches.
-
-## Native dotfiles
-
-Static configuration is authored under:
-
-```text
-dotfiles/git/
-dotfiles/helix/
-dotfiles/starship/
-dotfiles/zsh/
-dotfiles/pi/
-dotfiles/opencode/
-```
-
-Home Manager links or installs these files. Git identity and other genuinely dynamic values are generated separately. Existing conflicting files are backed up predictably rather than deleted silently.
-
-## Command flow
-
-`apply` and `plan` call the same target constructors in `.mise/lib/nix.sh`.
-
-```text
-host selection
-   └─► inventory validation
-         └─► platform validation
-               └─► target resolution
-                     ├─► plan: Nix dry run only
-                     └─► apply: complete build ─► activation
-```
-
-Linux builds include system-manager, the system configuration, and Home Manager before either activation runs. Darwin builds the complete nix-darwin system before `darwin-rebuild switch` runs. A failed build leaves the active machine unchanged.
-
-`deploy` uses the same Linux target constructors and builds all closures before modifying the remote machine. `check`, `doctor`, and `plan` contain no activation or sudo path.
-
-## Flake wiring
-
-`flake.nix` declares inputs and delegates to `nix/outputs.nix`. Filesystem scanning and easy-hosts are removed. `flake-parts` is retained because it still reduces the per-system formatter, package, and check wiring; removing it would add code without simplifying host construction.
-
-The output contract remains:
-
-```text
-darwinConfigurations.<host>
-systemConfigs.<host>
-homeConfigurations.<host>
-```
+A failure in step 2 does not make the system generation invalid. Conversely, deploy-rs system rollback does not revert user dotfiles or upgraded tools.

@@ -1,7 +1,16 @@
-alias ls='eza'
+alias ls='eza --icons=auto --git'
+alias ll='eza -l --icons=auto --git'
+alias la='eza -a --icons=auto --git'
+alias lla='eza -la --icons=auto --git'
+alias lt='eza --tree --icons=auto --git'
 alias less='bat'
 alias cat='bat'
 alias oc='opencode'
+
+# Workstation directory shortcuts retained from the former host Home Manager module.
+alias work='cd ~/workspace/checkpoint'
+alias personal='cd ~/workspace/personal'
+alias apollo='cd ~/workspace/checkpoint/apollo'
 
 alias gst='git status'
 alias gd='git diff'

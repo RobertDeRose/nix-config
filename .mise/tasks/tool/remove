@@ -1,28 +1,8 @@
 #!/usr/bin/env bash
-# [MISE] description="Remove a standalone developer tool from mise"
-#
-#USAGE arg "<tool>" help="Configured mise tool name"
-
-# usage_tool is injected by mise or `usage bash`. Maison uses the latter so a
-# broken tool entry cannot block configuration edits.
-# shellcheck disable=SC2154
+# [MISE] description="Remove a global mise tool declaration"
+#USAGE arg "<tool>" help="Tool name, optionally name@version"
 set -euo pipefail
-TASK_FILE="${BASH_SOURCE[0]}"
-REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-source "$REPO_ROOT/.mise/lib/common.sh"
-source "$REPO_ROOT/.mise/lib/packages.sh"
-
-backup="$(mktemp "${TMPDIR:-/tmp}/mise.toml.XXXXXX")"
-cp mise.toml "$backup"
-restore() {
-  cp "$backup" mise.toml
-  rm -f "$backup"
-}
-trap restore ERR INT TERM
-config_editor "$REPO_ROOT" tool "${usage_tool}" --remove
-validate_package_inventory "$REPO_ROOT"
-trap - ERR INT TERM
-rm -f "$backup"
-printf '\nConfiguration diff:\n'
-git --no-pager diff -- mise.toml
+root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+config="$root/config/mise/config.toml"
+python3 "$root/.mise/lib/config_edit.py" tool --file "$config" --name "${usage_tool}" --remove
+printf 'Removed %s from %s. Installed versions were intentionally left in the mise cache.\n' "${usage_tool}" "${config#$root/}"

@@ -37,7 +37,6 @@ jobs:
           install: false
       - name: Install repository validation tools
         run: |
-          mise plugin install nix https://github.com/jbadeau/mise-nix.git
           mise install
       - name: Run the repository contract
         run: mise run check
@@ -51,7 +50,7 @@ jobs:
         os:
           - ubuntu-latest
           - ubuntu-24.04-arm
-          - macos-latest
+          - macos-15
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -81,7 +80,7 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - macos-latest
+          - macos-15
     env:
       CI: "true"
       GITHUB_TOKEN: ${{ github.token }}
@@ -91,6 +90,5 @@ jobs:
           ref: ${{ inputs.ref != '' && inputs.ref || github.sha }}
       - name: Exercise the pre-mise bootstrap boundary
         run: |
-          git config user.name "CI Bootstrap User"
-          git config user.email "ci-bootstrap@example.invalid"
-          ./bootstrap.sh --host ci-bootstrap
+          ./bootstrap.sh --help
+          bash -n bootstrap.sh

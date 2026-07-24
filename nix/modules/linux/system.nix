@@ -6,7 +6,6 @@
   pkgs,
   user,
   host,
-  packageData,
   ...
 }:
 let
@@ -96,13 +95,15 @@ in
     };
   };
 
-  # ------------------------------------------------------------------ #
-  # Common system packages
-  # ------------------------------------------------------------------ #
-  environment.systemPackages = packageData.profileSystemPackages {
-    inherit pkgs;
-    profile = "linux";
-  };
+  # Administrative and bootstrap tools for the Nix system layer. curl, Git,
+  # and tar must exist before the remote mise user transaction can install its
+  # own packages or even discover the uploaded repository.
+  environment.systemPackages = [
+    pkgs.curl
+    pkgs.gitMinimal
+    pkgs.gnutar
+    pkgs.nh
+  ];
 
   environment.etc."sudoers.d/90-system-manager-wheel" = {
     text = ''

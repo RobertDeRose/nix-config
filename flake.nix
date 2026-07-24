@@ -29,11 +29,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    home-manager = {
-      url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
 
     nix-hex-box = {
@@ -42,18 +37,13 @@
       inputs.darwin.follows = "darwin";
     };
 
-    llmagents = {
-      url = "github:numtide/llm-agents.nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    worktrunk = {
-      url = "github:max-sixty/worktrunk";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     system-manager = {
       url = "github:numtide/system-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    deploy-rs = {
+      url = "github:serokell/deploy-rs";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -63,6 +53,5 @@
     import ./nix/outputs.nix {
       inherit inputs;
       inventory = builtins.fromTOML (builtins.readFile ./inventory.toml);
-      packageInventory = builtins.fromTOML (builtins.readFile ./packages.toml);
     };
 }

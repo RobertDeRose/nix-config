@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
-# [MISE] description="Validate Nix formatting and flake metadata"
-
+# [MISE] description="Validate and format-check the Nix flake"
 set -euo pipefail
-
-TASK_FILE="${BASH_SOURCE[0]}"
-REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-source "$REPO_ROOT/.mise/lib/common.sh"
-source "$REPO_ROOT/.mise/lib/nix.sh"
-export NIX_SUPPRESS_DIRTY_WARNING=true
+root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+cd "$root"
+source "$root/.mise/lib/common.sh"
+source "$root/.mise/lib/nix.sh"
 load_nix_environment
-nix_command false flake metadata > /dev/null
-nix_command false flake check --all-systems --no-build \
-  2> >(grep -vFx "warning: unknown flake output 'systemConfigs'" >&2)
-nix_command false fmt -- --ci
+configure_github_access_token
+export NIX_SUPPRESS_DIRTY_WARNING=true
+nix_command flake metadata >/dev/null
+nix_command flake check --all-systems --no-build
+nix_command fmt -- --ci

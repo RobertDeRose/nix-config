@@ -1,20 +1,16 @@
-# schema
 [settings]
 experimental = true
 env_shell_expand = true
+dotfiles.default_mode = "symlink"
 
+# Repository-maintenance tools only. User tools live in config/mise/config.toml
+# and are installed independently of the Nix system closure.
 [tools]
 actionlint = "latest"
 "aqua:Mic92/nixfmt-rs" = "latest"
-codex = "latest"
-"github:ctxrs/ctx" = "latest"
-"github:peterldowns/nix-search-cli" = "latest"
-"github:rust-lang/mdbook" = "latest"
 hk = "latest"
 jq = "latest"
-node = ["24", "lts"]
-pkl = "latest"
-python = "latest"
+"github:rust-lang/mdBook" = "latest"
 shellcheck = "latest"
 shfmt = "latest"
 tombi = "latest"
@@ -28,3 +24,43 @@ postinstall = "command -v hk >/dev/null && hk install --mise || true"
 
 [task_config]
 includes = [".mise/tasks"]
+
+# The repository config owns user files. The global mise config owns user tools,
+# applications, packages, and per-user preferences.
+[dotfiles]
+"~/.config/mise/config.toml" = { source = "config/mise/config.toml", mode = "symlink" }
+"~/.config/mise/config.macos.toml" = { source = "config/mise/config.macos.toml", mode = "symlink" }
+"~/.config/mise/config.macos-arm64.toml" = { source = "config/mise/config.macos-arm64.toml", mode = "symlink" }
+"~/.config/mise/config.macos-x64.toml" = { source = "config/mise/config.macos-x64.toml", mode = "symlink" }
+"~/.config/mise/config.linux.toml" = { source = "config/mise/config.linux.toml", mode = "symlink" }
+"~/.config/mise/mise.lock" = { source = "config/mise/mise.lock", mode = "symlink" }
+"~/.miserc.toml" = { source = "config/mise/.miserc.toml", mode = "symlink" }
+
+"~/.config/git/config" = { source = "dotfiles/git/config", mode = "symlink" }
+"~/.config/git/ignore" = { source = "dotfiles/git/ignore", mode = "symlink" }
+"~/.config/git/identity" = { source = "dotfiles/git/identity", mode = "symlink" }
+"~/.config/git/platform" = { source = "dotfiles/git/platform.tera", mode = "template" }
+"~/.config/git/allowed_signers" = { source = "dotfiles/git/allowed_signers", mode = "symlink" }
+"~/workspace/personal/.gitconfig" = { source = "dotfiles/workspace/personal/.gitconfig", mode = "symlink" }
+
+"~/.config/helix/config.toml" = { source = "dotfiles/helix/config.toml", mode = "symlink" }
+"~/.config/helix/languages.toml" = { source = "dotfiles/helix/languages.toml", mode = "symlink" }
+"~/.config/starship.toml" = { source = "dotfiles/starship/starship.toml", mode = "symlink" }
+"~/.config/starship/minimal.toml" = { source = "dotfiles/starship/starship-minimal.toml", mode = "symlink" }
+"~/.config/ghostty/config" = { source = "dotfiles/ghostty/config", mode = "symlink" }
+"~/.config/zed/settings.json" = { source = "dotfiles/zed/settings.json", mode = "symlink" }
+"~/.config/zed/keymap.json" = { source = "dotfiles/zed/keymap.json", mode = "symlink" }
+"~/.config/htop/htoprc" = { source = "dotfiles/htop/htoprc", mode = "copy" }
+"~/.config/yazi/yazi.toml" = { source = "dotfiles/yazi/yazi.toml", mode = "symlink" }
+"~/.config/direnv/lib/maison-mise.sh" = { source = "dotfiles/direnv/lib/mise.sh", mode = "symlink" }
+"~/.ssh/config" = { source = "dotfiles/ssh/config.tera", mode = "template" }
+
+"~/.config/maison/zsh" = { source = "dotfiles/zsh", mode = "symlink" }
+"~/.zshrc" = { source = "dotfiles/zsh/zshrc", mode = "symlink" }
+"~/.local/bin" = { source = "dotfiles/bin", mode = "symlink-each" }
+
+"~/.pi/agent/themes/ayu-mirage.json" = { source = "dotfiles/pi/themes/ayu-mirage.json", mode = "symlink" }
+"~/.pi/agent/extensions/ayu-footer.ts" = { source = "dotfiles/pi/extensions/footer.ts", mode = "symlink" }
+"~/.pi/agent/extensions/markdown-pager.ts" = { source = "dotfiles/pi/extensions/pager.ts", mode = "symlink" }
+"~/.pi/agent/extensions/bookmark.ts" = { source = "dotfiles/pi/extensions/bookmark.ts", mode = "symlink" }
+"~/.pi/agent/AGENTS.md" = { source = "dotfiles/pi/AGENTS.md", mode = "symlink" }

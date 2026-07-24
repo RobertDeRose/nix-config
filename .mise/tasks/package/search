@@ -1,240 +1,52 @@
 #!/usr/bin/env bash
-# [MISE] description="Search Mise, nixpkgs, and Homebrew"
-#
-#USAGE arg "<query>" help="Package name or regex; use ^name$ for an exact match"
-
-# usage_* variables are injected by mise's file-task argument parser.
-# shellcheck disable=SC2154
-
+# [MISE] description="Search mise and Homebrew package sources"
+#USAGE arg "<query>" help="Package name or description"
 set -euo pipefail
-
-TASK_FILE="${BASH_SOURCE[0]}"
-REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-source "$REPO_ROOT/.mise/lib/common.sh"
-source "$REPO_ROOT/.mise/lib/nix.sh"
-configure_github_access_token
-
 query="${usage_query}"
-brew_query="$query"
-temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/package-search.XXXXXX")"
-spinner_pid=""
-search_pids=()
 
-# Homebrew only treats searches wrapped in /.../ as regular expressions.
-case "$query" in
-  ^* | *\$)
-    brew_query="/$query/"
-    ;;
-esac
+printf '%s\n' '== mise registry/backends =='
+mise search "$query" || true
 
-stop_spinner() {
-  if [[ -z $spinner_pid ]]; then
-    return
-  fi
+printf '\n%s\n' '== Homebrew formulae and casks =='
+python3 - "$query" <<'PY'
+from __future__ import annotations
 
-  kill "$spinner_pid" 2> /dev/null || true
-  wait "$spinner_pid" 2> /dev/null || true
-  spinner_pid=""
-  printf '\r\033[K' >&2
-}
+import json
+import sys
+import urllib.error
+import urllib.request
 
-cleanup() {
-  stop_spinner
-  rm -rf "$temp_dir"
-}
+query = sys.argv[1].casefold()
+endpoints = (
+    ("formula", "https://formulae.brew.sh/api/formula.json"),
+    ("cask", "https://formulae.brew.sh/api/cask.json"),
+)
+rows: list[tuple[str, str, str, str]] = []
+for kind, url in endpoints:
+    try:
+        with urllib.request.urlopen(url, timeout=15) as response:
+            entries = json.load(response)
+    except (OSError, urllib.error.URLError, json.JSONDecodeError) as exc:
+        print(f"warning: could not query {kind} metadata: {exc}", file=sys.stderr)
+        continue
+    for entry in entries:
+        token = entry.get("name") if kind == "formula" else entry.get("token")
+        names = entry.get("name", []) if kind == "cask" else []
+        if isinstance(names, str):
+            names = [names]
+        description = entry.get("desc") or ""
+        haystack = " ".join([token or "", description, *names]).casefold()
+        if query in haystack:
+            version = (
+                (entry.get("versions") or {}).get("stable")
+                if kind == "formula"
+                else entry.get("version")
+            ) or "unknown"
+            rows.append((kind, token or "", str(version), description))
 
-abort() {
-  local pid
-
-  for pid in "${search_pids[@]}"; do
-    kill "$pid" 2> /dev/null || true
-  done
-
-  exit 130
-}
-
-spinner() {
-  local -a frames=('|' '/' '-' $'\\')
-  local frame_count=${#frames[@]}
-  local index=0
-
-  while true; do
-    printf '\r\033[KSearching package sources... %s' \
-      "${frames[index % frame_count]}" >&2
-
-    index=$((index + 1))
-    sleep 0.1
-  done
-}
-
-search_mise() {
-  local matches
-  local suggestions
-  local suggestion_matches
-
-  if ! command -v mise > /dev/null 2>&1; then
-    printf 'mise is unavailable\n'
-    return
-  fi
-
-  matches="$(
-    mise registry 2> /dev/null |
-      awk -v query="$query" '
-        BEGIN {
-          query = tolower(query)
-        }
-
-        tolower($1) ~ query {
-          print
-
-          if (++count == 40) {
-            exit
-          }
-        }
-      ' ||
-      true
-  )"
-
-  if [[ -n $matches ]]; then
-    printf '%s\n' "$matches"
-    return
-  fi
-
-  # A tool may be available through a direct backend identifier without
-  # having a shorthand entry in the primary mise registry. Trigger mise's
-  # built-in suggestions and retain only suggestions whose package name
-  # matches the original query.
-  suggestions="$(
-    NO_COLOR=1 mise ls-remote "$query" 2>&1 ||
-      true
-  )"
-
-  if printf '%s
-' "$suggestions" | grep -Eqi 'rate limit|403 Forbidden|No GitHub token'; then
-    printf 'GitHub API authentication failed while searching the mise registry.
-'
-    printf 'Run: maison github auth
-'
-    return
-  fi
-
-  suggestion_matches="$(
-    printf '%s\n' "$suggestions" |
-      awk -v query="$query" '
-        BEGIN {
-          query = tolower(query)
-        }
-
-        /^Did you mean\?$/ {
-          reading_suggestions = 1
-          next
-        }
-
-        reading_suggestions && /^[[:space:]]+/ {
-          candidate = $1
-          package_name = candidate
-
-          sub(/^.*\//, "", package_name)
-          sub(/@.*$/, "", package_name)
-
-          if (tolower(package_name) ~ query) {
-            printf "%-32s %s\n", candidate, "direct mise backend"
-          }
-
-          next
-        }
-
-        reading_suggestions {
-          exit
-        }
-      ' ||
-      true
-  )"
-
-  if [[ -n $suggestion_matches ]]; then
-    printf '%s\n' "$suggestion_matches"
-  else
-    printf 'No Mise registry or backend matches\n'
-  fi
-}
-
-search_nixpkgs() {
-  local stderr_file="$temp_dir/nixpkgs.stderr"
-  local stdout_file="$temp_dir/nixpkgs.stdout"
-
-  if ! command -v nix-search > /dev/null 2>&1; then
-    printf 'nix-search is unavailable; run: mise install\n'
-    return
-  fi
-
-  if NO_COLOR=1 nix-search --channel unstable --max-results 40 --search "$query" \
-    > "$stdout_file" 2> "$stderr_file"; then
-    if [[ -s $stdout_file ]]; then
-      cat "$stdout_file"
-    else
-      printf 'No nixpkgs matches\n'
-    fi
-  else
-    printf 'nixpkgs search failed:\n'
-    cat "$stderr_file"
-  fi
-}
-
-search_homebrew() {
-  local package_type="$1"
-
-  if ! command -v brew > /dev/null 2>&1; then
-    printf 'Homebrew is unavailable on this machine\n'
-    return
-  fi
-
-  brew search "--$package_type" "$brew_query" 2>&1 |
-    head -80 ||
-    true
-}
-
-print_section() {
-  local title="$1"
-  local output_file="$2"
-
-  printf '== %s ==\n' "$title"
-  cat "$output_file"
-}
-
-trap cleanup EXIT
-trap abort INT TERM HUP
-
-# Start every provider before waiting for any of them.
-search_mise > "$temp_dir/mise" 2>&1 &
-search_pids+=("$!")
-
-search_nixpkgs > "$temp_dir/nixpkgs" 2>&1 &
-search_pids+=("$!")
-
-search_homebrew formula > "$temp_dir/homebrew-formulae" 2>&1 &
-search_pids+=("$!")
-
-search_homebrew cask > "$temp_dir/homebrew-casks" 2>&1 &
-search_pids+=("$!")
-
-# Avoid terminal control sequences when redirected or running in CI.
-if [[ -t 2 ]]; then
-  spinner &
-  spinner_pid="$!"
-fi
-
-# The searches are concurrent even though their PIDs are waited on in order.
-for pid in "${search_pids[@]}"; do
-  wait "$pid" || true
-done
-
-stop_spinner
-
-print_section 'Mise' "$temp_dir/mise"
-printf '\n'
-print_section 'nixpkgs' "$temp_dir/nixpkgs"
-printf '\n'
-print_section 'Homebrew formulae' "$temp_dir/homebrew-formulae"
-printf '\n'
-print_section 'Homebrew casks' "$temp_dir/homebrew-casks"
+for kind, token, version, description in sorted(rows, key=lambda row: (row[0], row[1]))[:80]:
+    manager = "brew" if kind == "formula" else "brew-cask"
+    print(f"{manager}:{token:<42} {version:<18} {description}")
+if not rows:
+    print("No Homebrew matches found (or metadata was unavailable).")
+PY

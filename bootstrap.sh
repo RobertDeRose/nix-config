@@ -145,16 +145,13 @@ fi
 cd "$repo_root"
 export MISE_TRUSTED_CONFIG_PATHS="$repo_root${MISE_TRUSTED_CONFIG_PATHS:+:$MISE_TRUSTED_CONFIG_PATHS}"
 
-# Bootstrap platform prerequisites before Maison or Home Manager can install
-# managed Git configuration. The order is intentional: Homebrew, mise, Nix/Lix.
+# Bootstrap only the executors required by the two ownership layers: mise and Nix/Lix.
 # shellcheck source=.mise/lib/common.sh
 source "$repo_root/.mise/lib/common.sh"
 # shellcheck source=.mise/lib/platform.sh
 source "$repo_root/.mise/lib/platform.sh"
 # shellcheck source=.mise/lib/bootstrap.sh
 source "$repo_root/.mise/lib/bootstrap.sh"
-install_linuxbrew_if_missing
-
 if ! command -v mise > /dev/null 2>&1; then
   if [ ! -x "$HOME/.local/bin/mise" ]; then
     log "Installing mise"
@@ -175,5 +172,7 @@ mise trust "$repo_root/mise.toml" > /dev/null
 
 log "Handing off to Maison for host $host"
 bootstrap_args=(--host "$host")
-[ -z "$profiles" ] || bootstrap_args+=(--profiles "$profiles")
+if [ -n "$profiles" ]; then
+  log "Ignoring legacy --profiles=$profiles; profiles now select only Nix system modules in inventory.toml"
+fi
 exec mise run --skip-tools bootstrap -- "${bootstrap_args[@]}"

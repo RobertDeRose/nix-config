@@ -1,163 +1,47 @@
 #!/usr/bin/env bash
 # [MISE] description="Add a validated host to inventory.toml"
-#
 #USAGE arg "<hostname>" help="Hostname to add"
-#USAGE arg "[os]" help="Legacy OS class: darwin or linux"
-#USAGE arg "[arch]" help="Legacy architecture: aarch64 or x86_64"
-#USAGE flag "--system <system>" help="Nix system, for example aarch64-darwin"
-#USAGE flag "--user <user>" help="Inventory user (defaults to the current user when already defined)"
+#USAGE flag "--system <system>" help="Nix system, for example aarch64-linux"
+#USAGE flag "--user <user>" help="Existing inventory user"
 #USAGE flag "--profiles <profiles>" help="Comma-separated profiles"
-#USAGE flag "--fullname <name>" help="Full name when creating a new user"
-#USAGE flag "--email <email>" help="Email when creating a new user"
-#USAGE flag "--github <username>" help="GitHub username when creating a new user"
-#USAGE flag "--overrides" help="Create hosts/<hostname>/system.nix and home.nix stubs"
-#USAGE flag "--commit" help="Stage and commit the inventory change"
-
-# usage_* variables are injected by mise's file-task argument parser.
-# shellcheck disable=SC2154
-
+#USAGE flag "--overrides" help="Create a host-specific system.nix stub"
 set -euo pipefail
-TASK_FILE="${BASH_SOURCE[0]}"
-REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-source "$REPO_ROOT/.mise/lib/common.sh"
-source "$REPO_ROOT/.mise/lib/platform.sh"
-source "$REPO_ROOT/.mise/lib/inventory.sh"
-source "$REPO_ROOT/.mise/lib/git.sh"
-source "$REPO_ROOT/.mise/lib/nix.sh"
-
+root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+source "$root/.mise/lib/common.sh"
+source "$root/.mise/lib/platform.sh"
+source "$root/.mise/lib/inventory.sh"
 host="${usage_hostname}"
-validate_hostname "$host" || die "invalid hostname '$host'; expected one DNS label"
-inventory_has_host "$REPO_ROOT" "$host" && die "host '$host' already exists"
-
-system="${usage_system:-}"
-if [ -z "$system" ] && [ -n "${usage_os:-}" ]; then
-  arch="${usage_arch:-$(current_arch)}"
-  system="$arch-${usage_os}"
-fi
-[ -n "$system" ] || system="$(current_system)"
-is_supported_system "$system" || die "unsupported system '$system'"
-
+system="${usage_system:-$(current_system)}"
 user="${usage_user:-$(current_user)}"
+validate_hostname "$host" || die "invalid hostname: $host"
+is_supported_system "$system" || die "unsupported system: $system"
+inventory_has_host "$root" "$host" && die "host already exists: $host"
+inventory_has_user "$root" "$user" || die "inventory user does not exist: $user"
 profiles="${usage_profiles:-}"
-if [ -z "$profiles" ]; then
-  case "$system" in
-    *-darwin) profiles=base,dev,mac ;;
-    *-linux) profiles=base,dev,linux ;;
-  esac
-fi
-
-profile_toml=""
-old_ifs="$IFS"
-IFS=','
-for profile in $profiles; do
-  profile="$(printf '%s' "$profile" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-  case "$profile" in
-    base | dev) ;;
-    mac) case "$system" in *-darwin) ;; *) die "profile '$profile' is incompatible with '$system'" ;; esac ;;
-    linux) case "$system" in *-linux) ;; *) die "profile '$profile' is incompatible with '$system'" ;; esac ;;
-    *) die "unknown profile '$profile'" ;;
-  esac
-  [ -z "$profile_toml" ] || profile_toml="$profile_toml, "
-  profile_toml="$profile_toml\"$profile\""
+if [ -z "$profiles" ]; then case "$system" in *-darwin) profiles=base,dev,mac ;; *-linux) profiles=base,dev,linux ;; esac; fi
+quoted=""
+IFS=',' read -r -a values <<<"$profiles"
+for profile in "${values[@]}"; do
+  profile="$(printf '%s' "$profile" | xargs)"
+  case "$profile:$system" in base:*|dev:*|mac:*-darwin|linux:*-linux) ;; *) die "incompatible profile: $profile" ;; esac
+  [ -z "$quoted" ] || quoted+=", "
+  quoted+="\"$profile\""
 done
-IFS="$old_ifs"
-
-inventory_file="$REPO_ROOT/inventory.toml"
-if inventory_has_user "$REPO_ROOT" "$user"; then
-  inventory_user_allowed_for_system "$REPO_ROOT" "$user" "$system" || die "inventory user '$user' is not valid for '$system'"
-else
-  validate_username "$user" || die "invalid new managed username '$user'; new accounts must use a portable lowercase name"
-fi
-
-toml_basic_string() {
-  local value="$1"
-  case "$value" in
-    *$'\n'* | *$'\r'*) die "TOML string values may not contain newlines" ;;
-  esac
-  printf '%s' "$value" | sed 's/\\/\\\\/g; s/"/\\"/g'
-}
-
-backup="$(mktemp "${TMPDIR:-/tmp}/inventory.backup.XXXXXX")"
-candidate="$(mktemp "${TMPDIR:-/tmp}/inventory.candidate.XXXXXX")"
-cp "$inventory_file" "$backup"
-cp "$inventory_file" "$candidate"
-override_dir="hosts/$host"
-override_created=false
-restore_on_failure() {
-  cp "$backup" "$inventory_file"
-  if [ "$override_created" = true ]; then
-    rm -rf "$override_dir"
-  fi
-  rm -f "$backup" "$candidate"
-}
-trap restore_on_failure ERR INT TERM
-
-if ! inventory_has_user "$REPO_ROOT" "$user"; then
-  fullname="${usage_fullname:-}"
-  email="${usage_email:-}"
-  github="${usage_github:-}"
-  [ -n "$fullname" ] || die "user '$user' is not defined; pass --fullname to create it"
-  [ -n "$email" ] || die "user '$user' is not defined; pass --email to create it"
-  validate_github_username "$github" || die "user '$user' is not defined; pass a valid --github username"
-  escaped_user="$(toml_basic_string "$user")"
-  escaped_fullname="$(toml_basic_string "$fullname")"
-  escaped_email="$(toml_basic_string "$email")"
-  escaped_github="$(toml_basic_string "$github")"
-  cat >> "$candidate" << USER_ENTRY
-
-[users.$user]
-username = "$escaped_user"
-full_name = "$escaped_fullname"
-email = "$escaped_email"
-github = "$escaped_github"
-USER_ENTRY
-fi
-
-cat >> "$candidate" << HOST_ENTRY
+cat >>"$root/inventory.toml" <<HOST
 
 [hosts.$host]
 system = "$system"
 user = "$user"
-profiles = [$profile_toml]
-HOST_ENTRY
-mv "$candidate" "$inventory_file"
-
-created_paths=(inventory.toml)
+profiles = [$quoted]
+HOST
 if [ "${usage_overrides:-false}" = true ]; then
-  [ ! -e "$override_dir" ] || die "override path '$override_dir' already exists"
-  mkdir -p "$override_dir"
-  override_created=true
-  cat > "$override_dir/system.nix" << 'SYSTEM_OVERRIDE'
+  mkdir -p "$root/hosts/$host"
+  cat >"$root/hosts/$host/system.nix" <<'NIX'
 { ... }:
 {
-  # Host-specific system exceptions only.
+  # Host-specific OS-level exceptions only.
 }
-SYSTEM_OVERRIDE
-  cat > "$override_dir/home.nix" << 'HOME_OVERRIDE'
-{ ... }:
-{
-  # Host-specific Home Manager exceptions only.
-}
-HOME_OVERRIDE
-  created_paths+=("$override_dir")
+NIX
 fi
-
 mise run host:validate
-if command -v nix > /dev/null 2>&1; then
-  load_nix_environment
-  configure_github_access_token
-  evaluate_host "$REPO_ROOT" "$host" false
-else
-  log_warn "Nix/Lix is unavailable; evaluation will occur during bootstrap/apply"
-fi
-
-trap - ERR INT TERM
-rm -f "$backup" "$candidate"
-
-printf '\nConfiguration diff:\n'
-git --no-pager diff -- "${created_paths[@]}"
-if [ "${usage_commit:-false}" = true ]; then
-  git_commit_paths "$REPO_ROOT" "feat: add host $host ($system)" "${created_paths[@]}"
-fi
-printf '\nAdded host %s. Preview it with:\n  mise run plan --host %s\n' "$host" "$host"
+git --no-pager diff -- inventory.toml "hosts/$host" 2>/dev/null || true

@@ -1,6 +1,6 @@
 [book]
 title = "Maison"
-description = "Reproducible macOS and Linux system configuration with Nix flakes"
+description = "Nix/Lix system configuration with a mise-managed user environment"
 authors = ["Robert DeRose"]
 language = "en"
 src = "src"

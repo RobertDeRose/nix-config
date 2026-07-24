@@ -1,14 +1,5 @@
 #!/usr/bin/env bash
-# [MISE] description="Deprecated: forward to plan"
+# [MISE] description="Compatibility alias for system:plan"
 # [MISE] hide=true
-#
-#USAGE arg "[target]" help="Optional explicit flake target"
-#USAGE flag "--host <host>" help="Host to preview"
-#USAGE flag "-d --debug" help="Show verbose Nix output and traces"
-
 set -euo pipefail
-
-TASK_FILE="${BASH_SOURCE[0]}"
-REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-exec mise run plan -- "$@"
+exec mise run "system:plan" -- "$@"

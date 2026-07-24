@@ -4,7 +4,6 @@
   inventoryData,
   darwinConfigurations,
   systemConfigs,
-  homeConfigurations,
 }:
 let
   hostsForSystem = lib.filterAttrs (_: host: host.system == system) inventoryData.hosts;
@@ -22,10 +21,6 @@ let
         {
           name = "host-${name}-system";
           value = systemConfigs.${name};
-        }
-        {
-          name = "host-${name}-home";
-          value = homeConfigurations.${name}.activationPackage;
         }
       ];
 in

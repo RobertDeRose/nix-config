@@ -1,42 +1,50 @@
-# Package ownership policy
-
-Every user-visible package has one primary source. Platform-specific ownership is allowed only when the difference is explicit and validated.
+# Package policy
 
 ## Decision order
 
-1. **Mise** owns standalone, user-scoped developer and repository-validation tools when a maintained prebuilt release is available and no system integration is required.
-2. **Nix** owns packages required by nix-darwin, system-manager, Home Manager modules, activation code, services, or reproducible system closures.
-3. **Homebrew** owns macOS GUI applications, macOS-specific formulae, and binaries whose upstream bottles avoid costly or unreliable local Nix builds.
-4. **MAS** owns Mac App Store applications.
-5. **Custom Nix packages** are a last resort and require a documented upstream, supported systems, source-selection rationale, and cache expectations.
+1. **mise tool backend** for versioned, user-scoped developer tools with prebuilt releases.
+2. **mise built-in Homebrew formula** for user-facing native CLI packages and shared-library applications.
+3. **Homebrew cask or MAS through mise** for ordinary user-facing macOS applications.
+4. **Nix/nix-darwin** for system-wide fonts, filesystem integrations, system services, privileged activation, and Nix administration workflows.
 
-Ordinary profile and host package changes belong in `packages.toml`. Mise tools remain in `mise.toml`. Packages selected implicitly by a Home Manager `programs.*` option or required inside activation logic are listed under `[module_owned]` for auditability while their actual declarations stay with the module.
+A package does not belong in Nix merely because nixpkgs contains it.
 
-## Current explicit exceptions
+## Current Nix packages
 
-`jq` is intentionally present in two closures: mise supplies the interactive/CI command, while the Pi activation script embeds `pkgs.jq` so activation cannot depend on the user environment. `worktrunk` is declared in `packages.toml`, rendered into the Home Manager-managed global mise config, and installed after activation so fresh Linux bootstraps use a prebuilt release instead of compiling its Rust dependency graph.
+Darwin's system closure contains administration tools and deliberately system-owned integrations:
 
-## Custom Nix package group: llm-agents.nix
+- `nh`
+- `deploy-rs`
+- `nixd`
+- system-wide fonts
+- FUSE-T casks through the minimal Nix-managed native Homebrew exception
 
-The `llmagents` flake input supplies the macOS-only AI tools `herdr`, `opencode`, `openspec`, and `pi` through `nix/packages/custom/llmagents.nix`.
+Linux system-manager contains `nh`, the minimal `curl`/Git/tar user-bootstrap prerequisites, and packages embedded by system configuration and services.
 
-- Upstream: `numtide/llm-agents.nix`.
-- nixpkgs is insufficient because these rapidly changing agent binaries are not all available there at compatible versions.
-- Mise is not used because the current input provides one cross-platform, Nix-evaluated package set shared by Home Manager modules.
-- Homebrew is not used because the tools must also work on Linux and do not all have equivalent formulae.
-- Supported systems are the systems exported by the upstream input; host evaluation fails clearly when a package is absent.
-- Cache misses can trigger local builds. The personal cache is acceleration only and is not a correctness requirement.
+## User package files
 
-Reassess this exception when all four tools have suitable, trusted mise backends or nixpkgs packages.
+- `config/mise/config.toml`: cross-platform versioned tools.
+- `config/mise/config.macos-arm64.toml`: Apple Silicon user-facing formulae, casks, and MAS apps.
+- `config/mise/config.linux.toml`: Linuxbrew user packages.
+- `config/mise/config.macos-x64.toml`: explicit Intel limitation, not false parity.
 
-## Adding software
+## Version policy
 
-Use `maison package:search <name>` to inspect available source classes. Then use one explicit command:
+`latest` is intentional for fast-moving workstation tools and applications. Exact versions may be pinned where regressions are costly. Nix system inputs remain pinned by `flake.lock` and should be updated through `maison update`.
+
+## Source-build policy
+
+Prefer prebuilt release artifacts and Homebrew bottles for user software. Nix source builds are acceptable only for the small system closure or an explicitly justified system dependency. They should not be the default fallback for ordinary interactive tools.
+
+## Mutations
 
 ```bash
-maison tool:add <tool>
-maison package:add <package> [--profile <profile>]
-maison app:add <cask>
+maison tool add <backend:tool> [version]
+maison tool remove <backend:tool[@version]>
+maison package add <manager:package> [--macos]
+maison package remove <manager:package> [--macos]
+maison app add <cask>
+maison app remove <cask>
 ```
 
-The commands show a diff and run ownership validation. They never choose a source silently and never stage, commit, or push.
+Removal edits the declaration and deliberately leaves installed data in place. Pruning should be a separate, explicit operation.

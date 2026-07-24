@@ -63,7 +63,7 @@ if [ -d "$REPO_ROOT/hosts" ]; then
   find "$REPO_ROOT/hosts" -mindepth 1 -maxdepth 1 -type d -print | while IFS= read -r dir; do
     host="$(basename "$dir")"
     inventory_has_host "$REPO_ROOT" "$host" || die "override directory hosts/$host has no inventory entry"
-    find "$dir" -maxdepth 1 -type f ! -name system.nix ! -name home.nix -print | while IFS= read -r unexpected; do
+    find "$dir" -maxdepth 1 -type f ! -name system.nix -print | while IFS= read -r unexpected; do
       die "unexpected host override file: ${unexpected#"$REPO_ROOT"/}"
     done
   done

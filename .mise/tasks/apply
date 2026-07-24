@@ -1,71 +1,18 @@
 #!/usr/bin/env bash
-# [MISE] description="Build and apply the selected host configuration"
+# [MISE] description="Apply the Nix system layer, then converge the mise user layer"
 # [MISE] interactive=true
-#
-#USAGE arg "[hostname]" help="Legacy positional host name"
-#USAGE flag "--host <host>" help="Host to apply (defaults to the current hostname)"
-#USAGE flag "-d --debug" help="Show verbose Nix output and traces"
-#USAGE flag "--no-activate" help="Build the complete target without activating it"
-
+#USAGE flag "--host <host>" help="Inventory host"
+#USAGE flag "--system-only" help="Skip the mise user layer"
+#USAGE flag "--user-only" help="Skip the Nix system layer"
+#USAGE flag "--force-dotfiles" help="Replace conflicting user dotfiles"
 set -euo pipefail
-
-TASK_FILE="${BASH_SOURCE[0]}"
-REPO_ROOT="$(git -C "$(dirname "$TASK_FILE")" rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-# shellcheck source=.mise/lib/common.sh
-source "$REPO_ROOT/.mise/lib/common.sh"
-# shellcheck source=.mise/lib/platform.sh
-source "$REPO_ROOT/.mise/lib/platform.sh"
-# shellcheck source=.mise/lib/inventory.sh
-source "$REPO_ROOT/.mise/lib/inventory.sh"
-# shellcheck source=.mise/lib/nix.sh
-source "$REPO_ROOT/.mise/lib/nix.sh"
-
-host="${usage_host:-${usage_hostname:-$(current_hostname)}}"
-debug="${usage_debug:-false}"
-no_activate="${usage_no_activate:-false}"
-
-require_inventory_host "$REPO_ROOT" "$host"
-validate_host_platform "$REPO_ROOT" "$host" "$(current_system)"
-load_nix_environment
-configure_github_access_token
-export NIX_SUPPRESS_DIRTY_WARNING=true
-
-log_info "Selected host: $host ($(inventory_host_system "$REPO_ROOT" "$host"))"
-if is_ci; then
-  evaluate_host "$REPO_ROOT" "$host" "$debug"
-  log_info "CI validation succeeded; activation was skipped"
-  exit 0
+if [ "${usage_user_only:-false}" != true ]; then
+  args=()
+  [ -z "${usage_host:-}" ] || args+=(--host "$usage_host")
+  mise run system:apply -- "${args[@]}"
 fi
-
-log_info "Building the complete host configuration before activation"
-build_host "$REPO_ROOT" "$host" "$debug"
-
-if [ "$no_activate" = true ]; then
-  log_info "Build succeeded; --no-activate requested"
-  exit 0
+if [ "${usage_system_only:-false}" != true ]; then
+  args=()
+  [ "${usage_force_dotfiles:-false}" != true ] || args+=(--force-dotfiles)
+  mise run user:apply -- "${args[@]}"
 fi
-
-log_info "Activating host configuration"
-activate_host "$REPO_ROOT" "$host" "$debug"
-
-global_mise_config="$HOME/.config/mise/config.toml"
-if [ ! -f "$global_mise_config" ]; then
-  die "Home Manager did not create the global mise config: $global_mise_config"
-fi
-require_command mise
-log_info "Installing globally configured mise tools"
-MISE_CONFIG_FILE="$global_mise_config" mise install
-
-log_info "Installing Maison command"
-mkdir -p "$HOME/.local/bin"
-usage_bin="$(mise -C "$REPO_ROOT" which usage 2> /dev/null || true)"
-if [ ! -x "$usage_bin" ]; then
-  log_info "Installing Maison CLI runtime"
-  mise -C "$REPO_ROOT" install usage
-  usage_bin="$(mise -C "$REPO_ROOT" which usage)"
-fi
-[ -x "$usage_bin" ] || die "Usage was not installed with the Maison project tools"
-ln -sfn "$usage_bin" "$HOME/.local/bin/usage"
-ln -sfn "$REPO_ROOT/bin/maison" "$HOME/.local/bin/maison"
-"$HOME/.local/bin/maison" --version > /dev/null

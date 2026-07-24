@@ -1,5 +1,5 @@
-# Static Git configuration. Home Manager generates only identity and
-# platform-specific fragments, which are included below.
+# Static Git configuration. Mise deploys the identity and platform-specific
+# fragments included below.
 [include]
     path = ~/.config/git/identity
 [include]

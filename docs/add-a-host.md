@@ -1,98 +1,29 @@
 # Add a host
 
-## 1. Select a system and profiles
-
-Supported systems:
-
-```text
-aarch64-darwin
-x86_64-darwin
-aarch64-linux
-x86_64-linux
+```bash
+maison host add <hostname> --system aarch64-linux --user rderose --profiles base,dev,linux --overrides
 ```
 
-Profiles:
-
-- `base` and `dev` are cross-platform.
-- `mac` is Darwin-only.
-- `linux` is Linux-only.
-
-## 2. Ensure the user exists
-
-Users are declared once in `inventory.toml`:
+For a deployable Linux host, add an explicit deployment table to `inventory.toml`:
 
 ```toml
-[users.rderose]
-username = "rderose"
-full_name = "Robert DeRose"
-email = "rderose@example.com"
-github = "RobertDeRose"
+[hosts.example.deploy]
+enable = true
+hostname = "example.example.com"
+ssh_user = "root"
+user_ssh_user = "rderose"
+repo_path = "/home/rderose/.maison"
+remote_build = false
+auto_rollback = true
+magic_rollback = true
 ```
 
-Do not place secrets in the inventory. New usernames must be portable lowercase, non-root account names.
-
-## 3. Add the host
+Then run:
 
 ```bash
-maison host:add build-server \
-  --system x86_64-linux \
-  --user rderose \
-  --profiles base,dev,linux
+maison host validate
+maison system plan --host example
+maison system deploy example --dry-activate
 ```
 
-For a new user, also provide `--fullname`, `--email`, and `--github`.
-
-The command validates the hostname, system, user, profile names, and platform compatibility. It writes one inventory entry, validates the complete inventory, evaluates the new output when Nix is available, and shows a diff. It does not create/switch a branch, stage, commit, or push.
-
-Use `--commit` only when an immediate local commit is intended. The command never pushes.
-
-## 4. Add overrides only for exceptions
-
-Most hosts need only the inventory entry. When a real exception exists:
-
-```bash
-maison host:add special-mac \
-  --system aarch64-darwin \
-  --user rderose \
-  --profiles base,dev,mac \
-  --overrides
-```
-
-This creates:
-
-```text
-hosts/special-mac/system.nix
-hosts/special-mac/home.nix
-```
-
-Remove an unused empty file. Do not repeat the system, user, or profile metadata in overrides.
-
-## 5. Validate and preview
-
-```bash
-maison check:inventory
-maison check:hosts
-maison plan --host build-server
-```
-
-`plan --host` requires the selected host to match the current machine platform. Remote Linux hosts can be built and activated with:
-
-```bash
-maison deploy user@destination build-server
-```
-
-## 6. Apply or bootstrap
-
-On an already configured matching machine:
-
-```bash
-maison apply --host build-server
-```
-
-On a fresh machine:
-
-```bash
-./bootstrap.sh --host build-server
-```
-
-Existing flake output names are generated automatically; `flake.nix` does not need a host-specific edit.
+Host override files may contain OS-level exceptions only. User differences belong in Tera dotfiles or platform mise configuration.

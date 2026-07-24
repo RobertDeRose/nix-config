@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# [MISE] description="Validate TOML/JSON and the system/user ownership boundary"
+set -euo pipefail
+root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+cd "$root"
+python3 - <<'PY'
+from pathlib import Path
+import json, tomllib
+for p in sorted(Path('.').glob('*.toml')) + sorted(Path('config/mise').glob('*.toml')):
+    with p.open('rb') as f: tomllib.load(f)
+for p in sorted(Path('dotfiles').rglob('*.json')):
+    json.loads(p.read_text())
+PY
+! grep -R -n -E 'home-manager|homeConfigurations|homeConfig' flake.nix nix
+! test -e packages.toml
+mise run host:validate

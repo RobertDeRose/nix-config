@@ -82,7 +82,6 @@ while IFS=$'\t' read -r host username fullname; do
       ;;
     *-linux)
       build_target ".#systemConfigs.\"$host\""
-      build_target ".#homeConfigurations.\"$host\".activationPackage"
       ;;
   esac
 done < <(host_rows)

@@ -1,30 +1,36 @@
-# Nix configuration UX refactor report
+# Topology refactor report
 
-## Baseline
+- Source bundle commit: `49e34f89715a5500e4aa15042dd65cc4483586e8`
+- Refactor branch: `topology/nh-deploy-rs-mise-user`
+- Goal: retain Nix for OS-level state, remove Home Manager, and move user state to mise.
 
-- Baseline commit: `7b2c0ecb7ac4c2c0f598e89f1a8a41933ef0512f`
-- Recovery tag: `pre-nix-config-ux-refactor`
-- Refactor branch: `refactor/nix-config-ux`
-- Darwin output: `darwinConfigurations.USMBDEROSER`
-- Linux system output: `systemConfigs.dev-som`
-- Linux Home Manager output: `homeConfigurations.dev-som`
+## Structural changes
 
-## Known baseline constraints
+- Removed the Home Manager input, modules, outputs, activation, and generation handling.
+- Removed the generated `packages.toml` ownership layer and reduced nix-homebrew to the OS-integrated FUSE-T exception.
+- Added deploy-rs flake input, deploy nodes, activation checks, and system profile deployment.
+- Adopted `nh darwin` for local Darwin build and switch.
+- Kept system-manager for privileged Linux state.
+- Converted native application configuration and package inventories to mise.
+- Preserved biometric sudo, login-window policy, Caps Lock remapping, host identity, and services in Nix.
+- Split aggregate workflows into explicit `system:*` and `user:*` tasks.
 
-The implementation environment used for this refactor does not provide Nix/Lix or mise. Baseline and final Nix builds therefore must be completed by CI or on a configured host. Static shell, TOML, JSON, task-contract, and repository-structure checks are run locally.
+## Validation available in the branch
 
-The repository initially used easy-hosts for Darwin discovery, a separate filesystem scan for Linux discovery, substantial inline mise task bodies, and a root bootstrap script containing post-mise orchestration. The Linux flake path also contained a default user fallback.
+- TOML, JSON, shell, and Python syntax checks.
+- Standard-library regression tests for topology and deterministic config editing.
+- Inventory validation.
+- `nix flake check --all-systems --no-build` and formatting when Nix is available.
+- Per-platform CI builds for package and host outputs.
 
-## Phase log
+## Runtime verification still required
 
-Each refactor phase appends its implementation and validation result here. User-visible behavior is intentionally preserved unless an entry explicitly states otherwise.
+The artifact build environment did not provide Nix/Lix or mise. Run these on a configured host before activation:
 
-## Compatibility exception: existing Darwin username
+```bash
+maison check
+maison system plan
+maison user plan
+```
 
-The existing macOS account name `DeRoseR` contains uppercase characters and therefore is not portable to Linux. To preserve the active macOS identity without renaming the account, `inventory.toml` marks that existing identity with `allow_nonportable = true`. Validation permits the exception only for Darwin hosts; newly scaffolded users must still use portable lowercase account names.
-
-## Post-checkpoint correction: transactional updates and cache fallback
-
-- Correction branch: `fix/update-cache-fallback`
-
-A clean-machine `mise update` exposed a misleading missing-NAR message from the Numtide cache during host evaluation. The correction makes `update` transactional, suppresses expected dirty-tree warnings while validating its own lockfile change, evaluates hosts without package-specific caches, enables Nix/Lix substitute fallback for builds, and prints explicit per-host and aggregate validation results. Regression tests cover lock restoration and Linux multi-output evaluation failure propagation.
+Then perform the staged deploy-rs rollback tests in `migration-contract.md` before deleting the old deployment implementation's recovery data.

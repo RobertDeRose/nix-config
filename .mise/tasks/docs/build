@@ -19,7 +19,7 @@ if command -v mdbook &> /dev/null; then
 elif command -v nix &> /dev/null; then
   load_nix_environment
   configure_github_access_token
-  nix_command false develop --command mdbook build
+  nix_command develop --command mdbook build
 else
   echo "Error: mdbook not found. Install via 'mise install' or 'cargo install mdbook'." >&2
   exit 1
