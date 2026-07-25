@@ -10,7 +10,7 @@ cd "$root"
 source "$root/.mise/lib/common.sh"
 source "$root/.mise/lib/inventory.sh"
 
-host="${usage_host}"
+host="${usage_host:?mise did not provide the required host argument}"
 require_inventory_host "$root" "$host"
 mise run system:deploy -- "$host"
 [ "${usage_system_only:-false}" != true ] || exit 0
@@ -34,10 +34,15 @@ tar \
 
 remote_archive="/tmp/maison-deploy-${host}-$$.tar.gz"
 quoted_archive="$(printf '%q' "$remote_archive")"
+# The destination was shell-escaped with printf %q for intentional expansion
+# into the remote command.
+# shellcheck disable=SC2029
 ssh "$ssh_user@$hostname" "cat > $quoted_archive" <"$archive"
 
 quoted_repo="$(printf '%q' "$repo_path")"
 quoted_user="$(printf '%q' "$user")"
+# All expanded arguments were shell-escaped with printf %q above.
+# shellcheck disable=SC2029
 ssh "$ssh_user@$hostname" "sh -s -- $quoted_repo $quoted_user $quoted_archive" <<'REMOTE_ROOT'
 set -eu
 repo_path="$1"
@@ -82,6 +87,8 @@ for arg in "${remote_args[@]}"; do
   quoted_args+=" $(printf '%q' "$arg")"
 done
 quoted_repo="$(printf '%q' "$repo_path")"
+# The repository path and optional arguments were shell-escaped with printf %q.
+# shellcheck disable=SC2029
 ssh "$user@$hostname" "sh -s -- $quoted_repo$quoted_args" <<'REMOTE_USER'
 set -eu
 repo_path="$1"

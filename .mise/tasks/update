@@ -11,7 +11,18 @@ load_nix_environment
 configure_github_access_token
 before="$(mktemp)"
 cp flake.lock "$before"
-trap 'status=$?; [ $status -eq 0 ] || cp "$before" flake.lock; rm -f "$before"; exit $status' EXIT
+# Invoked indirectly by the EXIT trap below.
+# shellcheck disable=SC2329
+restore_lock_on_failure() {
+  local exit_status="$1"
+  if [ "$exit_status" -ne 0 ]; then
+    cp "$before" flake.lock
+  fi
+  rm -f "$before"
+  trap - EXIT
+  exit "$exit_status"
+}
+trap 'restore_lock_on_failure "$?"' EXIT
 if [ -n "${usage_input:-}" ]; then
   nix_command flake update "$usage_input"
 else

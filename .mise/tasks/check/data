@@ -11,6 +11,12 @@ for p in sorted(Path('.').glob('*.toml')) + sorted(Path('config/mise').glob('*.t
 for p in sorted(Path('dotfiles').rglob('*.json')):
     json.loads(p.read_text())
 PY
-! grep -R -n -E 'home-manager|homeConfigurations|homeConfig' flake.nix nix
-! test -e packages.toml
+if grep -R -n -E 'home-manager|homeConfigurations|homeConfig' flake.nix nix; then
+  echo "Home Manager references remain in the Nix system layer" >&2
+  exit 1
+fi
+if [ -e packages.toml ]; then
+  echo "Legacy packages.toml still exists" >&2
+  exit 1
+fi
 mise run host:validate

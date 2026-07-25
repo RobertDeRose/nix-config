@@ -3,4 +3,5 @@
 #USAGE arg "<cask>" help="Cask token"
 set -euo pipefail
 root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
-exec mise bootstrap packages use --path "$root/config/mise/config.macos-arm64.toml" --yes "brew-cask:${usage_cask}"
+cask="${usage_cask:?mise did not provide the required cask argument}"
+exec mise bootstrap packages use --path "$root/config/mise/config.macos-arm64.toml" --yes "brew-cask:${cask}"

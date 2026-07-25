@@ -3,7 +3,7 @@
 #USAGE arg "<cask>" help="Cask token"
 set -euo pipefail
 root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
-package="brew-cask:${usage_cask}"
+package="brew-cask:${usage_cask:?mise did not provide the required cask argument}"
 python3 "$root/.mise/lib/config_edit.py" package \
   --file "$root/config/mise/config.macos-arm64.toml" \
   --name "$package" \

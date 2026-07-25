@@ -6,4 +6,5 @@ set -euo pipefail
 root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 path="$root/config/mise/config.toml"
 [ "${usage_macos:-false}" != true ] || path="$root/config/mise/config.macos-arm64.toml"
-exec mise bootstrap packages use --path "$path" --yes "${usage_package}"
+package="${usage_package:?mise did not provide the required package argument}"
+exec mise bootstrap packages use --path "$path" --yes "$package"

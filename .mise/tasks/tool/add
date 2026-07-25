@@ -6,11 +6,12 @@ set -euo pipefail
 root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 version="${usage_version:-latest}"
 config="$root/config/mise/config.toml"
-python3 "$root/.mise/lib/config_edit.py" tool --file "$config" --name "${usage_tool}" --version "$version"
-suffix="${usage_tool##*@}"
-if [[ "${usage_tool}" == *@* && "$suffix" != */* ]]; then
-  install_spec="${usage_tool}"
+tool="${usage_tool:?mise did not provide the required tool argument}"
+python3 "$root/.mise/lib/config_edit.py" tool --file "$config" --name "$tool" --version "$version"
+suffix="${tool##*@}"
+if [[ "$tool" == *@* && "$suffix" != */* ]]; then
+  install_spec="$tool"
 else
-  install_spec="${usage_tool}@${version}"
+  install_spec="${tool}@${version}"
 fi
 MISE_GLOBAL_CONFIG_FILE="$config" mise install "$install_spec"

@@ -4,5 +4,6 @@
 set -euo pipefail
 root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 config="$root/config/mise/config.toml"
-python3 "$root/.mise/lib/config_edit.py" tool --file "$config" --name "${usage_tool}" --remove
-printf 'Removed %s from %s. Installed versions were intentionally left in the mise cache.\n' "${usage_tool}" "${config#$root/}"
+tool="${usage_tool:?mise did not provide the required tool argument}"
+python3 "$root/.mise/lib/config_edit.py" tool --file "$config" --name "$tool" --remove
+printf 'Removed %s from %s. Installed versions were intentionally left in the mise cache.\n' "$tool" "${config#"$root"/}"

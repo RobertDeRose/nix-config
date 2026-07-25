@@ -10,7 +10,7 @@ cd "$root"
 source "$root/.mise/lib/common.sh"
 source "$root/.mise/lib/inventory.sh"
 source "$root/.mise/lib/nix.sh"
-host="${usage_host}"
+host="${usage_host:?mise did not provide the required host argument}"
 require_inventory_host "$root" "$host"
 case "$(inventory_host_system "$root" "$host")" in *-linux) ;; *) die "deploy supports Linux hosts only" ;; esac
 load_nix_environment

@@ -6,5 +6,6 @@ set -euo pipefail
 root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 path="$root/config/mise/config.toml"
 [ "${usage_macos:-false}" != true ] || path="$root/config/mise/config.macos-arm64.toml"
-python3 "$root/.mise/lib/config_edit.py" package --file "$path" --name "${usage_package}" --remove
-printf 'Removed %s from %s. The installed package was intentionally left in place.\n' "${usage_package}" "${path#$root/}"
+package="${usage_package:?mise did not provide the required package argument}"
+python3 "$root/.mise/lib/config_edit.py" package --file "$path" --name "$package" --remove
+printf 'Removed %s from %s. The installed package was intentionally left in place.\n' "$package" "${path#"$root"/}"
