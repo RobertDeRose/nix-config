@@ -12,7 +12,8 @@ let
   mkNode =
     name: host:
     let
-      deployLib = inputs.deploy-rs.lib.${host.system};
+      pkgs = import inputs.nixpkgs { system = host.system; };
+      deployRs = import ./deploy-rs.nix { inherit lib pkgs; };
     in
     {
       hostname = host.deploy.hostname;
@@ -24,10 +25,13 @@ let
       profiles.system = {
         user = "root";
         profilePath = "/nix/var/nix/profiles/system-manager-profiles/system-manager";
-        path = deployLib.activate.custom systemConfigs.${name} ''
-          cd /tmp
-          "$PROFILE/bin/activate"
-        '';
+        path = deployRs.mkActivation {
+          base = systemConfigs.${name};
+          activate = ''
+            cd /tmp
+            "$PROFILE/bin/activate"
+          '';
+        };
       };
     };
 in

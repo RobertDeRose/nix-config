@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# [MISE] description="Validate and format-check the Nix flake"
+# [MISE] description="Validate and format-check every supported Nix output without warnings"
 set -euo pipefail
 root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 cd "$root"
@@ -8,6 +8,60 @@ source "$root/.mise/lib/nix.sh"
 load_nix_environment
 configure_github_access_token
 export NIX_SUPPRESS_DIRTY_WARNING=true
-nix_command flake metadata >/dev/null
-nix_command flake check --all-systems --no-build
-nix_command fmt -- --ci
+
+run_nix_checked() {
+  local stdout_file stderr_file status
+  stdout_file="$(mktemp)"
+  stderr_file="$(mktemp)"
+
+  if nix_command "$@" >"$stdout_file" 2>"$stderr_file"; then
+    status=0
+  else
+    status=$?
+  fi
+
+  [ ! -s "$stderr_file" ] || cat "$stderr_file" >&2
+  cat "$stdout_file"
+
+  if [ "$status" -eq 0 ] && grep -Eq '(^|[[:space:]])warning:' "$stderr_file"; then
+    printf 'Nix emitted warnings while running:' >&2
+    printf ' %q' "$@" >&2
+    printf '\n' >&2
+    status=1
+  fi
+
+  rm -f "$stdout_file" "$stderr_file"
+  return "$status"
+}
+
+run_nix_checked flake metadata --no-update-lock-file >/dev/null
+
+run_nix_checked eval --no-update-lock-file --json .#packages \
+  --apply 'builtins.mapAttrs (_: packages: builtins.mapAttrs (_: package: package.drvPath) packages)' \
+  >/dev/null
+run_nix_checked eval --no-update-lock-file --json .#apps \
+  --apply '
+    builtins.mapAttrs (_: apps:
+      builtins.mapAttrs (_: app:
+        assert app.type == "app";
+        assert builtins.isString app.program;
+        app.program
+      ) apps
+    )
+  ' \
+  >/dev/null
+run_nix_checked eval --no-update-lock-file --json .#formatter \
+  --apply 'builtins.mapAttrs (_: formatter: formatter.drvPath)' \
+  >/dev/null
+run_nix_checked eval --no-update-lock-file --json .#checks \
+  --apply 'builtins.mapAttrs (_: checks: builtins.mapAttrs (_: check: check.drvPath) checks)' \
+  >/dev/null
+run_nix_checked eval --no-update-lock-file --json .#darwinConfigurations \
+  --apply 'builtins.mapAttrs (_: configuration: configuration.system.drvPath)' \
+  >/dev/null
+run_nix_checked eval --no-update-lock-file --json .#systemConfigs \
+  --apply 'builtins.mapAttrs (_: configuration: configuration.drvPath)' \
+  >/dev/null
+run_nix_checked eval --no-update-lock-file --json .#deploy >/dev/null
+
+run_nix_checked fmt --no-update-lock-file -- --ci

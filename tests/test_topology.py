@@ -36,7 +36,6 @@ class DataFilesTest(unittest.TestCase):
             root_inputs,
             {
                 "darwin",
-                "deploy-rs",
                 "flake-parts",
                 "nix-hex-box",
                 "nix-homebrew",
@@ -46,6 +45,7 @@ class DataFilesTest(unittest.TestCase):
         )
         serialized = json.dumps(lock)
         self.assertNotIn("home-manager", serialized)
+        self.assertNotIn('"deploy-rs"', serialized)
 
 
 class OwnershipBoundaryTest(unittest.TestCase):
@@ -147,10 +147,39 @@ class DeploymentContractTest(unittest.TestCase):
     def test_deploy_rs_activates_exact_system_manager_profile(self) -> None:
         deployment = read("nix/lib/deployments.nix")
         self.assertIn('/nix/var/nix/profiles/system-manager-profiles/system-manager', deployment)
-        self.assertIn('activate.custom systemConfigs.${name}', deployment)
+        self.assertIn("deployRs.mkActivation", deployment)
+        self.assertIn("base = systemConfigs.${name}", deployment)
         self.assertIn('"$PROFILE/bin/activate"', deployment)
         self.assertIn("magicRollback", deployment)
         self.assertIn("autoRollback", deployment)
+
+    def test_deploy_rs_uses_one_nixpkgs_package_revision(self) -> None:
+        flake = read("flake.nix")
+        outputs = read("nix/outputs.nix")
+        adapter = read("nix/lib/deploy-rs.nix")
+
+        self.assertNotIn("github:serokell/deploy-rs", flake)
+        self.assertNotIn("inputs.deploy-rs", outputs)
+        self.assertIn("deployPackage = pkgs.deploy-rs", adapter)
+        self.assertIn("${deployPackage}/bin/activate", adapter)
+        self.assertIn("pkgs.symlinkJoin", adapter)
+        self.assertIn("${deploySource}/interface.json", adapter)
+
+    def test_nix_check_is_warning_free_and_output_aware(self) -> None:
+        script = read(".mise/tasks/check/nix")
+        self.assertNotIn("flake check", script)
+        self.assertIn("--no-update-lock-file", script)
+        self.assertIn("Nix emitted warnings", script)
+        for output in (
+            ".#packages",
+            ".#apps",
+            ".#formatter",
+            ".#checks",
+            ".#darwinConfigurations",
+            ".#systemConfigs",
+            ".#deploy",
+        ):
+            self.assertIn(output, script)
 
     def test_rollbacks_do_not_double_advance_darwin_profile(self) -> None:
         script = read(".mise/tasks/system/rollback")

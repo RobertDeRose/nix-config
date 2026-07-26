@@ -12,6 +12,11 @@ let
 
   darwinHosts = lib.filterAttrs (_: host: lib.hasSuffix "-darwin" host.system) inventoryData.hosts;
   linuxHosts = lib.filterAttrs (_: host: lib.hasSuffix "-linux" host.system) inventoryData.hosts;
+  deploymentSystems = lib.unique (
+    lib.mapAttrsToList (_: host: host.system) (
+      lib.filterAttrs (_: host: host.deploy.enable) linuxHosts
+    )
+  );
 
   darwinConfigurations = lib.mapAttrs (
     _: host:
@@ -66,6 +71,7 @@ inputs.flake-parts.lib.mkFlake { inherit inputs; } {
     { pkgs, system, ... }:
     let
       hasSystemManager = builtins.hasAttr system inputs.system-manager.packages;
+      deployRs = import ./lib/deploy-rs.nix { inherit lib pkgs; };
       systemManagerPackage =
         let
           systemManagerPkgs = import inputs.nixpkgs {
@@ -119,8 +125,6 @@ inputs.flake-parts.lib.mkFlake { inherit inputs; } {
           systemConfigs
           ;
       }
-      // lib.optionalAttrs (builtins.hasAttr system inputs.deploy-rs.lib) (
-        inputs.deploy-rs.lib.${system}.deployChecks deploy
-      );
+      // lib.optionalAttrs (lib.elem system deploymentSystems) (deployRs.deployChecks deploy);
     };
 }

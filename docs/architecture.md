@@ -73,7 +73,10 @@ Each deploy-enabled Linux inventory host becomes `deploy.nodes.<host>`. The `sys
 - Activates the exact closure selected by deploy-rs through `$PROFILE/bin/activate`.
 - Enables `autoRollback` and `magicRollback` from inventory.
 
-The deployment schema and activation paths are included in flake checks.
+The local deploy-rs adapter uses the same `pkgs.deploy-rs` package for the CLI,
+remote activation binary, and version-matched schema. Deployment schema and
+activation-path checks are exported only for systems that own deploy-enabled
+hosts.
 
 ## mise user layer
 
