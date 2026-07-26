@@ -49,12 +49,10 @@ let
       profiles = builtins.concatLists (
         lib.mapAttrsToList (
           nodeName: node:
-          lib.mapAttrsToList (
-            profileName: profile: {
-              path = toString profile.path;
-              inherit nodeName profileName;
-            }
-          ) node.profiles
+          lib.mapAttrsToList (profileName: profile: {
+            path = toString profile.path;
+            inherit nodeName profileName;
+          }) node.profiles
         ) deploy.nodes
       );
       activationChecks = lib.concatMapStringsSep "\n" (

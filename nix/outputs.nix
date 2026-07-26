@@ -13,9 +13,7 @@ let
   darwinHosts = lib.filterAttrs (_: host: lib.hasSuffix "-darwin" host.system) inventoryData.hosts;
   linuxHosts = lib.filterAttrs (_: host: lib.hasSuffix "-linux" host.system) inventoryData.hosts;
   deploymentSystems = lib.unique (
-    lib.mapAttrsToList (_: host: host.system) (
-      lib.filterAttrs (_: host: host.deploy.enable) linuxHosts
-    )
+    lib.mapAttrsToList (_: host: host.system) (lib.filterAttrs (_: host: host.deploy.enable) linuxHosts)
   );
 
   darwinConfigurations = lib.mapAttrs (
