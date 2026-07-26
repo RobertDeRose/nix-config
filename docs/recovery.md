@@ -21,12 +21,13 @@ maison user plan
 maison user apply
 ```
 
-Resolve conflicting whole-file targets manually or rerun with `--force-dotfiles` after reviewing the dry run.
+The dry run previews whole-file ownership changes with force enabled but does not modify files. After review, rerun with `--force-dotfiles`; Maison backs up the exact targets mise refused before replacement.
 
 Targeted migration backups are stored under:
 
 ```text
 ~/.local/state/maison/backups/git
+~/.local/state/maison/backups/dotfiles/<timestamp>
 ~/.local/state/maison/backups/pi
 ```
 

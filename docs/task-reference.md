@@ -5,7 +5,7 @@
 | Task | Behavior |
 | --- | --- |
 | `doctor` | Diagnose both ownership layers without mutation |
-| `plan` | Run system build preview, then user dry run |
+| `plan` | Preview user ownership changes, then build the system closure |
 | `apply` | Apply Nix system state, then mise user state |
 | `update [input]` | Update flake inputs transactionally, validate, then upgrade user software |
 | `deploy <host>` | Deploy Linux system with deploy-rs, then converge remote user state |
@@ -28,8 +28,8 @@
 
 | Task | Behavior |
 | --- | --- |
-| `user:plan` | Preview repository dotfiles and global user bootstrap |
-| `user:apply` | Install tools, packages, apps, defaults, and dotfiles |
+| `user:plan` | Preview repository dotfile handoff and global user bootstrap without mutation |
+| `user:apply` | Install tools, packages, apps, defaults, and dotfiles; forced conflicts are backed up first |
 | `user:status` | Report user-environment drift |
 | `user:update` | Show outdated tools, upgrade tools, then upgrade packages |
 

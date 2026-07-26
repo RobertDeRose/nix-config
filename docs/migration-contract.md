@@ -16,6 +16,7 @@ This document records where behavior moved before Home Manager and bespoke deplo
 | Nix daemon/cache policy | Darwin/common Nix modules and Linux system-manager | `nix show-config` |
 | Git configuration | mise dotfiles under `~/.config/git` | `git config --list --show-origin` |
 | Existing `~/.gitconfig` conflict | `scripts/user-prepare.sh` backup | Backup under `~/.local/state/maison/backups/git` |
+| Existing whole-file dotfile conflicts | Forced `user:apply` detects mise refusals, copies their contents, then replaces them | Timestamped backup under `~/.local/state/maison/backups/dotfiles` |
 | Zsh, Starship, fzf, direnv, eza, Yazi integration | Native dotfiles plus mise/Homebrew packages | New login shell and completion checks |
 | Helix, Ghostty, Zed, htop | Native dotfiles | Start each application and inspect config path |
 | Pi extensions and mutable settings | mise dotfiles plus merge in `user-finalize.sh` | Existing package selections remain present |
@@ -51,5 +52,6 @@ Do not delete these until the new topology has been used successfully:
 - `/etc/nix/nix.custom.conf.before-nix-darwin`
 - `<remote repo>.previous`
 - `~/.local/state/maison/backups/git/*`
+- `~/.local/state/maison/backups/dotfiles/*`
 - `~/.local/state/maison/backups/pi/*`
 - Old Nix system generations

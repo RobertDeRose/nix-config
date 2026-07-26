@@ -51,11 +51,18 @@ ensure_nh() {
 }
 
 run_nh() {
-  if command -v nh >/dev/null 2>&1; then
-    nh "$@"
-  else
-    nix_command run .#nh -- "$@"
-  fi
+  local nix_config="${NIX_CONFIG:-}"
+  nix_config="${nix_config}${nix_config:+
+}accept-flake-config = true"
+
+  (
+    export NIX_CONFIG="$nix_config"
+    if command -v nh >/dev/null 2>&1; then
+      nh "$@"
+    else
+      nix_command run .#nh -- "$@"
+    fi
+  )
 }
 
 prepare_darwin_activation() {

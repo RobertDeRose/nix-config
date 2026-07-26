@@ -4,6 +4,8 @@ import json
 import os
 import re
 import stat
+import subprocess
+import tempfile
 import tomllib
 import unittest
 from pathlib import Path
@@ -194,6 +196,97 @@ class DeploymentContractTest(unittest.TestCase):
         self.assertIn("mise run system:deploy", script)
         self.assertIn("mise run user:apply", script)
         self.assertLess(script.index("mise run system:deploy"), script.index("mise run user:apply"))
+
+
+class MigrationBehaviorTest(unittest.TestCase):
+    def test_nh_accepts_repository_flake_config_without_losing_existing_config(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            fake_nh = temp / "nh"
+            capture = temp / "nix-config"
+            fake_nh.write_text('#!/bin/sh\nprintf "%s" "$NIX_CONFIG" >"$NH_ENV_CAPTURE"\n')
+            fake_nh.chmod(0o755)
+
+            env = os.environ.copy()
+            env["PATH"] = f"{temp}{os.pathsep}{env['PATH']}"
+            env["NH_ENV_CAPTURE"] = str(capture)
+            env["NIX_CONFIG"] = "access-tokens = github.com=redacted"
+            subprocess.run(
+                ["bash", "-c", "source .mise/lib/nix.sh; run_nh darwin build ."],
+                cwd=ROOT,
+                env=env,
+                check=True,
+            )
+
+            config = capture.read_text()
+            self.assertIn("access-tokens = github.com=redacted", config)
+            self.assertIn("accept-flake-config = true", config)
+
+    def test_forced_dotfile_handoff_backs_up_exact_conflicts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            home = temp / "home"
+            fake_bin = temp / "bin"
+            fake_bin.mkdir()
+            home.mkdir()
+
+            miserc = home / ".miserc.toml"
+            settings = home / ".config/zed/settings.json"
+            keymap = home / ".config/zed/keymap.json"
+            keymap_source = home / "keymap-source.json"
+            settings.parent.mkdir(parents=True)
+            miserc.write_text('auto_env = true\n')
+            settings.write_text('{"theme":"Ayu"}\n')
+            keymap_source.write_text('[{"key":"ctrl-p"}]\n')
+            keymap.symlink_to(keymap_source)
+
+            fake_mise = fake_bin / "mise"
+            fake_mise.write_text(
+                "#!/bin/sh\n"
+                "cat >&2 <<'EOF'\n"
+                "mise ERROR files: refusing to overwrite existing files (use --force-dotfiles):\n"
+                "  ~/.miserc.toml\n"
+                "  ~/.config/zed/settings.json\n"
+                "  ~/.config/zed/keymap.json\n"
+                "EOF\n"
+                "exit 1\n"
+            )
+            fake_mise.chmod(0o755)
+
+            env = os.environ.copy()
+            env["HOME"] = str(home)
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env['PATH']}"
+            subprocess.run(
+                [str(ROOT / "scripts/user-prepare.sh"), "--force-dotfiles"],
+                cwd=ROOT,
+                env=env,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertFalse(miserc.exists())
+            self.assertFalse(settings.exists())
+            self.assertFalse(keymap.exists())
+
+            backups = list((home / ".local/state/maison/backups/dotfiles").iterdir())
+            self.assertEqual(len(backups), 1)
+            backup = backups[0]
+            self.assertEqual((backup / ".miserc.toml").read_text(), 'auto_env = true\n')
+            self.assertEqual((backup / ".config/zed/settings.json").read_text(), '{"theme":"Ayu"}\n')
+            keymap_backup = backup / ".config/zed/keymap.json"
+            self.assertFalse(keymap_backup.is_symlink())
+            self.assertEqual(keymap_backup.read_text(), '[{"key":"ctrl-p"}]\n')
+
+    def test_user_preview_is_forced_but_apply_requires_explicit_opt_in(self) -> None:
+        plan = read(".mise/tasks/user/plan")
+        apply = read(".mise/tasks/user/apply")
+        aggregate = read(".mise/tasks/plan")
+
+        self.assertIn("--dry-run --force-dotfiles", plan)
+        self.assertIn('prepare_args+=(--force-dotfiles)', apply)
+        self.assertIn('user-prepare.sh" "${prepare_args[@]}"', apply)
+        self.assertLess(aggregate.index("mise run user:plan"), aggregate.index("mise run system:plan"))
 
 
 class RepositoryContractTest(unittest.TestCase):

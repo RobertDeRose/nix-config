@@ -6,10 +6,14 @@ set -euo pipefail
 root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 cd "$root"
 args=(--yes)
-[ "${usage_force_dotfiles:-false}" != true ] || args+=(--force-dotfiles)
+prepare_args=()
+if [ "${usage_force_dotfiles:-false}" = true ]; then
+  args+=(--force-dotfiles)
+  prepare_args+=(--force-dotfiles)
+fi
 mise trust "$root/mise.toml" >/dev/null
-"$root/scripts/user-prepare.sh"
 mise install
+"$root/scripts/user-prepare.sh" "${prepare_args[@]}"
 mise bootstrap --only dotfiles "${args[@]}"
 (
   cd "$HOME"

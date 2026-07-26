@@ -3,10 +3,11 @@
 set -euo pipefail
 root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 cd "$root"
-mise bootstrap --only dotfiles --dry-run
+args=(--dry-run --force-dotfiles)
+mise bootstrap --only dotfiles "${args[@]}"
 config="$HOME/.config/mise/config.toml"
 [ -f "$config" ] || config="$root/config/mise/config.toml"
 (
   cd "$HOME"
-  MISE_AUTO_ENV=true MISE_GLOBAL_CONFIG_FILE="$config" mise bootstrap --skip task --dry-run
+  MISE_AUTO_ENV=true MISE_GLOBAL_CONFIG_FILE="$config" mise bootstrap --skip task "${args[@]}"
 )

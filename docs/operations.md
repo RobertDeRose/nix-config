@@ -8,7 +8,7 @@ maison user plan
 maison plan
 ```
 
-`system:plan` builds without activation. `user:plan` uses mise dry-run/status behavior and does not invoke sudo.
+`user:plan` runs first and uses `--force-dotfiles` only with mise dry-run so ownership conflicts are visible without changing files. `system:plan` then builds without activation. Neither preview invokes sudo.
 
 ## Apply
 
@@ -18,7 +18,7 @@ maison user apply
 maison apply
 ```
 
-Use `--host` for an inventory host and `--force-dotfiles` only after reviewing conflicts.
+Use `--host` for an inventory host. Use `--force-dotfiles` only after reviewing `user:plan`; forced apply copies every refused target to a timestamped directory under `~/.local/state/maison/backups/dotfiles` before replacement.
 
 ## Inspect drift
 

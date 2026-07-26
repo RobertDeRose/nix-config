@@ -4,5 +4,5 @@
 set -euo pipefail
 args=()
 [ -z "${usage_host:-}" ] || args+=(--host "$usage_host")
-mise run system:plan -- "${args[@]}"
 mise run user:plan
+mise run system:plan -- "${args[@]}"
