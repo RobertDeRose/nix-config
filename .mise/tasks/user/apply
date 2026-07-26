@@ -15,6 +15,7 @@ mise trust "$root/mise.toml" >/dev/null
 mise install
 "$root/scripts/user-prepare.sh" "${prepare_args[@]}"
 mise bootstrap --only dotfiles "${args[@]}"
+"$root/scripts/user-link-mise-lock.sh"
 (
   cd "$HOME"
   MISE_AUTO_ENV=true MISE_GLOBAL_CONFIG_FILE="$HOME/.config/mise/config.toml" mise bootstrap --skip task "${args[@]}"

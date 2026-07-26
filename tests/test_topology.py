@@ -126,9 +126,14 @@ class OwnershipBoundaryTest(unittest.TestCase):
             "config.macos-arm64.toml",
             "config.macos-x64.toml",
             "config.linux.toml",
-            "mise.lock",
         ):
             self.assertIn(f"~/.config/mise/{name}", root_config)
+        self.assertNotIn('"~/.config/mise/mise.lock"', root_config)
+
+        plan = read(".mise/tasks/user/plan")
+        apply = read(".mise/tasks/user/apply")
+        self.assertIn('user-link-mise-lock.sh" --dry-run', plan)
+        self.assertIn('user-link-mise-lock.sh"', apply)
 
     def test_platform_package_policy(self) -> None:
         with (ROOT / "config/mise/config.macos-arm64.toml").open("rb") as handle:
@@ -277,6 +282,32 @@ class MigrationBehaviorTest(unittest.TestCase):
             keymap_backup = backup / ".config/zed/keymap.json"
             self.assertFalse(keymap_backup.is_symlink())
             self.assertEqual(keymap_backup.read_text(), '[{"key":"ctrl-p"}]\n')
+
+    def test_mise_lockfile_link_is_plannable_and_applied_directly(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            home = temp / "home"
+            home.mkdir()
+            env = os.environ.copy()
+            env["HOME"] = str(home)
+            script = ROOT / "scripts/user-link-mise-lock.sh"
+
+            preview = subprocess.run(
+                [str(script), "--dry-run"],
+                cwd=ROOT,
+                env=env,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            target = home / ".config/mise/mise.lock"
+            self.assertIn(str(ROOT / "config/mise/mise.lock"), preview.stdout)
+            self.assertIn(str(target), preview.stdout)
+            self.assertFalse(target.exists())
+
+            subprocess.run([str(script)], cwd=ROOT, env=env, check=True)
+            self.assertTrue(target.is_symlink())
+            self.assertEqual(target.resolve(), ROOT / "config/mise/mise.lock")
 
     def test_user_preview_is_forced_but_apply_requires_explicit_opt_in(self) -> None:
         plan = read(".mise/tasks/user/plan")

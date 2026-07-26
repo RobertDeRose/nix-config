@@ -5,6 +5,7 @@ root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 cd "$root"
 args=(--dry-run --force-dotfiles)
 mise bootstrap --only dotfiles "${args[@]}"
+"$root/scripts/user-link-mise-lock.sh" --dry-run
 config="$HOME/.config/mise/config.toml"
 [ -f "$config" ] || config="$root/config/mise/config.toml"
 (

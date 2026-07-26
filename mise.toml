@@ -33,7 +33,6 @@ includes = [".mise/tasks"]
 "~/.config/mise/config.macos-arm64.toml" = { source = "config/mise/config.macos-arm64.toml", mode = "symlink" }
 "~/.config/mise/config.macos-x64.toml" = { source = "config/mise/config.macos-x64.toml", mode = "symlink" }
 "~/.config/mise/config.linux.toml" = { source = "config/mise/config.linux.toml", mode = "symlink" }
-"~/.config/mise/mise.lock" = { source = "config/mise/mise.lock", mode = "symlink" }
 "~/.miserc.toml" = { source = "config/mise/.miserc.toml", mode = "symlink" }
 
 "~/.config/git/config" = { source = "dotfiles/git/config", mode = "symlink" }
