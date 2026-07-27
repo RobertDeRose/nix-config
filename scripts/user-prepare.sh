@@ -26,7 +26,7 @@ backup_conflicting_dotfiles() {
   if (
     cd "$root"
     mise bootstrap --only dotfiles --dry-run
-  ) >"$output_file" 2>&1; then
+  ) > "$output_file" 2>&1; then
     rm -f "$output_file"
     return 0
   else
@@ -45,7 +45,7 @@ backup_conflicting_dotfiles() {
 
   while IFS= read -r conflict; do
     case "$conflict" in
-      "~/"*) target="$HOME/${conflict#\~/}" ;;
+      \~/*) target="$HOME/${conflict#\~/}" ;;
       "$HOME"/*) target="$conflict" ;;
       *)
         printf 'error: cannot back up unexpected dotfile target: %s\n' "$conflict" >&2
@@ -63,7 +63,7 @@ backup_conflicting_dotfiles() {
     mkdir -p "$(dirname "$backup")"
 
     if [ -L "$target" ] && [ ! -e "$target" ]; then
-      printf '%s\n' "$(readlink "$target")" >"$backup.broken-symlink-target"
+      printf '%s\n' "$(readlink "$target")" > "$backup.broken-symlink-target"
     else
       cp -RLp "$target" "$backup"
     fi
