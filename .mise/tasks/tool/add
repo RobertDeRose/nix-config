@@ -6,12 +6,63 @@ set -euo pipefail
 root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 version="${usage_version:-latest}"
 config="$root/config/mise/config.toml"
+lock="$root/config/mise/mise.lock"
 tool="${usage_tool:?mise did not provide the required tool argument}"
-python3 "$root/.mise/lib/config_edit.py" tool --file "$config" --name "$tool" --version "$version"
+transaction_dir="$(mktemp -d "${TMPDIR:-/tmp}/maison-tool-add.XXXXXX")"
+config_backup="$transaction_dir/config.toml"
+lock_backup="$transaction_dir/mise.lock"
+lock_existed=false
+committed=false
+
+cp -p "$config" "$config_backup"
+if [ -e "$lock" ] || [ -L "$lock" ]; then
+  cp -p "$lock" "$lock_backup"
+  lock_existed=true
+fi
+
+restore_transaction() {
+  cp -p "$config_backup" "$config"
+  if [ "$lock_existed" = true ]; then
+    cp -p "$lock_backup" "$lock"
+  else
+    rm -f "$lock"
+  fi
+}
+
+cleanup() {
+  status=$?
+  trap - EXIT HUP INT TERM
+  if [ "$committed" != true ]; then
+    restore_transaction
+  fi
+  rm -rf "$transaction_dir"
+  exit "$status"
+}
+trap cleanup EXIT HUP INT TERM
+
+python3 "$root/.mise/lib/config_edit.py" tool \
+  --file "$config" \
+  --name "$tool" \
+  --version "$version"
+
 suffix="${tool##*@}"
 if [[ "$tool" == *@* && "$suffix" != */* ]]; then
   install_spec="$tool"
 else
   install_spec="${tool}@${version}"
 fi
-MISE_GLOBAL_CONFIG_FILE="$config" mise install "$install_spec"
+
+set +e
+install_output="$(MISE_GLOBAL_CONFIG_FILE="$config" mise install "$install_spec" 2>&1)"
+install_status=$?
+set -e
+printf '%s\n' "$install_output"
+
+if [ "$install_status" -ne 0 ] || \
+  grep -Eq 'mise ERROR|Failed to resolve tool version list' <<<"$install_output"; then
+  printf 'tool:add: installation failed; restored %s and %s\n' \
+    "$config" "$lock" >&2
+  exit 1
+fi
+
+committed=true

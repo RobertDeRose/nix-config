@@ -358,6 +358,95 @@ class MigrationBehaviorTest(unittest.TestCase):
         self.assertIn('user-prepare.sh" "${prepare_args[@]}"', apply)
         self.assertLess(aggregate.index("mise run user:plan"), aggregate.index("mise run system:plan"))
 
+    def test_tool_add_rolls_back_config_and_lock_on_resolution_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            repo = temp / "repo"
+            fake_bin = temp / "bin"
+            fake_bin.mkdir()
+            (repo / ".mise/tasks/tool").mkdir(parents=True)
+            (repo / ".mise/lib").mkdir(parents=True)
+            (repo / "config/mise").mkdir(parents=True)
+
+            task = repo / ".mise/tasks/tool/add"
+            task.write_text(read(".mise/tasks/tool/add"))
+            task.chmod(0o755)
+            (repo / ".mise/lib/config_edit.py").write_text(read(".mise/lib/config_edit.py"))
+            config = repo / "config/mise/config.toml"
+            lock = repo / "config/mise/mise.lock"
+            original_config = '[tools]\nnode = "24"\n'
+            original_lock = 'lock-before\n'
+            config.write_text(original_config)
+            lock.write_text(original_lock)
+
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            fake_mise = fake_bin / "mise"
+            fake_mise.write_text(
+                "#!/bin/sh\n"
+                'printf "lock-after\n" >"$TEST_LOCK"\n'
+                "echo 'mise WARN Failed to resolve tool version list for broken'\n"
+                "exit 0\n"
+            )
+            fake_mise.chmod(0o755)
+
+            env = os.environ.copy()
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env['PATH']}"
+            env["usage_tool"] = "aqua:gastownhall/beads"
+            env["usage_version"] = "latest"
+            env["TEST_LOCK"] = str(lock)
+            result = subprocess.run(
+                [str(task)],
+                cwd=repo,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(config.read_text(), original_config)
+            self.assertEqual(lock.read_text(), original_lock)
+            self.assertIn("installation failed; restored", result.stderr)
+
+    def test_tool_add_commits_backend_qualified_tool_after_success(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            repo = temp / "repo"
+            fake_bin = temp / "bin"
+            fake_bin.mkdir()
+            (repo / ".mise/tasks/tool").mkdir(parents=True)
+            (repo / ".mise/lib").mkdir(parents=True)
+            (repo / "config/mise").mkdir(parents=True)
+
+            task = repo / ".mise/tasks/tool/add"
+            task.write_text(read(".mise/tasks/tool/add"))
+            task.chmod(0o755)
+            (repo / ".mise/lib/config_edit.py").write_text(read(".mise/lib/config_edit.py"))
+            config = repo / "config/mise/config.toml"
+            lock = repo / "config/mise/mise.lock"
+            config.write_text('[tools]\nnode = "24"\n')
+            lock.write_text('lock-before\n')
+
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            fake_mise = fake_bin / "mise"
+            fake_mise.write_text(
+                "#!/bin/sh\n"
+                'printf "lock-after\n" >"$TEST_LOCK"\n'
+                "echo installed\n"
+            )
+            fake_mise.chmod(0o755)
+
+            env = os.environ.copy()
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env['PATH']}"
+            env["usage_tool"] = "aqua:gastownhall/beads"
+            env["usage_version"] = "1.1.0"
+            env["TEST_LOCK"] = str(lock)
+            subprocess.run([str(task)], cwd=repo, env=env, check=True)
+
+            with config.open("rb") as handle:
+                tools = tomllib.load(handle)["tools"]
+            self.assertEqual(tools["aqua:gastownhall/beads"], "1.1.0")
+            self.assertEqual(lock.read_text(), "lock-after\n")
+
 
 class RepositoryContractTest(unittest.TestCase):
     def test_task_and_script_entrypoints_are_executable(self) -> None:
