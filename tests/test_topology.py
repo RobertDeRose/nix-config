@@ -140,11 +140,38 @@ class OwnershipBoundaryTest(unittest.TestCase):
             mac = tomllib.load(handle)
         with (ROOT / "config/mise/config.linux.toml").open("rb") as handle:
             linux = tomllib.load(handle)
+        global_config = tomllib.loads(read("config/mise/config.toml"))
         mac_packages = mac["bootstrap"]["packages"]
         linux_packages = linux["bootstrap"]["packages"]
-        for package in ("brew:helix", "brew:git", "brew:starship", "brew:yazi"):
+        self.assertEqual(
+            global_config["plugins"]["nix"],
+            "https://github.com/jbadeau/mise-nix.git",
+        )
+        self.assertEqual(
+            global_config["tools"]["nix:deadnix"],
+            "nixos/nixpkgs#deadnix",
+        )
+        self.assertEqual(
+            global_config["tools"]["nix:devenv"],
+            "nixos/nixpkgs#devenv",
+        )
+        self.assertEqual(global_config["tools"]["mas"], "latest")
+        for package in ("brew:direnv", "brew:helix", "brew:git", "brew:starship", "brew:yazi"):
             self.assertIn(package, mac_packages)
             self.assertIn(package, linux_packages)
+        self.assertNotIn("brew:nix-direnv", mac_packages)
+        self.assertNotIn("brew:nix-direnv", linux_packages)
+        for packages, managers in (
+            (mac_packages, {"brew", "brew-cask", "mas"}),
+            (linux_packages, {"brew"}),
+        ):
+            self.assertNotIn("brew:deadnix", packages)
+            self.assertNotIn("brew:devenv", packages)
+            self.assertFalse(any(package.startswith("nix:") for package in packages))
+            self.assertTrue(
+                all(package.partition(":")[0] in managers for package in packages),
+            )
+        self.assertNotIn("brew:mas", mac_packages)
         for package in ("brew-cask:ghostty", "brew-cask:zed", "mas:1352778147"):
             self.assertIn(package, mac_packages)
         self.assertNotIn("brew-cask:ghostty", linux_packages)

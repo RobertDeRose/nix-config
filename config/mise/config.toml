@@ -4,16 +4,24 @@ env_shell_expand = true
 lockfile = true
 lockfile_platforms = ["macos-arm64", "macos-x64", "linux-arm64", "linux-x64"]
 
+[plugins]
+nix = "https://github.com/jbadeau/mise-nix.git"
+
 [tools]
 acli = "latest"
+"aqua:gastownhall/beads" = "latest"
+bat = "latest"
 codex = "latest"
 "github:ctxrs/ctx" = "latest"
 "github:max-sixty/worktrunk" = "latest"
 "github:ogulcancelik/herdr" = "latest"
 "github:peterldowns/nix-search-cli" = "latest"
+mas = "latest"
+"nix:deadnix" = "nixos/nixpkgs#deadnix"
+"nix:devenv" = "nixos/nixpkgs#devenv"
+node = ["24", "lts"]
 "npm:@earendil-works/pi-coding-agent" = "latest"
 "npm:@fission-ai/openspec" = "latest"
-node = ["24", "lts"]
 opencode = "latest"
 pkl = "latest"
 python = "latest"
