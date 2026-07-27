@@ -51,6 +51,7 @@ includes = [".mise/tasks"]
 "~/.config/zed/keymap.json" = { source = "dotfiles/zed/keymap.json", mode = "symlink" }
 "~/.config/htop/htoprc" = { source = "dotfiles/htop/htoprc", mode = "copy" }
 "~/.config/yazi/yazi.toml" = { source = "dotfiles/yazi/yazi.toml", mode = "symlink" }
+"~/.config/direnv/direnvrc" = { source = "dotfiles/direnv/direnvrc", mode = "symlink" }
 "~/.config/direnv/lib/maison-mise.sh" = { source = "dotfiles/direnv/lib/mise.sh", mode = "symlink" }
 "~/.ssh/config" = { source = "dotfiles/ssh/config.tera", mode = "template" }
 

@@ -176,6 +176,18 @@ class OwnershipBoundaryTest(unittest.TestCase):
             self.assertIn(package, mac_packages)
         self.assertNotIn("brew-cask:ghostty", linux_packages)
 
+    def test_nix_direnv_uses_pinned_direnvrc(self) -> None:
+        root_config = read("mise.toml")
+        direnvrc = read("dotfiles/direnv/direnvrc")
+
+        self.assertIn("~/.config/direnv/direnvrc", root_config)
+        self.assertIn("nix_direnv_version 3.1.1", direnvrc)
+        self.assertIn("nix-community/nix-direnv/3.1.1/direnvrc", direnvrc)
+        self.assertIn(
+            "sha256-p+fzQdrms/hDa7g+soShAybJNo4bN4SIAeSfqNKgD5I=",
+            direnvrc,
+        )
+
 
 class DeploymentContractTest(unittest.TestCase):
     def test_deploy_rs_activates_exact_system_manager_profile(self) -> None:
