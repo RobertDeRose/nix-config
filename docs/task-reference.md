@@ -7,7 +7,7 @@
 | `doctor` | Diagnose both ownership layers without mutation |
 | `plan` | Preview user ownership changes, then build the system closure |
 | `apply` | Apply Nix system state, then mise user state |
-| `update [input]` | Update flake inputs transactionally, validate, then upgrade user software |
+| `update [input] [--check]` | Update flake inputs atomically; optionally run full validation |
 | `deploy <host>` | Deploy Linux system with deploy-rs, then converge remote user state |
 | `rollback` | Roll back only the Nix system generation |
 | `bootstrap` | Install/repair Nix and converge both layers |
@@ -31,7 +31,9 @@
 | `user:plan` | Preview repository dotfile handoff and global user bootstrap without mutation |
 | `user:apply` | Install tools, packages, apps, defaults, and dotfiles; forced conflicts are backed up first |
 | `user:status` | Report user-environment drift |
-| `user:update` | Show outdated tools, upgrade tools, then upgrade packages |
+| `user:update` | Show outdated mise tools, then upgrade those tools |
+| `package:update` | Upgrade configured Homebrew formulae |
+| `app:update` | Upgrade configured Homebrew casks and Mac App Store apps |
 
 ## Configuration commands
 

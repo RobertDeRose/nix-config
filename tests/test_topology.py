@@ -216,6 +216,7 @@ class DeploymentContractTest(unittest.TestCase):
         self.assertNotIn("flake check", script)
         self.assertIn("--no-update-lock-file", script)
         self.assertIn("Nix emitted warnings", script)
+        self.assertIn("unable to download .*retrying", script)
         for output in (
             ".#packages",
             ".#apps",
@@ -348,6 +349,49 @@ class MigrationBehaviorTest(unittest.TestCase):
             self.assertTrue(target.is_symlink())
             self.assertEqual(target.resolve(), ROOT / "config/mise/mise.lock")
 
+    def test_update_uses_single_nix_process_and_atomic_lockfile(self) -> None:
+        script = read(".mise/tasks/update")
+        flake = read("flake.nix")
+
+        self.assertNotIn("flake prefetch", script)
+        self.assertNotIn("MAISON_NIX_PREFETCH_JOBS", script)
+        self.assertEqual(script.count("flake update"), 1)
+        self.assertIn('MAISON_NIX_UPDATE_ATTEMPTS:-1', script)
+        self.assertIn('MAISON_NIX_UPDATE_STALLED_TIMEOUT:-60', script)
+        self.assertIn('--output-lock-file "$candidate_lock"', script)
+        self.assertIn('mv "$candidate_lock" flake.lock', script)
+        self.assertIn("--option download-attempts 1", script)
+        self.assertIn(
+            'git+https://github.com/NixOS/nixpkgs?ref=nixpkgs-unstable&shallow=1',
+            flake,
+        )
+        self.assertNotIn('github:nixos/nixpkgs/nixpkgs-unstable', flake)
+
+    def test_update_surfaces_have_independent_failure_boundaries(self) -> None:
+        update = read(".mise/tasks/update")
+        user_update = read(".mise/tasks/user/update")
+        package_update = read(".mise/tasks/package/update")
+        app_update = read(".mise/tasks/app/update")
+
+        self.assertIn('#USAGE flag "--check"', update)
+        self.assertIn('if [ "${usage_check:-false}" = true ]; then', update)
+        self.assertIn('mise run check', update)
+        self.assertNotIn('mise run user:update', update)
+        self.assertNotIn('config/mise/mise.lock', update)
+        self.assertNotIn('mise upgrade', update)
+        self.assertNotIn('bootstrap packages upgrade', update)
+
+        self.assertIn('mise outdated || true', user_update)
+        self.assertIn('mise upgrade', user_update)
+        self.assertNotIn('bootstrap packages upgrade', user_update)
+
+        self.assertIn('bootstrap packages upgrade --manager brew --yes', package_update)
+        self.assertNotIn('--manager brew-cask', package_update)
+        self.assertNotIn('--manager mas', package_update)
+
+        self.assertIn('bootstrap packages upgrade --manager brew-cask --yes', app_update)
+        self.assertIn('bootstrap packages upgrade --manager mas --yes', app_update)
+
     def test_user_preview_is_forced_but_apply_requires_explicit_opt_in(self) -> None:
         plan = read(".mise/tasks/user/plan")
         apply = read(".mise/tasks/user/apply")
@@ -464,6 +508,15 @@ class RepositoryContractTest(unittest.TestCase):
         cli = read("bin/maison")
         for command in ('cmd "check"', 'cmd "system"', 'cmd "user"', 'cmd "deploy"'):
             self.assertIn(command, cli)
+
+        package_commands = cli.split('#USAGE cmd "package"', 1)[1].split(
+            '#USAGE cmd "app"', 1
+        )[0]
+        app_commands = cli.split('#USAGE cmd "app"', 1)[1].split(
+            '#USAGE cmd "docs"', 1
+        )[0]
+        self.assertIn('cmd "update"', package_commands)
+        self.assertIn('cmd "update"', app_commands)
 
     def test_build_matrix_has_no_home_manager_target(self) -> None:
         build = read(".github/scripts/build-platform-targets.sh")

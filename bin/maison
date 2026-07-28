@@ -43,10 +43,12 @@
 #USAGE   cmd "add" help="Add a package" { arg "[args]..." }
 #USAGE   cmd "remove" help="Remove a package" { arg "[args]..." }
 #USAGE   cmd "search" help="Search package sources" { arg "[args]..." }
+#USAGE   cmd "update" help="Upgrade Homebrew formulae" { arg "[args]..." }
 #USAGE }
-#USAGE cmd "app" help="Manage macOS casks" {
+#USAGE cmd "app" help="Manage macOS applications" {
 #USAGE   cmd "add" help="Add a cask" { arg "[args]..." }
 #USAGE   cmd "remove" help="Remove a cask" { arg "[args]..." }
+#USAGE   cmd "update" help="Upgrade casks and Mac App Store apps" { arg "[args]..." }
 #USAGE }
 #USAGE cmd "docs" help="Manage documentation" {
 #USAGE   cmd "build" help="Build documentation" { arg "[args]..." }

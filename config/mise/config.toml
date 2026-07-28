@@ -10,6 +10,7 @@ nix = "https://github.com/jbadeau/mise-nix.git"
 [tools]
 acli = "latest"
 "aqua:gastownhall/beads" = "latest"
+"aqua:sethvargo/ratchet" = "latest"
 bat = "latest"
 codex = "latest"
 "github:ctxrs/ctx" = "latest"
@@ -25,7 +26,7 @@ node = ["24", "lts"]
 opencode = "latest"
 pkl = "latest"
 python = "latest"
-usage = "3.5.5"
+usage = "latest"
 
 [env]
 EDITOR = "hx"

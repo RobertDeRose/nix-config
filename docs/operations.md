@@ -31,12 +31,15 @@ maison system history
 ## Update
 
 ```bash
-maison user update           # frequent tool/package updates
-maison update                # flake update + full validation + user update
+maison update                # update flake.lock only
 maison update nixpkgs        # update one flake input
+maison update --check        # update flake.lock, then run full validation
+maison user update           # upgrade mise-managed tools
+maison package update        # upgrade Homebrew formulae
+maison app update            # upgrade casks and Mac App Store apps
 ```
 
-`maison update` saves the previous `flake.lock` and restores it when validation fails. It does not activate the updated system automatically.
+Each update surface is an independent transaction. `maison update` changes only `flake.lock` and restores it when the Nix update or optional validation fails. Tool, formula, and application upgrades are explicit so a package-manager or cask failure cannot invalidate a successful Nix lock update. The update commands do not activate the system automatically.
 
 ## Clean
 

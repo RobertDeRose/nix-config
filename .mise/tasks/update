@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# [MISE] description="Update Nix inputs transactionally, then upgrade the mise user layer"
+# [MISE] description="Update Nix inputs transactionally"
 # [MISE] interactive=true
 #USAGE arg "[input]" help="Optional single flake input"
+#USAGE flag "--check" help="Run full validation after updating"
 set -euo pipefail
 root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 cd "$root"
@@ -9,24 +10,65 @@ source "$root/.mise/lib/common.sh"
 source "$root/.mise/lib/nix.sh"
 load_nix_environment
 configure_github_access_token
-before="$(mktemp)"
-cp flake.lock "$before"
+
+backup_dir="$(mktemp -d)"
+cp flake.lock "$backup_dir/flake.lock"
+
 # Invoked indirectly by the EXIT trap below.
 # shellcheck disable=SC2329
 restore_lock_on_failure() {
   local exit_status="$1"
   if [ "$exit_status" -ne 0 ]; then
-    cp "$before" flake.lock
+    cp "$backup_dir/flake.lock" flake.lock
   fi
-  rm -f "$before"
+  rm -rf "$backup_dir"
   trap - EXIT
   exit "$exit_status"
 }
 trap 'restore_lock_on_failure "$?"' EXIT
-if [ -n "${usage_input:-}" ]; then
-  nix_command flake update "$usage_input"
-else
-  nix_command flake update
+
+update_args=()
+[ -z "${usage_input:-}" ] || update_args+=("$usage_input")
+
+# Keep the update in one Nix process. Separate prefetch processes contend on
+# Nix's shared fetcher-cache SQLite database and duplicate work across retries.
+# Write to a candidate lockfile so the repository lock changes only after a
+# complete, successful graph update.
+max_attempts="${MAISON_NIX_UPDATE_ATTEMPTS:-1}"
+connect_timeout="${MAISON_NIX_UPDATE_CONNECT_TIMEOUT:-10}"
+stalled_timeout="${MAISON_NIX_UPDATE_STALLED_TIMEOUT:-60}"
+retry_delay="${MAISON_NIX_UPDATE_RETRY_DELAY:-2}"
+candidate_lock="$backup_dir/flake.lock.candidate"
+
+case "$max_attempts" in
+  '' | *[!0-9]*) die "MAISON_NIX_UPDATE_ATTEMPTS must be a positive integer" ;;
+esac
+[ "$max_attempts" -gt 0 ] || die "MAISON_NIX_UPDATE_ATTEMPTS must be greater than zero"
+
+update_succeeded=false
+for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+  rm -f "$candidate_lock"
+  log_info "Updating Nix inputs (attempt $attempt/$max_attempts)"
+
+  if nix_command \
+    --option connect-timeout "$connect_timeout" \
+    --option stalled-download-timeout "$stalled_timeout" \
+    --option download-attempts 1 \
+    flake update --output-lock-file "$candidate_lock" "${update_args[@]}"; then
+    [ -s "$candidate_lock" ] || die "Nix update succeeded without producing a candidate lockfile"
+    mv "$candidate_lock" flake.lock
+    update_succeeded=true
+    break
+  fi
+
+  if [ "$attempt" -lt "$max_attempts" ]; then
+    log_warn "Nix input update failed; retrying in ${retry_delay}s"
+    sleep "$retry_delay"
+  fi
+done
+
+[ "$update_succeeded" = true ] || die "Nix input update failed after $max_attempts attempt(s)"
+
+if [ "${usage_check:-false}" = true ]; then
+  mise run check
 fi
-mise run check
-mise run user:update
