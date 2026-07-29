@@ -49,3 +49,9 @@ includes = [".mise/tasks"]
 "~/.pi/agent/extensions/markdown-pager.ts" = { source = "dotfiles/pi/extensions/pager.ts", mode = "symlink" }
 "~/.pi/agent/extensions/bookmark.ts" = { source = "dotfiles/pi/extensions/bookmark.ts", mode = "symlink" }
 "~/.pi/agent/AGENTS.md" = { source = "dotfiles/pi/AGENTS.md", mode = "symlink" }
+
+[tools]
+hk = "latest"
+shellcheck = "latest"
+shfmt = "latest"
+tombi = "latest"
