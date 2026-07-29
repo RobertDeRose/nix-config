@@ -13,6 +13,7 @@ nix = "https://github.com/jbadeau/mise-nix.git"
 acli = "latest"
 "aqua:gastownhall/beads" = "latest"
 "aqua:sethvargo/ratchet" = "latest"
+bat = "latest"
 "github:ctxrs/ctx" = "latest"
 "github:max-sixty/worktrunk" = "latest"
 "github:ogulcancelik/herdr" = "latest"
@@ -24,8 +25,6 @@ pkl = "latest"
 python = "latest"
 usage = "latest"
 
-# Formulae with bottles on Apple Silicon macOS and supported Linux systems.
-# Each executable has one owner: tools do not duplicate these packages.
 [bootstrap.packages]
 "brew:bash" = "latest"
 "brew:bat" = "latest"
