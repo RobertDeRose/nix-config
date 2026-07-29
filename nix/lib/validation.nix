@@ -11,7 +11,10 @@ let
     "mac"
     "linux"
   ];
-  validHostname = value: builtins.isString value && builtins.match "[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?" value != null;
+  validHostname =
+    value:
+    builtins.isString value
+    && builtins.match "[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?" value != null;
   validRemoteHostname = value:
     builtins.isString value
     && value != ""
@@ -25,8 +28,12 @@ let
   validSshUsername = value:
     builtins.isString value
     && (value == "root" || builtins.match "[a-z_][a-z0-9_-]*" value != null);
-  validGithub = value: builtins.isString value && builtins.match "[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?" value != null;
-  validDeployRepoPath = username: value:
+  validGithub =
+    value:
+    builtins.isString value
+    && builtins.match "[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?" value != null;
+  validDeployRepoPath =
+    username: value:
     let
       homePrefix = "/home/${username}/";
     in
