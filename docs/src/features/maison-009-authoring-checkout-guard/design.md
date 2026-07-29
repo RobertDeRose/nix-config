@@ -6,7 +6,7 @@
 - Feature slug: `maison-009-authoring-checkout-guard`
 - Design path: `docs/src/features/maison-009-authoring-checkout-guard/design.md`
 - Implemented record: `docs/src/features/maison-009-authoring-checkout-guard/index.md`
-- Base branch: `chore-migrate-dstack-workflow`
+- Base branch: `dev`
 - Status: draft
 - Review priority: `P1`
 
@@ -170,7 +170,7 @@ None.
 ### Assumptions
 
 - The reviewed commit and review summary are authoritative planning evidence for this remediation roadmap.
-- Feature branches should base on `chore-migrate-dstack-workflow` until the migration branch is delivered.
+- Feature branches should base on `dev`.
 
 ### Design Changes During Planning
 

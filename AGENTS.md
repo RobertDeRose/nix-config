@@ -144,7 +144,7 @@ For multiline messages, write the message to a temporary file and use `git commi
 
 Feature branches use `feat/<slug>`. When `wt` is available, treat JSON output from `wt switch --format json` as authoritative for branch and path.
 
-Only fast-forward merges into `main` are accepted. Use `git merge --ff-only`; never create a merge commit and never fall back to one when fast-forwarding fails.
+Only fast-forward merges into `dev` are accepted. Use `git merge --ff-only`; never create a merge commit and never fall back to one when fast-forwarding fails.
 
 A no-mode `/close-feature` completes close-out and then asks for one explicit action:
 

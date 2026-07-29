@@ -12,5 +12,5 @@ build-dir = "../book"
 default-theme = "navy"
 preferred-dark-theme = "navy"
 git-repository-url = "https://github.com/RobertDeRose/nix-config"
-edit-url-template = "https://github.com/RobertDeRose/nix-config/edit/main/docs/{path}"
+edit-url-template = "https://github.com/RobertDeRose/nix-config/edit/dev/docs/{path}"
 additional-css = ["theme/cobalt.css"]

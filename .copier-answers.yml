@@ -71,5 +71,5 @@ project_slug: maison
 project_users: The primary users are the repository maintainer and future contributors/operators
     who need to bootstrap, validate, apply, recover, and remotely deploy supported
     Maison-managed hosts.
-repository_default_branch: main
+repository_default_branch: dev
 repository_layout: single-package

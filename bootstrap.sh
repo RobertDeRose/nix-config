@@ -3,8 +3,8 @@
 #
 # Usage:
 #   ./bootstrap.sh [--host HOST] [--repo OWNER/REPO|URL|PATH] [--ref REF]
-#   curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh \
-#     | bash -s -- --host HOST --repo RobertDeRose/nix-config --ref main
+#   curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/dev/bootstrap.sh \
+#     | bash -s -- --host HOST --repo RobertDeRose/nix-config --ref dev
 
 set -euo pipefail
 
@@ -19,7 +19,7 @@ Usage:
 Options:
   --host HOST   Inventory host; defaults to the short local hostname.
   --repo REPO   GitHub owner/repository, Git URL, or local repository path.
-  --ref REF     Branch or tag to clone; defaults to main.
+  --ref REF     Branch or tag to clone; defaults to dev.
   -h, --help    Show this help text.
 HELP
 }
@@ -32,7 +32,7 @@ bootstrap_die() {
 
 host="$(hostname -s)"
 repo="${REPO:-RobertDeRose/nix-config}"
-ref="${REF:-${BRANCH:-main}}"
+ref="${REF:-${BRANCH:-dev}}"
 profiles="${PROFILES:-}"
 
 while [ "$#" -gt 0 ]; do

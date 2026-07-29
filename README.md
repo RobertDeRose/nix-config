@@ -109,7 +109,7 @@ From an existing checkout:
 Or from the public repository:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh \
+curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/dev/bootstrap.sh \
   | bash -s -- --host "$(hostname -s)"
 ```
 

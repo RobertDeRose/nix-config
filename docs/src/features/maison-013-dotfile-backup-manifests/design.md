@@ -6,7 +6,7 @@
 - Feature slug: `maison-013-dotfile-backup-manifests`
 - Design path: `docs/src/features/maison-013-dotfile-backup-manifests/design.md`
 - Implemented record: `docs/src/features/maison-013-dotfile-backup-manifests/index.md`
-- Base branch: `chore-migrate-dstack-workflow`
+- Base branch: `dev`
 - Status: draft
 - Review priority: `P1`
 
@@ -170,7 +170,7 @@ None.
 ### Assumptions
 
 - The reviewed commit and review summary are authoritative planning evidence for this remediation roadmap.
-- Feature branches should base on `chore-migrate-dstack-workflow` until the migration branch is delivered.
+- Feature branches should base on `dev`.
 
 ### Design Changes During Planning
 

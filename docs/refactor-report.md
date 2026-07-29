@@ -1,7 +1,7 @@
 # Topology refactor report
 
 - Source bundle commit: `e57364aa73583e160f5d66af180f0763a482a607`
-- Refactor branch: `topology/nh-deploy-rs-mise-user-reviewed`
+- Refactor branch: `dev`
 - Goal: retain Nix for OS-level state, remove Home Manager, and move user state to mise.
 
 ## Structural changes

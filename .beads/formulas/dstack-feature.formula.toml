@@ -25,7 +25,7 @@ required = true
 
 [vars.base_branch]
 description = "Git branch the feature worktree is based on"
-default = "main"
+default = "dev"
 
 [[steps]]
 id = "design"

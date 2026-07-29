@@ -27,7 +27,7 @@ local linters = new Mapping<String, Step> {
   ["trailing-whitespace"] = Builtins.trailing_whitespace
 }
 
-default_branch = "main"
+default_branch = "dev"
 fail_fast = false
 exclude = List("**/mise.toml")
 
