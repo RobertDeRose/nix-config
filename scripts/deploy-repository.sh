@@ -1,0 +1,180 @@
+#!/usr/bin/env sh
+# Stage a source archive as the active Maison repository while retaining the
+# previous repository until user convergence succeeds.
+set -eu
+
+repo_path="${1:?usage: deploy-repository.sh <repo-path> <managed-user> <archive>}"
+managed_user="${2:?usage: deploy-repository.sh <repo-path> <managed-user> <archive>}"
+archive="${3:?usage: deploy-repository.sh <repo-path> <managed-user> <archive>}"
+managed_home="${MAISON_MANAGED_HOME:-/home/$managed_user}"
+staging="${repo_path}.next.$$"
+previous="${repo_path}.previous"
+state="${repo_path}.deploy-state"
+
+case "$managed_user" in
+  '' | root | *[!a-z0-9_-]*)
+    printf 'error: invalid managed user: %s\n' "$managed_user" >&2
+    exit 1
+    ;;
+esac
+case "$repo_path" in
+  "$managed_home"/*) ;;
+  *)
+    printf 'error: repository path must be below %s: %s\n' "$managed_home" "$repo_path" >&2
+    exit 1
+    ;;
+esac
+case "$repo_path" in
+  *[!A-Za-z0-9_./-]*)
+    printf 'error: repository path contains unsupported characters: %s\n' "$repo_path" >&2
+    exit 1
+    ;;
+esac
+case "$repo_path" in
+  *'//'* | */)
+    printf 'error: repository path must be normalized: %s\n' "$repo_path" >&2
+    exit 1
+    ;;
+  *'/./'* | *'/../'* | *'/.' | *'/..')
+    printf 'error: repository path may not contain dot segments: %s\n' "$repo_path" >&2
+    exit 1
+    ;;
+esac
+
+if [ "$(id -u)" -eq 0 ] || [ "$(id -un)" = "$managed_user" ]; then
+  as_root() { "$@"; }
+else
+  command -v sudo >/dev/null 2>&1 || {
+    printf 'error: sudo is required to manage the repository for %s\n' "$managed_user" >&2
+    exit 1
+  }
+  as_root() { sudo "$@"; }
+fi
+
+as_root id "$managed_user" >/dev/null 2>&1 || {
+  printf 'error: managed user does not exist: %s\n' "$managed_user" >&2
+  exit 1
+}
+as_root test -d "$managed_home" || {
+  printf 'error: managed home does not exist: %s\n' "$managed_home" >&2
+  exit 1
+}
+if [ -e "$state" ] || [ -L "$state" ]; then
+  printf 'error: unfinished Maison deployment state exists at %s\n' "$state" >&2
+  exit 1
+fi
+if [ -e "$previous" ] || [ -L "$previous" ]; then
+  printf 'error: previous Maison repository exists without deployment state at %s\n' "$previous" >&2
+  exit 1
+fi
+[ -f "$archive" ] && [ ! -L "$archive" ] || {
+  printf 'error: deployment archive must be a regular non-symlink file: %s\n' "$archive" >&2
+  exit 1
+}
+
+home_real="$(as_root readlink -f -- "$managed_home")" || {
+  printf 'error: unable to resolve managed home: %s\n' "$managed_home" >&2
+  exit 1
+}
+parent="$(dirname "$repo_path")"
+existing_parent="$parent"
+while [ ! -e "$existing_parent" ] && [ ! -L "$existing_parent" ]; do
+  existing_parent="$(dirname "$existing_parent")"
+done
+existing_parent_real="$(as_root readlink -f -- "$existing_parent")" || {
+  printf 'error: unable to resolve repository ancestor: %s\n' "$existing_parent" >&2
+  exit 1
+}
+case "$existing_parent_real" in
+  "$home_real" | "$home_real"/*) ;;
+  *)
+    printf 'error: repository parent resolves outside %s: %s\n' "$managed_home" "$existing_parent_real" >&2
+    exit 1
+    ;;
+esac
+as_root mkdir -p -- "$parent"
+parent_real="$(as_root readlink -f -- "$parent")" || {
+  printf 'error: unable to resolve repository parent: %s\n' "$parent" >&2
+  exit 1
+}
+case "$parent_real" in
+  "$home_real" | "$home_real"/*) ;;
+  *)
+    printf 'error: repository parent resolves outside %s: %s\n' "$managed_home" "$parent_real" >&2
+    exit 1
+    ;;
+esac
+
+old_moved=false
+installed=false
+cleanup() {
+  status=$?
+  trap - EXIT HUP INT TERM
+  as_root rm -f -- "$archive" || true
+  as_root rm -rf -- "$staging" || true
+  if [ "$installed" = true ]; then
+    as_root rm -rf -- "$repo_path" || status=1
+  fi
+  if [ "$old_moved" = true ] && as_root test -d "$previous" && ! as_root test -L "$previous"; then
+    if ! as_root mv -T -- "$previous" "$repo_path"; then
+      printf 'error: failed to restore previous repository at %s\n' "$repo_path" >&2
+      status=1
+    fi
+  fi
+  as_root rm -f -- "$state" || true
+  exit "$status"
+}
+trap cleanup EXIT
+set_signal_traps() {
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+}
+set_signal_traps
+
+as_root rm -rf -- "$staging"
+as_root mkdir -p -- "$staging"
+as_root tar --no-same-owner -xzf "$archive" -C "$staging"
+for required in mise.toml flake.nix .maison-revision; do
+  as_root test -f "$staging/$required" && ! as_root test -L "$staging/$required" || {
+    printf 'error: deployment archive is missing regular file %s\n' "$required" >&2
+    exit 1
+  }
+done
+revision="$(as_root cat "$staging/.maison-revision")"
+printf '%s\n' "$revision" | grep -Eq '^[0-9a-f]{40}$' || {
+  printf 'error: deployment archive has an invalid revision stamp\n' >&2
+  exit 1
+}
+if as_root test -e "$staging/.git" || as_root test -L "$staging/.git"; then
+  printf 'error: deployment archive unexpectedly contains .git\n' >&2
+  exit 1
+fi
+if [ "$(id -un)" != "$managed_user" ]; then
+  as_root chown -R "$managed_user" "$staging"
+fi
+
+if as_root test -e "$repo_path" || as_root test -L "$repo_path"; then
+  as_root test -d "$repo_path" && ! as_root test -L "$repo_path" || {
+    printf 'error: existing repository path is not a real directory: %s\n' "$repo_path" >&2
+    exit 1
+  }
+  # Ignore interactive termination only across the rename and state flag
+  # assignment so cleanup never mistakes a failed rename for a committed one.
+  trap '' HUP INT TERM
+  as_root mv -T -- "$repo_path" "$previous"
+  old_moved=true
+  set_signal_traps
+  printf 'previous\n' | as_root tee "$state" >/dev/null
+else
+  printf 'absent\n' | as_root tee "$state" >/dev/null
+fi
+
+trap '' HUP INT TERM
+as_root mv -T -- "$staging" "$repo_path"
+installed=true
+set_signal_traps
+as_root rm -f -- "$archive"
+
+trap - EXIT HUP INT TERM
+printf 'Staged Maison revision %s at %s\n' "$revision" "$repo_path"

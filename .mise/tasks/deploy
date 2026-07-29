@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# [MISE] description="Deploy Linux system state, then transactionally converge its mise user environment"
+# [MISE] interactive=true
+#USAGE arg "<host>" help="Linux inventory host"
+#USAGE flag "--system-only" help="Skip repository transfer and remote user bootstrap"
+#USAGE flag "--force-dotfiles" help="Replace conflicting remote user dotfiles"
+set -euo pipefail
+root="${MISE_PROJECT_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)}"
+cd "$root"
+source "$root/.mise/lib/common.sh"
+source "$root/.mise/lib/inventory.sh"
+
+host="${usage_host:?mise did not provide the required host argument}"
+require_inventory_host "$root" "$host"
+[ "$(host_platform_class "$root" "$host")" = linux ] || die "deploy supports Linux inventory hosts only"
+
+archive=""
+remote_archive=""
+hostname=""
+ssh_user=""
+cleanup() {
+  local status=$?
+  trap - EXIT HUP INT TERM
+  [ -z "$archive" ] || rm -f "$archive"
+  if [ -n "$remote_archive" ] && [ -n "$hostname" ] && [ -n "$ssh_user" ]; then
+    quoted_cleanup="$(printf '%q' "$remote_archive")"
+    # shellcheck disable=SC2029 # validated mktemp path is shell-escaped above
+    ssh "$ssh_user@$hostname" "rm -f -- $quoted_cleanup" >/dev/null 2>&1 || true
+  fi
+  exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+if [ "${usage_system_only:-false}" != true ]; then
+  archive="$(mktemp "${TMPDIR:-/tmp}/maison-deploy.XXXXXX.tar.gz")"
+  "$root/scripts/create-deploy-archive.sh" "$root" "$archive"
+fi
+
+mise run system:deploy -- "$host"
+[ "${usage_system_only:-false}" != true ] || exit 0
+
+hostname="$(inventory_deploy_hostname "$root" "$host")"
+ssh_user="$(inventory_deploy_ssh_user "$root" "$host")"
+user="$(inventory_deploy_user_ssh_user "$root" "$host")"
+repo_path="$(inventory_deploy_repo_path "$root" "$host")"
+remote_archive="$(ssh "$ssh_user@$hostname" 'umask 077; mktemp /tmp/maison-deploy.XXXXXX.tar.gz')"
+[[ "$remote_archive" =~ ^/tmp/maison-deploy\.[A-Za-z0-9]+\.tar\.gz$ ]] ||
+  die "remote mktemp returned an unsafe archive path: $remote_archive"
+
+quoted_archive="$(printf '%q' "$remote_archive")"
+# shellcheck disable=SC2029 # destination is shell-escaped above
+ssh "$ssh_user@$hostname" "cat > $quoted_archive" <"$archive"
+
+quoted_repo="$(printf '%q' "$repo_path")"
+quoted_user="$(printf '%q' "$user")"
+quoted_remote_archive="$(printf '%q' "$remote_archive")"
+# shellcheck disable=SC2029 # all arguments are shell-escaped above
+ssh "$ssh_user@$hostname" \
+  "sh -s -- $quoted_repo $quoted_user $quoted_remote_archive" \
+  <"$root/scripts/deploy-repository.sh"
+# The staging script removes the remote archive after extracting it. Avoid a
+# second SSH cleanup attempt on every successful deployment.
+remote_archive=""
+
+remote_args=()
+[ "${usage_force_dotfiles:-false}" != true ] || remote_args+=(--force-dotfiles)
+quoted_args=""
+for arg in "${remote_args[@]}"; do
+  quoted_args+=" $(printf '%q' "$arg")"
+done
+# shellcheck disable=SC2029 # repository path and optional arguments are shell-escaped
+if ssh "$user@$hostname" "sh -s -- $quoted_repo$quoted_args" <<'REMOTE_USER'
+set -eu
+repo_path="$1"
+shift
+if ! command -v mise >/dev/null 2>&1; then
+  curl -fsSL https://mise.run | sh
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+cd "$repo_path"
+export MISE_TRUSTED_CONFIG_PATHS="$repo_path${MISE_TRUSTED_CONFIG_PATHS:+:$MISE_TRUSTED_CONFIG_PATHS}"
+mise trust "$repo_path/mise.toml" >/dev/null
+mise run user:apply -- "$@"
+REMOTE_USER
+then
+  action=commit
+  user_status=0
+else
+  action=rollback
+  user_status=$?
+fi
+
+quoted_action="$(printf '%q' "$action")"
+# shellcheck disable=SC2029 # all arguments are shell-escaped above
+if ! ssh "$ssh_user@$hostname" \
+  "sh -s -- $quoted_repo $quoted_user $quoted_action" \
+  <"$root/scripts/finalize-deploy-repository.sh"; then
+  if [ "$action" = rollback ]; then
+    printf 'error: remote user convergence failed and repository rollback also failed; inspect %s.deploy-state\n' "$repo_path" >&2
+  else
+    printf 'error: remote convergence succeeded but repository transaction cleanup failed; the previous repository remains recoverable\n' >&2
+  fi
+  exit 1
+fi
+
+if [ "$user_status" -ne 0 ]; then
+  printf 'error: remote user convergence failed; the previous repository was restored\n' >&2
+  exit "$user_status"
+fi
