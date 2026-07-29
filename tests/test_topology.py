@@ -92,6 +92,32 @@ class DataFilesTest(unittest.TestCase):
         self.assertNotIn("home-manager", serialized)
         self.assertNotIn('"deploy-rs"', serialized)
 
+    def test_nix_formatter_uses_the_contributor_lock(self) -> None:
+        lock = tomllib.loads(read("mise.dev.lock"))
+        entries = lock["tools"]["aqua:Mic92/nixfmt-rs"]
+        self.assertEqual(len(entries), 1)
+        entry = entries[0]
+        version = entry["version"]
+        platform_keys = {
+            "aarch64-darwin": "platforms.macos-arm64",
+            "aarch64-linux": "platforms.linux-arm64",
+            "x86_64-linux": "platforms.linux-x64",
+        }
+        for system, platform_key in platform_keys.items():
+            with self.subTest(system=system):
+                artifact = entry[platform_key]
+                self.assertIn(f"/{version}/", artifact["url"])
+                self.assertRegex(artifact["checksum"], r"^sha256:[0-9a-f]{64}$")
+
+        package = read("nix/lib/nixfmt-rs.nix")
+        outputs = read("nix/outputs.nix")
+        self.assertIn("builtins.readFile ../../mise.dev.lock", package)
+        for system, platform_key in platform_keys.items():
+            self.assertIn(f'{system} = "{platform_key}";', package)
+        self.assertIn("pkgs.nixfmt-tree.override { inherit nixfmtPackage; }", outputs)
+        self.assertIn("nixfmt = nixfmtPackage;", outputs)
+        self.assertNotIn("formatter = pkgs.nixfmt-tree;", outputs)
+
 
 class OwnershipBoundaryTest(unittest.TestCase):
     def test_home_manager_is_removed_from_nix_graph(self) -> None:

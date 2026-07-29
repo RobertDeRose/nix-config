@@ -83,13 +83,23 @@ inputs.flake-parts.lib.mkFlake { inherit inputs; } {
           exec python3 ${../.mise/lib/inventory.py} "$@"
         '';
       };
+      nixfmtPackage = import ./lib/nixfmt-rs.nix {
+        inherit
+          lib
+          pkgs
+          system
+          ;
+      };
     in
     {
-      formatter = pkgs.nixfmt-tree;
+      # The contributor environment and `nix fmt` must use one formatter
+      # version. Read the mise lock directly so an update advances both.
+      formatter = pkgs.nixfmt-tree.override { inherit nixfmtPackage; };
 
       packages = {
         inherit (pkgs) nh deploy-rs;
         maison-inventory = inventoryPackage;
+        nixfmt = nixfmtPackage;
       }
       // lib.optionalAttrs hasSystemManager {
         system-manager = systemManagerPackage;
