@@ -110,7 +110,7 @@ if grep -Fq "not owned by cask 'docker-desktop'" "$output_file" &&
   grep -Fq "completion target '" "$output_file" &&
   reconcile_docker_completion_links; then
   handoff_pending=true
-  : >"$output_file"
+  : > "$output_file"
   printf 'maison: retrying package convergence after Docker Desktop completion handoff\n' >&2
   if run_packages "$output_file" "$@"; then
     handoff_pending=false

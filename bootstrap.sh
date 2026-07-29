@@ -9,7 +9,7 @@
 set -euo pipefail
 
 show_help() {
-  cat <<'HELP'
+  cat << 'HELP'
 Install Maison and hand machine setup to its mise-backed bootstrap task.
 
 Usage:

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 load_nix_environment() {
-  if command -v nix >/dev/null 2>&1; then
+  if command -v nix > /dev/null 2>&1; then
     return 0
   fi
   if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
@@ -10,16 +10,16 @@ load_nix_environment() {
     . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
     set -u
   fi
-  command -v nix >/dev/null 2>&1 || die "Nix or Lix is not available"
+  command -v nix > /dev/null 2>&1 || die "Nix or Lix is not available"
 }
 
 configure_github_access_token() {
   local token="${MISE_GITHUB_TOKEN:-${GITHUB_API_TOKEN:-${GITHUB_TOKEN:-}}}"
-  if [ -z "$token" ] && command -v mise >/dev/null 2>&1; then
-    token="$(mise token github --raw 2>/dev/null || true)"
+  if [ -z "$token" ] && command -v mise > /dev/null 2>&1; then
+    token="$(mise token github --raw 2> /dev/null || true)"
   fi
-  if [ -z "$token" ] && command -v gh >/dev/null 2>&1; then
-    token="$(gh auth token 2>/dev/null || true)"
+  if [ -z "$token" ] && command -v gh > /dev/null 2>&1; then
+    token="$(gh auth token 2> /dev/null || true)"
   fi
   if [ -n "$token" ]; then
     export GITHUB_TOKEN="$token"
@@ -43,7 +43,7 @@ nix_command() {
 }
 
 ensure_nh() {
-  if command -v nh >/dev/null 2>&1; then
+  if command -v nh > /dev/null 2>&1; then
     printf '%s\n' "$(command -v nh)"
   else
     printf '%s\n' "nix-run"
@@ -57,7 +57,7 @@ run_nh() {
 
   (
     export NIX_CONFIG="$nix_config"
-    if command -v nh >/dev/null 2>&1; then
+    if command -v nh > /dev/null 2>&1; then
       nh "$@"
     else
       nix_command run .#nh -- "$@"
@@ -72,7 +72,7 @@ prepare_darwin_activation() {
     sudo launchctl kickstart -k system/org.nixos.nix-daemon
     sleep 2
   fi
-  if [ -f /etc/nix/nix.conf ] && ! grep -qF nix-darwin /etc/nix/nix.conf 2>/dev/null; then
+  if [ -f /etc/nix/nix.conf ] && ! grep -qF nix-darwin /etc/nix/nix.conf 2> /dev/null; then
     log_info "Moving unmanaged /etc/nix/nix.conf aside for nix-darwin"
     sudo mv /etc/nix/nix.conf /etc/nix/nix.conf.before-nix-darwin
   fi

@@ -24,7 +24,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 git -C "$root" archive --format=tar HEAD | tar -xf - -C "$staging"
-printf '%s\n' "$revision" >"$staging/.maison-revision"
+printf '%s\n' "$revision" > "$staging/.maison-revision"
 
 # Keep ownership deterministic and never copy the source repository's .git,
 # ignored files, untracked files, or local credentials.

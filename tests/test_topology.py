@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import pwd
 import re
 import shutil
 import stat
@@ -356,6 +355,62 @@ class InventoryBehaviorTest(unittest.TestCase):
 
 
 class DeploymentContractTest(unittest.TestCase):
+    def deployment_environment(self, temp: Path, home: Path) -> tuple[str, dict[str, str]]:
+        """Provide a deterministic portable Linux deployment user."""
+
+        user = "maison-test"
+        real_mv = shutil.which("mv")
+        real_tar = shutil.which("tar")
+        if real_mv is None or real_tar is None:
+            self.skipTest("mv and tar are required for deployment contract tests")
+        fake_bin = temp / "deployment-bin"
+        executable(
+            fake_bin / "id",
+            textwrap.dedent(
+                f"""\
+                #!/bin/sh
+                case "${{1:-}}" in
+                  -u) printf '%s\\n' 501 ;;
+                  -un) printf '%s\\n' {user} ;;
+                  {user}) exit 0 ;;
+                  *) exit 1 ;;
+                esac
+                """
+            ),
+        )
+        executable(
+            fake_bin / "mv",
+            textwrap.dedent(
+                """\
+                #!/bin/sh
+                case "${1:-}" in
+                  --version | -T) exit 64 ;;
+                esac
+                exec "$MAISON_TEST_REAL_MV" "$@"
+                """
+            ),
+        )
+        executable(
+            fake_bin / "tar",
+            textwrap.dedent(
+                """\
+                #!/bin/sh
+                [ "${1:-}" != --no-same-owner ] || exit 64
+                exec "$MAISON_TEST_REAL_TAR" "$@"
+                """
+            ),
+        )
+        env = os.environ.copy()
+        env.update(
+            {
+                "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
+                "MAISON_MANAGED_HOME": str(home),
+                "MAISON_TEST_REAL_MV": real_mv,
+                "MAISON_TEST_REAL_TAR": real_tar,
+            }
+        )
+        return user, env
+
     def test_deploy_rs_activates_exact_system_manager_profile(self) -> None:
         deployment = read("nix/lib/deployments.nix")
         adapter = read("nix/lib/deploy-rs.nix")
@@ -454,16 +509,14 @@ class DeploymentContractTest(unittest.TestCase):
     def test_repository_stage_rolls_back_and_commits(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             temp = Path(directory)
-            home = temp / "home"
+            physical_root = temp / "private"
+            physical_root.mkdir()
+            alias_root = temp / "var"
+            alias_root.symlink_to(physical_root, target_is_directory=True)
+            home = alias_root / "home"
             home.mkdir()
-            if os.geteuid() == 0:
-                user = "nobody"
-                try:
-                    pwd.getpwnam(user)
-                except KeyError:
-                    self.skipTest("nobody account is unavailable")
-            else:
-                user = pwd.getpwuid(os.geteuid()).pw_name
+            self.assertNotEqual(home, home.resolve())
+            user, env = self.deployment_environment(temp, home)
             repo = home / ".maison"
             repo.mkdir()
             (repo / "old-marker").write_text("old\n")
@@ -478,8 +531,6 @@ class DeploymentContractTest(unittest.TestCase):
                     for child in source.iterdir():
                         bundle.add(child, arcname=child.name)
 
-            env = os.environ.copy()
-            env["MAISON_MANAGED_HOME"] = str(home)
             archive = temp / "one.tar.gz"
             revision_one = "1" * 40
             make_archive(archive, revision_one)
@@ -550,14 +601,7 @@ class DeploymentContractTest(unittest.TestCase):
             temp = Path(directory)
             home = temp / "home"
             home.mkdir()
-            if os.geteuid() == 0:
-                user = "nobody"
-                try:
-                    pwd.getpwnam(user)
-                except KeyError:
-                    self.skipTest("nobody account is unavailable")
-            else:
-                user = pwd.getpwuid(os.geteuid()).pw_name
+            user, env = self.deployment_environment(temp, home)
 
             repo = home / ".maison"
             repo.mkdir()
@@ -573,8 +617,6 @@ class DeploymentContractTest(unittest.TestCase):
                 for child in source.iterdir():
                     bundle.add(child, arcname=child.name)
 
-            env = os.environ.copy()
-            env["MAISON_MANAGED_HOME"] = str(home)
             subprocess.run(
                 [str(ROOT / "scripts/deploy-repository.sh"), str(repo), user, str(archive)],
                 env=env,
@@ -1093,7 +1135,7 @@ class MigrationBehaviorTest(unittest.TestCase):
             self.assertEqual(result.returncode, 27)
             self.assertTrue(target.is_symlink())
             self.assertEqual(os.readlink(target), relative_source)
-            self.assertEqual(target.resolve(), source)
+            self.assertEqual(target.resolve(), source.resolve())
 
     def test_docker_handoff_never_removes_an_unrelated_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1131,7 +1173,7 @@ class MigrationBehaviorTest(unittest.TestCase):
             result = subprocess.run([str(ROOT / "scripts/user-apply-packages.sh")], env=env)
             self.assertEqual(result.returncode, 9)
             self.assertTrue(target.is_symlink())
-            self.assertEqual(target.resolve(), unrelated)
+            self.assertEqual(target.resolve(), unrelated.resolve())
 
     def test_forced_dotfile_handoff_backs_up_exact_conflicts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
