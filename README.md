@@ -127,13 +127,15 @@ maison user plan
 
 `maison deploy <host>` requires a clean working tree. It creates a revision-stamped archive from `git archive`, so `.git`, ignored files, untracked files, local credentials, and dirty edits are never transferred.
 
-The remote repository replacement is a transaction:
+The remote repository replacement uses a privileged transaction boundary:
 
 1. Validate that `repo_path` is a normalized descendant of `/home/<managed-user>`.
-2. Extract into `<repo_path>.next.<pid>` and verify the expected Maison files.
-3. Move the old repository to `<repo_path>.previous` and write `<repo_path>.deploy-state`.
-4. Run `user:apply` as the managed user.
-5. Delete the previous repository only after success; otherwise restore it automatically.
+2. Allocate a root-owned transaction root on the same filesystem outside the managed user's writable home.
+3. Stage the archive, rollback copy, lock, and journal under that root-owned transaction root.
+4. Run `user:apply` as the managed user from the staged repository.
+5. Finalize or roll back through the journaled privileged transaction state.
+
+Maison fails closed when no safe same-filesystem root-owned transaction root is available.
 
 Deploy-rs still owns the separate system-profile rollback boundary.
 

@@ -49,9 +49,9 @@ A Docker Desktop completion ownership error is repaired only when the conflictin
 
 ## Failed remote user deployment
 
-Maison writes `<repo_path>.deploy-state` and retains the prior source as `<repo_path>.previous` until user convergence succeeds. When `user:apply` fails, the deployment command automatically removes the failed source tree and restores the previous repository.
+Maison records repository transaction state in a root-owned same-filesystem transaction root outside the managed user's writable home. For the default `/home/<user>/.maison` repository path, inspect the root-owned namespace under `/home/.maison-deploy/transactions/<user>/`.
 
-If transaction cleanup itself fails, inspect those two paths before making changes. Do not delete `.previous` while `.deploy-state` exists.
+When `user:apply` fails, the deployment command rolls back from the root-owned journal and rollback tree. If transaction cleanup itself fails, inspect the journal, staging tree, rollback tree, and lock under the root-owned transaction root before making changes. Do not delete transaction journals or rollback trees until the active repository state is understood.
 
 ## Failed system deployment
 

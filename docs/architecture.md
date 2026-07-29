@@ -99,4 +99,4 @@ maison apply
 
 A failed system activation stops before user convergence. A failed user convergence leaves the active system generation in place.
 
-Remote deployment has an additional repository transaction around the user phase. The old repository is retained until `user:apply` succeeds and restored automatically on failure. Deploy-rs independently protects the Linux system profile.
+Remote deployment has an additional repository transaction around the user phase. Transaction journals, locks, staging trees, and rollback trees are privileged state and live in a root-owned same-filesystem transaction root outside the managed user's writable home. The managed user may read and apply the staged repository, but must not be able to unlink, replace, or edit transaction control state. Deploy-rs independently protects the Linux system profile.

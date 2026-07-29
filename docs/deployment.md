@@ -23,10 +23,13 @@ After successful system activation, Maison:
 
 1. Uploads the archive separately from the remote command stream.
 2. Validates that `repo_path` is a normalized descendant of the managed user's home.
-3. Extracts and verifies it as `<repo>.next.<pid>`.
-4. Moves an existing repository to `<repo>.previous` and records `<repo>.deploy-state`.
-5. Runs `user:apply` as the managed user.
-6. Removes `.previous` only after success, or restores it automatically after failure.
+3. Allocates a root-owned transaction root on the same filesystem outside any managed-user-writable ancestor.
+4. Creates an unpredictable transaction ID, acquires the repository transaction lock, and journals each privileged step.
+5. Stages the new source tree and rollback source under the root-owned transaction root.
+6. Runs `user:apply` as the managed user from the staged repository.
+7. Finalizes or rolls back by reading the root-owned journal and refusing unsafe ownership, symlink, permission, or cross-filesystem state.
+
+For the default `/home/<user>/.maison` repository path, the default transaction namespace is a root-owned sibling under `/home`, such as `/home/.maison-deploy/transactions/<user>/<repo-hash>/`. Maison fails closed when no same-filesystem root-owned transaction root exists outside the managed user's control.
 
 Use `--system-only` to skip repository transfer and user convergence.
 
@@ -48,4 +51,4 @@ magic_rollback = true
 
 ## Safety boundary
 
-Deploy-rs rollback covers the system profile. Repository rollback covers the source tree used for the subsequent user convergence. Mise changes that completed before a later user-step failure are convergent state, not a Nix generation, and are repaired by rerunning `maison user apply` from the restored repository.
+Deploy-rs rollback covers the system profile. Repository rollback covers the source tree used for the subsequent user convergence. Repository transaction state is privileged state: the managed user must not be able to unlink, replace, or edit journals, staging trees, rollback trees, or locks. Mise changes that completed before a later user-step failure are convergent state, not a Nix generation, and are repaired by rerunning `maison user apply` from the restored repository.
