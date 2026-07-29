@@ -6,6 +6,7 @@ result-*
 
 # mdBook build output
 book/
+docs/book/
 
 # Don't ignore flake.lock — it's what makes the config reproducible!
 # flake.lock
@@ -17,6 +18,13 @@ book/
 __pycache__/
 *.pyc
 .build/
+.rumdl_cache/
 
 # User-specific Maison/mise settings
 mise.local.toml
+.mise.local.toml
+
+# Local tooling and secret overrides
+.env
+.env.local
+.env.*.local

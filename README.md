@@ -148,3 +148,10 @@ Docker Desktop can leave completion symlinks that predate mise's cask ownership 
 Nix inputs are pinned by `flake.lock`. Mise lockfiles preserve resolved user and contributor tool versions where metadata exists, but user configuration intentionally retains `latest` declarations and permits network resolution for missing entries. This is repeatable workstation convergence, not strict offline or byte-for-byte reproduction.
 
 Review the [architecture](docs/architecture.md), [deployment guide](docs/deployment.md), [migration contract](docs/migration-contract.md), and [recovery guide](docs/recovery.md) before deleting old generations or backups.
+
+## Development workflow
+
+Maison uses the dstack documentation-first, Beads-backed workflow for planned work.
+Use `/plan-features`, `/start-feature <slug>`, `/implement-feature <slug>`,
+and `/close-feature <slug>` to keep designs, tasks, validation, and delivery
+records aligned.
