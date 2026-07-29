@@ -1,0 +1,43 @@
+schema = 1
+
+[defaults]
+user = "rderose"
+
+[users.rderose]
+username = "rderose"
+full_name = "Robert DeRose"
+email = "rderose@checkpt.com"
+github = "RobertDeRose"
+
+[users.DeRoseR]
+username = "DeRoseR"
+allow_nonportable = true
+full_name = "Robert DeRose"
+email = "rderose@checkpt.com"
+github = "RobertDeRose"
+
+[hosts.USMBDEROSER]
+system = "aarch64-darwin"
+user = "DeRoseR"
+profiles = ["base", "dev", "mac"]
+
+[hosts.USMBDEROSER.features]
+personal_cache = true
+
+[hosts.dev-som]
+system = "aarch64-linux"
+user = "rderose"
+profiles = ["base", "dev", "linux"]
+
+[hosts.dev-som.features]
+personal_cache = true
+
+[hosts.dev-som.deploy]
+enable = true
+hostname = "dev-som.checkpoint-device.com"
+ssh_user = "root"
+user_ssh_user = "rderose"
+repo_path = "/home/rderose/.maison"
+remote_build = false
+auto_rollback = true
+magic_rollback = true
