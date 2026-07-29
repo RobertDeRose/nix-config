@@ -29,7 +29,7 @@
 | Task | Behavior |
 | --- | --- |
 | `user:plan` | Preview dotfile handoff, packages, tools, preferences, and lock links without mutation |
-| `user:apply` | Apply dotfiles, packages, tools, apps, and preferences; back up explicitly forced conflicts |
+| `user:apply` | Sanitize live app backups, then apply dotfiles, packages, tools, apps, and preferences; back up explicitly forced conflicts |
 | `user:status` | Report user-environment drift |
 | `user:update` | Show outdated mise tools, then upgrade those tools |
 | `package:update` | Upgrade configured Homebrew formulae |

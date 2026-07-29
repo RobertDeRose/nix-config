@@ -17,6 +17,7 @@ This document records where behavior moved before Home Manager and bespoke deplo
 | Git configuration | mise dotfiles under `~/.config/git` | `git config --list --show-origin` |
 | Existing `~/.gitconfig` conflict | `scripts/user-prepare.sh` backup | Backup under `~/.local/state/maison/backups/git` |
 | Existing whole-file dotfile conflicts | Forced `user:apply` detects mise refusals, copies their contents, then replaces them | Timestamped backup under `~/.local/state/maison/backups/dotfiles` |
+| Live application bundles retained under Maison backups | `scripts/user-prepare.sh` archives them with `ditto`, unregisters the bundle, and prevents backup indexing | No `.app` directory remains under the backup root; a non-empty `.app.zip` is retained |
 | Zsh, Starship, fzf, direnv, eza, Yazi integration | Native dotfiles plus mise/Homebrew packages | New login shell and completion checks |
 | Helix, Ghostty, Zed, htop | Native dotfiles | Start each application and inspect config path |
 | Pi extensions and mutable settings | mise dotfiles plus merge in `user-finalize.sh` | Existing package selections remain present |
@@ -54,4 +55,5 @@ Do not delete these until the new topology has been used successfully:
 - `~/.local/state/maison/backups/git/*`
 - `~/.local/state/maison/backups/dotfiles/*`
 - `~/.local/state/maison/backups/pi/*`
+- Archived `~/.local/state/maison/backups/**/*.app.zip` bundles
 - Old Nix system generations

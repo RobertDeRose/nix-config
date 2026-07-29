@@ -4,6 +4,7 @@ set -euo pipefail
 root="${MISE_PROJECT_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)}"
 cd "$root"
 args=(--dry-run --force-dotfiles)
+"$root/scripts/user-prepare.sh" --dry-run
 mise bootstrap --only dotfiles "${args[@]}"
 "$root/scripts/user-link-mise-lock.sh" --dry-run
 config="$HOME/.config/mise/config.toml"
