@@ -24,7 +24,7 @@ Intel macOS is unsupported; there is no placeholder configuration pretending to 
 
 ## Contributor tools
 
-Repository validation, formatting, hooks, and documentation tools live in `mise.dev.toml`. They are installed explicitly with:
+Repository validation, formatting, hooks, and documentation tools live in `mise.dev.toml`. The flake formatter reads the locked `nixfmt-rs` artifact from `mise.dev.lock`, making that lockfile the single formatter-version source for both hk and `nix fmt`. They are installed explicitly with:
 
 ```bash
 mise -E dev install

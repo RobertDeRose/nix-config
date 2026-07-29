@@ -96,6 +96,7 @@ Platform-specific mise files are selected through `.miserc.toml` and `auto_env =
 - `config.linux.toml`: Linux-specific package-manager and locale policy.
 
 Repository validation tools are not installed during normal machine convergence. `maison check` explicitly loads `mise.dev.toml`.
+The flake formatter reads the `nixfmt-rs` artifact from `mise.dev.lock`, so hooks and `nix fmt` cannot drift to different formatter versions.
 
 ## Bootstrap
 
