@@ -1,0 +1,441 @@
+{
+  "capability_inventory": {
+    "ambiguities": [
+      ".: Python test files exist but pyproject.toml is missing"
+    ],
+    "ci": {
+      "commands": [
+        {
+          "command": "nix flake update",
+          "provenance": "ci-evidence-only",
+          "source": ".github/workflows/cache-refresh.yml:42",
+          "working_directory": "."
+        },
+        {
+          "command": "if git diff --quiet -- flake.lock; then\necho \"changed=false\" >> \"$GITHUB_OUTPUT\"\nexit 0\nfi\necho \"changed=true\" >> \"$GITHUB_OUTPUT\"\ngit diff --stat -- flake.lock >> \"$GITHUB_STEP_SUMMARY\"",
+          "provenance": "ci-evidence-only",
+          "source": ".github/workflows/cache-refresh.yml:46",
+          "working_directory": "."
+        },
+        {
+          "command": "kernel=\"$(uname -s | tr '[:upper:]' '[:lower:]')\"\narch=\"$(uname -m)\"\ncase \"$arch\" in\narm64|aarch64) arch=\"aarch64\" ;;\nx86_64) arch=\"x86_64\" ;;\n*)\necho \"Unsupported architecture: $arch\" >&2\nexit 1\n;;\nesac\ntarget=\"$arch-$kernel\"\necho \"Refreshing cache targets for $target\"\nbash .github/scripts/build-platform-targets.sh \"$target\"",
+          "provenance": "ci-evidence-only",
+          "source": ".github/workflows/cache-refresh.yml:101",
+          "working_directory": "."
+        },
+        {
+          "command": "if git diff --quiet -- flake.lock; then\necho \"flake.lock already matches refreshed artifact\"\necho \"pr_number=\" >> \"$GITHUB_OUTPUT\"\nexit 0\nfi\nbranch=\"automation/refresh-flake-lock\"\nremote_branch_sha=\"$(git ls-remote --heads origin \"$branch\" | awk '{print $1}')\"\ngit config user.name \"robborg-the-creator[bot]\"\ngit config user.email \"280037799+robborg-the-creator[bot]@users.noreply.github.com\"\ngit checkout -b \"$branch\"\ngit add flake.lock\ngit commit -m \"chore: refresh flake lock\"\nif [ -n \"$remote_branch_sha\" ]; then\ngit push --force-with-lease=\"refs/heads/$branch:$remote_branch_sha\" origin \"$branch\"\nelse\ngit push --set-upstream origin \"$branch\"\nfi\npr_number=\"$(gh pr list \\\n--state open \\\n--head \"$branch\" \\\n--json number \\\n--jq '.[0].number')\"\nif [ -n \"$pr_number\" ] && [ \"$pr_number\" != \"null\" ]; then\ngh pr edit \"$pr_number\" \\\n--title \"chore: refresh flake lock\" \\\n--body \"Automated flake.lock refresh after successful cache warmup.\"\nelse\ngh pr create \\\n--base main \\\n--head \"$branch\" \\\n--title \"chore: refresh flake lock\" \\\n--body \"Automated flake.lock refresh after successful cache warmup.\"\npr_number=\"$(gh pr list \\\n--state open \\\n--head \"$branch\" \\\n--json number \\\n--jq '.[0].number')\"\nfi\necho \"pr_number=$pr_number\" >> \"$GITHUB_OUTPUT\"",
+          "provenance": "ci-evidence-only",
+          "source": ".github/workflows/cache-refresh.yml:158",
+          "working_directory": "."
+        },
+        {
+          "command": "gh pr merge \"$PR_NUMBER\" --repo \"$GH_REPO\" --admin --squash",
+          "provenance": "ci-evidence-only",
+          "source": ".github/workflows/cache-refresh.yml:246",
+          "working_directory": "."
+        },
+        {
+          "command": "mise -E dev install",
+          "provenance": "ci-evidence-only",
+          "source": ".github/workflows/ci.yml:39",
+          "working_directory": "."
+        },
+        {
+          "command": "mise -E dev run check",
+          "provenance": "ci-evidence-only",
+          "source": ".github/workflows/ci.yml:41",
+          "working_directory": "."
+        },
+        {
+          "command": "kernel=\"$(uname -s | tr '[:upper:]' '[:lower:]')\"\narch=\"$(uname -m)\"\ncase \"$arch\" in\narm64 | aarch64) arch=aarch64 ;;\nx86_64 | amd64) arch=x86_64 ;;\n*) echo \"Unsupported architecture: $arch\" >&2; exit 1 ;;\nesac\nbash .github/scripts/build-platform-targets.sh \"$arch-$kernel\"",
+          "provenance": "ci-evidence-only",
+          "source": ".github/workflows/ci.yml:64",
+          "working_directory": "."
+        },
+        {
+          "command": "bash -n bootstrap.sh\n./bootstrap.sh --help\ncat bootstrap.sh | bash -s -- --help\nPYTHONPATH=tests python3 -m unittest -v \\\ntest_topology.MigrationBehaviorTest.test_bootstrap_help_pipe_and_clone_handoff",
+          "provenance": "ci-evidence-only",
+          "source": ".github/workflows/ci.yml:91",
+          "working_directory": "."
+        },
+        {
+          "command": "mise -E dev run docs:build",
+          "provenance": "ci-evidence-only",
+          "source": ".github/workflows/docs.yml:39",
+          "working_directory": "."
+        },
+        {
+          "command": "mise -E dev install\nmise -E dev exec -- hk check -a",
+          "provenance": "ci-evidence-only",
+          "source": ".github/workflows/hk.yml:33",
+          "working_directory": "."
+        }
+      ],
+      "files": [
+        ".github/workflows/cache-refresh.yml",
+        ".github/workflows/ci.yml",
+        ".github/workflows/docs.yml",
+        ".github/workflows/hk.yml"
+      ]
+    },
+    "documentation": {
+      "commands": [
+        {
+          "argv": [
+            "mdbook",
+            "build",
+            "docs"
+          ],
+          "name": "root-book-build",
+          "provenance": "docs/book.toml",
+          "working_directory": "."
+        }
+      ],
+      "evidence": [
+        "README.md",
+        "docs/add-a-host.md",
+        "docs/add-a-tool.md",
+        "docs/add-an-app.md",
+        "docs/architecture.md",
+        "docs/book.toml",
+        "docs/deployment.md",
+        "docs/migration-contract.md",
+        "docs/operations.md",
+        "docs/package-policy.md",
+        "docs/recovery.md",
+        "docs/refactor-report.md",
+        "docs/src/SUMMARY.md",
+        "docs/src/add-a-host.md",
+        "docs/src/add-a-tool.md",
+        "docs/src/add-an-app.md",
+        "docs/src/architecture.md",
+        "docs/src/deployment.md",
+        "docs/src/introduction.md",
+        "docs/src/migration-contract.md",
+        "docs/src/operations.md",
+        "docs/src/package-policy.md",
+        "docs/src/recovery.md",
+        "docs/src/refactor-report.md",
+        "docs/src/task-reference.md",
+        "docs/task-reference.md",
+        "dotfiles/opencode/README.md",
+        "dotfiles/pi/AGENTS.md"
+      ]
+    },
+    "layout": {
+      "config_roots": [
+        "."
+      ],
+      "kind": "single-package",
+      "source": null
+    },
+    "packages": [
+      {
+        "commands": [],
+        "manifests": [],
+        "mise_file": "mise.toml",
+        "path": ".",
+        "test_evidence": [
+          "tests/test_config_edit.py",
+          "tests/test_topology.py"
+        ]
+      }
+    ],
+    "tests": {
+      "commands": [],
+      "evidence": [
+        "tests/test_config_edit.py",
+        "tests/test_topology.py"
+      ]
+    }
+  },
+  "documentation": {
+    "command": "mise -E dev run docs:build",
+    "note": "Explicit baseline documentation command.",
+    "output_truncated": false,
+    "returncode": 0,
+    "status": "passed",
+    "stderr": "[docs:build] $ ~/workspace/personal/nix-config/.mise/tasks/docs/build\nInstalled hk hook via git config: hook.hk-pre-commit.command\n INFO Book building has started\n INFO Running the html backend\n INFO HTML book written to `/Users/DeRoseR/workspace/personal/nix-config/docs/../book`\n",
+    "stdout": ""
+  },
+  "generated_at": "2026-07-29T17:14:12+00:00",
+  "hk": {
+    "command": "pkl eval hk.pkl",
+    "hooks": {
+      "check": {
+        "actionlint": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check\":\"actionlint {{ files }}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":[\".github/workflows/*.yml\",\".github/workflows/*.yaml\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "53c59075a8c90450dc27b75a2711cf48c0f938fa858dd6b0b8c78e016ef9764f"
+        },
+        "check-added-large-files": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-added-large-files {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "14e83df6357b19c4110b39048feeb432c9e9835e38dd4515fc83eb3a01313ab6"
+        },
+        "check-exec-shebangs": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-executables-have-shebangs {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "2df07ee374ec04d99e2d6e83a30ce0773e72a3de43d084d2dc5ae2186c72e618"
+        },
+        "check-merge-conflict": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-merge-conflict --assume-in-merge {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "31770c2b5c43145c2a32735a25b6e84edc0fb8eeaf7baccba1b074417a16ded5"
+        },
+        "check_byte_order_marker": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"hk util check-byte-order-marker --diff {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"hk util fix-byte-order-marker {{files}}\",\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "d257416f7caa293cd27ba2d9d7a44794af4c0d57f24bb5c7c588fd66d18de60b"
+        },
+        "check_case_conflict": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-case-conflict {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "b1313f28b1be723c58c3bd0a13419bce9f1b613291214d2ba3780f382d8374ee"
+        },
+        "check_executables_have_shebangs": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-executables-have-shebangs {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "2df07ee374ec04d99e2d6e83a30ce0773e72a3de43d084d2dc5ae2186c72e618"
+        },
+        "check_symlinks": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":true,\"batch\":false,\"check\":\"hk util check-symlinks {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "0e5393ba5e8e4b6ce7eaf8dd903b6b5430de8b7af98dfaaddb797b736e72cf49"
+        },
+        "detect-private-key": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util detect-private-key {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "2aa82f9479b0cde02130e28b0a5da47b5783e128e994c05fdbc9c1158c9dd8d6"
+        },
+        "mise": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check\":\"mise fmt --check\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"mise fmt\",\"glob\":[\"mise.toml\",\"mise.*.toml\",\".mise.toml\",\".mise.*.toml\",\"mise/config.toml\",\"mise/config.*.toml\",\".mise/config.toml\",\".mise/config.*.toml\",\".config/mise.toml\",\".config/mise.*.toml\",\".config/mise/config.toml\",\".config/mise/config.*.toml\",\".config/mise/mise.toml\",\".config/mise/mise.*.toml\",\".config/mise/conf.d/*.toml\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "47344620d48c32221901d724bf0e2dffea2fed4490adfd3f73694a5d6298bc61"
+        },
+        "mise-fmt": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check\":\"mise fmt --check\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"mise fmt\",\"glob\":[\"mise.toml\",\"mise.*.toml\",\".mise.toml\",\".mise.*.toml\",\"mise/config.toml\",\"mise/config.*.toml\",\".mise/config.toml\",\".mise/config.*.toml\",\".config/mise.toml\",\".config/mise.*.toml\",\".config/mise/config.toml\",\".config/mise/config.*.toml\",\".config/mise/mise.toml\",\".config/mise/mise.*.toml\",\".config/mise/conf.d/*.toml\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "47344620d48c32221901d724bf0e2dffea2fed4490adfd3f73694a5d6298bc61"
+        },
+        "mixed-line-ending": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"hk util mixed-line-ending --diff {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"hk util mixed-line-ending --fix {{files}}\",\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "79feecbc9c1dc1a214bb5787cbd097a0e36733b55d1f341e6584957ce0c5e20f"
+        },
+        "newlines": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"hk util end-of-file-fixer --diff {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"hk util end-of-file-fixer --fix {{files}}\",\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "0546a56ed3d7e2c0836094b4468ffa9eb6a07393208d128cfccc9dba1f705225"
+        },
+        "nixfmt": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":{\"other\":\"nixfmt --check {{ files }}\",\"windows\":\"\"},\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":{\"other\":\"nixfmt {{ files }}\",\"windows\":\"\"},\"glob\":\"**/*.nix\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "563497b46640b85a9f02a1d94ad70af3fdbf2a5df48e9e7432d4d2917a386fa3"
+        },
+        "pkl_format": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_first\":true,\"check_list_files\":\"pkl format --diff-name-only {{ files }}\",\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"    pkl format --write {{ files }}\\n    code=$?\\n    if [ $code -eq 11 ]; then\\n        exit 0\\n    else\\n        exit $code\\n    fi\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"shell\":\"sh -c\",\"stomp\":false,\"types\":[\"pkl\"]}",
+          "fingerprint": "d7800e290787e9978bfa0000579cb4c9db3d9c6ca0184a6582750c0eccd61770"
+        },
+        "shellcheck": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check\":\"shellcheck -x {{ files }}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":[\"**/*.sh\",\"**/*.bash\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "61f5aecd3de59d5f545f227a39e20e5f7b3fcd6b0f84f46f311bf88bda5b3d5c"
+        },
+        "shfmt": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check_diff\":\"shfmt -d --apply-ignore {{ files }}\",\"check_first\":true,\"check_list_files\":\"files=$(shfmt -l --apply-ignore {{ files }})\\nif [ -n \\\"$files\\\" ]; then\\n  echo \\\"$files\\\"\\n  exit 1\\nfi\",\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"shfmt -w --apply-ignore {{ files }}\",\"glob\":[\"**/*.sh\",\"**/*.bash\",\"**/*.mksh\",\"**/*.bats\",\"**/*.zsh\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "97259962ab24ef408a9c7fabf8f6605ef51bb8570c71d8bc9291887289087784"
+        },
+        "tombi": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"tombi lint --quiet {{ files }}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*.toml\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "dfaf3b52033f825afbad8d7b31f0fe1fb4650a69e1974cafeae287b67f2f6dbb"
+        },
+        "tombi_format": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"tombi format --check --diff {{ files }}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"tombi format {{ files }}\",\"glob\":\"**/*.toml\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "efe0246956ac4bda14082e10930db3dd264e5f6fbe8488908a59f4b3d0202047"
+        },
+        "trailing-whitespace": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"hk util trailing-whitespace --diff {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"hk util trailing-whitespace --fix {{files}}\",\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "55737f9d3d4293348ef696868fcf9171058a9e0b231f7185e962a9165bcdc6ec"
+        }
+      },
+      "fix": {
+        "actionlint": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check\":\"actionlint {{ files }}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":[\".github/workflows/*.yml\",\".github/workflows/*.yaml\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "53c59075a8c90450dc27b75a2711cf48c0f938fa858dd6b0b8c78e016ef9764f"
+        },
+        "check-added-large-files": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-added-large-files {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "14e83df6357b19c4110b39048feeb432c9e9835e38dd4515fc83eb3a01313ab6"
+        },
+        "check-exec-shebangs": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-executables-have-shebangs {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "2df07ee374ec04d99e2d6e83a30ce0773e72a3de43d084d2dc5ae2186c72e618"
+        },
+        "check-merge-conflict": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-merge-conflict --assume-in-merge {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "31770c2b5c43145c2a32735a25b6e84edc0fb8eeaf7baccba1b074417a16ded5"
+        },
+        "check_byte_order_marker": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"hk util check-byte-order-marker --diff {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"hk util fix-byte-order-marker {{files}}\",\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "d257416f7caa293cd27ba2d9d7a44794af4c0d57f24bb5c7c588fd66d18de60b"
+        },
+        "check_case_conflict": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-case-conflict {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "b1313f28b1be723c58c3bd0a13419bce9f1b613291214d2ba3780f382d8374ee"
+        },
+        "check_executables_have_shebangs": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-executables-have-shebangs {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "2df07ee374ec04d99e2d6e83a30ce0773e72a3de43d084d2dc5ae2186c72e618"
+        },
+        "check_symlinks": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":true,\"batch\":false,\"check\":\"hk util check-symlinks {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "0e5393ba5e8e4b6ce7eaf8dd903b6b5430de8b7af98dfaaddb797b736e72cf49"
+        },
+        "detect-private-key": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util detect-private-key {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "2aa82f9479b0cde02130e28b0a5da47b5783e128e994c05fdbc9c1158c9dd8d6"
+        },
+        "mise": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check\":\"mise fmt --check\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"mise fmt\",\"glob\":[\"mise.toml\",\"mise.*.toml\",\".mise.toml\",\".mise.*.toml\",\"mise/config.toml\",\"mise/config.*.toml\",\".mise/config.toml\",\".mise/config.*.toml\",\".config/mise.toml\",\".config/mise.*.toml\",\".config/mise/config.toml\",\".config/mise/config.*.toml\",\".config/mise/mise.toml\",\".config/mise/mise.*.toml\",\".config/mise/conf.d/*.toml\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "47344620d48c32221901d724bf0e2dffea2fed4490adfd3f73694a5d6298bc61"
+        },
+        "mise-fmt": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check\":\"mise fmt --check\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"mise fmt\",\"glob\":[\"mise.toml\",\"mise.*.toml\",\".mise.toml\",\".mise.*.toml\",\"mise/config.toml\",\"mise/config.*.toml\",\".mise/config.toml\",\".mise/config.*.toml\",\".config/mise.toml\",\".config/mise.*.toml\",\".config/mise/config.toml\",\".config/mise/config.*.toml\",\".config/mise/mise.toml\",\".config/mise/mise.*.toml\",\".config/mise/conf.d/*.toml\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "47344620d48c32221901d724bf0e2dffea2fed4490adfd3f73694a5d6298bc61"
+        },
+        "mixed-line-ending": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"hk util mixed-line-ending --diff {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"hk util mixed-line-ending --fix {{files}}\",\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "79feecbc9c1dc1a214bb5787cbd097a0e36733b55d1f341e6584957ce0c5e20f"
+        },
+        "newlines": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"hk util end-of-file-fixer --diff {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"hk util end-of-file-fixer --fix {{files}}\",\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "0546a56ed3d7e2c0836094b4468ffa9eb6a07393208d128cfccc9dba1f705225"
+        },
+        "nixfmt": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":{\"other\":\"nixfmt --check {{ files }}\",\"windows\":\"\"},\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":{\"other\":\"nixfmt {{ files }}\",\"windows\":\"\"},\"glob\":\"**/*.nix\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "563497b46640b85a9f02a1d94ad70af3fdbf2a5df48e9e7432d4d2917a386fa3"
+        },
+        "pkl_format": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_first\":true,\"check_list_files\":\"pkl format --diff-name-only {{ files }}\",\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"    pkl format --write {{ files }}\\n    code=$?\\n    if [ $code -eq 11 ]; then\\n        exit 0\\n    else\\n        exit $code\\n    fi\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"shell\":\"sh -c\",\"stomp\":false,\"types\":[\"pkl\"]}",
+          "fingerprint": "d7800e290787e9978bfa0000579cb4c9db3d9c6ca0184a6582750c0eccd61770"
+        },
+        "shellcheck": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check\":\"shellcheck -x {{ files }}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":[\"**/*.sh\",\"**/*.bash\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "61f5aecd3de59d5f545f227a39e20e5f7b3fcd6b0f84f46f311bf88bda5b3d5c"
+        },
+        "shfmt": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check_diff\":\"shfmt -d --apply-ignore {{ files }}\",\"check_first\":true,\"check_list_files\":\"files=$(shfmt -l --apply-ignore {{ files }})\\nif [ -n \\\"$files\\\" ]; then\\n  echo \\\"$files\\\"\\n  exit 1\\nfi\",\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"shfmt -w --apply-ignore {{ files }}\",\"glob\":[\"**/*.sh\",\"**/*.bash\",\"**/*.mksh\",\"**/*.bats\",\"**/*.zsh\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "97259962ab24ef408a9c7fabf8f6605ef51bb8570c71d8bc9291887289087784"
+        },
+        "tombi": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"tombi lint --quiet {{ files }}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*.toml\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "dfaf3b52033f825afbad8d7b31f0fe1fb4650a69e1974cafeae287b67f2f6dbb"
+        },
+        "tombi_format": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"tombi format --check --diff {{ files }}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"tombi format {{ files }}\",\"glob\":\"**/*.toml\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "efe0246956ac4bda14082e10930db3dd264e5f6fbe8488908a59f4b3d0202047"
+        },
+        "trailing-whitespace": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"hk util trailing-whitespace --diff {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"hk util trailing-whitespace --fix {{files}}\",\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "55737f9d3d4293348ef696868fcf9171058a9e0b231f7185e962a9165bcdc6ec"
+        }
+      },
+      "pre-commit": {
+        "actionlint": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check\":\"actionlint {{ files }}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":[\".github/workflows/*.yml\",\".github/workflows/*.yaml\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "53c59075a8c90450dc27b75a2711cf48c0f938fa858dd6b0b8c78e016ef9764f"
+        },
+        "check-added-large-files": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-added-large-files {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "14e83df6357b19c4110b39048feeb432c9e9835e38dd4515fc83eb3a01313ab6"
+        },
+        "check-exec-shebangs": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-executables-have-shebangs {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "2df07ee374ec04d99e2d6e83a30ce0773e72a3de43d084d2dc5ae2186c72e618"
+        },
+        "check-merge-conflict": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-merge-conflict --assume-in-merge {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "31770c2b5c43145c2a32735a25b6e84edc0fb8eeaf7baccba1b074417a16ded5"
+        },
+        "check_byte_order_marker": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"hk util check-byte-order-marker --diff {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"hk util fix-byte-order-marker {{files}}\",\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "d257416f7caa293cd27ba2d9d7a44794af4c0d57f24bb5c7c588fd66d18de60b"
+        },
+        "check_case_conflict": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-case-conflict {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "b1313f28b1be723c58c3bd0a13419bce9f1b613291214d2ba3780f382d8374ee"
+        },
+        "check_executables_have_shebangs": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util check-executables-have-shebangs {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "2df07ee374ec04d99e2d6e83a30ce0773e72a3de43d084d2dc5ae2186c72e618"
+        },
+        "check_symlinks": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":true,\"batch\":false,\"check\":\"hk util check-symlinks {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "0e5393ba5e8e4b6ce7eaf8dd903b6b5430de8b7af98dfaaddb797b736e72cf49"
+        },
+        "detect-private-key": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"hk util detect-private-key {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "2aa82f9479b0cde02130e28b0a5da47b5783e128e994c05fdbc9c1158c9dd8d6"
+        },
+        "mise": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check\":\"mise fmt --check\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"mise fmt\",\"glob\":[\"mise.toml\",\"mise.*.toml\",\".mise.toml\",\".mise.*.toml\",\"mise/config.toml\",\"mise/config.*.toml\",\".mise/config.toml\",\".mise/config.*.toml\",\".config/mise.toml\",\".config/mise.*.toml\",\".config/mise/config.toml\",\".config/mise/config.*.toml\",\".config/mise/mise.toml\",\".config/mise/mise.*.toml\",\".config/mise/conf.d/*.toml\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "47344620d48c32221901d724bf0e2dffea2fed4490adfd3f73694a5d6298bc61"
+        },
+        "mise-fmt": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check\":\"mise fmt --check\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"mise fmt\",\"glob\":[\"mise.toml\",\"mise.*.toml\",\".mise.toml\",\".mise.*.toml\",\"mise/config.toml\",\"mise/config.*.toml\",\".mise/config.toml\",\".mise/config.*.toml\",\".config/mise.toml\",\".config/mise.*.toml\",\".config/mise/config.toml\",\".config/mise/config.*.toml\",\".config/mise/mise.toml\",\".config/mise/mise.*.toml\",\".config/mise/conf.d/*.toml\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "47344620d48c32221901d724bf0e2dffea2fed4490adfd3f73694a5d6298bc61"
+        },
+        "mixed-line-ending": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"hk util mixed-line-ending --diff {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"hk util mixed-line-ending --fix {{files}}\",\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "79feecbc9c1dc1a214bb5787cbd097a0e36733b55d1f341e6584957ce0c5e20f"
+        },
+        "newlines": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"hk util end-of-file-fixer --diff {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"hk util end-of-file-fixer --fix {{files}}\",\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "0546a56ed3d7e2c0836094b4468ffa9eb6a07393208d128cfccc9dba1f705225"
+        },
+        "nixfmt": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":{\"other\":\"nixfmt --check {{ files }}\",\"windows\":\"\"},\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":{\"other\":\"nixfmt {{ files }}\",\"windows\":\"\"},\"glob\":\"**/*.nix\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "563497b46640b85a9f02a1d94ad70af3fdbf2a5df48e9e7432d4d2917a386fa3"
+        },
+        "pkl_format": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_first\":true,\"check_list_files\":\"pkl format --diff-name-only {{ files }}\",\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"    pkl format --write {{ files }}\\n    code=$?\\n    if [ $code -eq 11 ]; then\\n        exit 0\\n    else\\n        exit $code\\n    fi\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"shell\":\"sh -c\",\"stomp\":false,\"types\":[\"pkl\"]}",
+          "fingerprint": "d7800e290787e9978bfa0000579cb4c9db3d9c6ca0184a6582750c0eccd61770"
+        },
+        "shellcheck": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check\":\"shellcheck -x {{ files }}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":[\"**/*.sh\",\"**/*.bash\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "61f5aecd3de59d5f545f227a39e20e5f7b3fcd6b0f84f46f311bf88bda5b3d5c"
+        },
+        "shfmt": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":true,\"check_diff\":\"shfmt -d --apply-ignore {{ files }}\",\"check_first\":true,\"check_list_files\":\"files=$(shfmt -l --apply-ignore {{ files }})\\nif [ -n \\\"$files\\\" ]; then\\n  echo \\\"$files\\\"\\n  exit 1\\nfi\",\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"shfmt -w --apply-ignore {{ files }}\",\"glob\":[\"**/*.sh\",\"**/*.bash\",\"**/*.mksh\",\"**/*.bats\",\"**/*.zsh\"],\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "97259962ab24ef408a9c7fabf8f6605ef51bb8570c71d8bc9291887289087784"
+        },
+        "tombi": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check\":\"tombi lint --quiet {{ files }}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"glob\":\"**/*.toml\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "dfaf3b52033f825afbad8d7b31f0fe1fb4650a69e1974cafeae287b67f2f6dbb"
+        },
+        "tombi_format": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"tombi format --check --diff {{ files }}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"tombi format {{ files }}\",\"glob\":\"**/*.toml\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "efe0246956ac4bda14082e10930db3dd264e5f6fbe8488908a59f4b3d0202047"
+        },
+        "trailing-whitespace": {
+          "definition": "{\"_type\":\"step\",\"allow_symlinks\":false,\"batch\":false,\"check_diff\":\"hk util trailing-whitespace --diff {{files}}\",\"check_first\":true,\"depends\":[],\"env\":{},\"exclude\":[],\"exclusive\":false,\"fix\":\"hk util trailing-whitespace --fix {{files}}\",\"glob\":\"**/*\",\"hide\":false,\"interactive\":false,\"output_summary\":\"stderr\",\"required\":[],\"stomp\":false}",
+          "fingerprint": "55737f9d3d4293348ef696868fcf9171058a9e0b231f7185e962a9165bcdc6ec"
+        }
+      }
+    },
+    "note": "Pkl evaluation passed.",
+    "status": "evaluable"
+  },
+  "resolution": {
+    "flags": {
+      "documentation": "supplied",
+      "tests": "supplied"
+    },
+    "residual_limitations": [
+      ".: Python test files exist but pyproject.toml is missing"
+    ],
+    "uncovered_candidates": {
+      "documentation": [],
+      "tests": []
+    },
+    "unresolved": [],
+    "write_eligible": true
+  },
+  "tests": {
+    "command": "mise -E dev run check",
+    "note": "Explicit baseline test command.",
+    "output_truncated": false,
+    "returncode": 0,
+    "status": "passed",
+    "stderr": "[check] $ ~/workspace/personal/nix-config/.mise/tasks/check/_default\nmise all tools are installed\nInstalled hk hook via git config: hook.hk-pre-commit.command\n[check:data] $ ~/workspace/personal/nix-config/.mise/tasks/check/data\n[host:validate] $ ~/workspace/personal/nix-config/.mise/tasks/host/validate\n[check:shell] $ ~/workspace/personal/nix-config/.mise/tasks/check/shell\n[check:tests] $ ~/workspace/personal/nix-config/.mise/tasks/check/tests\ntest_add_and_remove_package (test_config_edit.ConfigEditTest.test_add_and_remove_package) ... ok\ntest_add_and_remove_tool_versions (test_config_edit.ConfigEditTest.test_add_and_remove_tool_versions) ... ok\ntest_backend_qualified_tool_is_not_split_without_version (test_config_edit.ConfigEditTest.test_backend_qualified_tool_is_not_split_without_version) ... ok\ntest_remove_lock_entry_preserves_other_versions_and_sections (test_config_edit.ConfigEditTest.test_remove_lock_entry_preserves_other_versions_and_sections) ... ok\ntest_flake_lock_has_only_live_top_level_inputs (test_topology.DataFilesTest.test_flake_lock_has_only_live_top_level_inputs) ... ok\ntest_git_fixtures_ignore_global_commit_signing (test_topology.DataFilesTest.test_git_fixtures_ignore_global_commit_signing) ... ok\ntest_json_files_parse (test_topology.DataFilesTest.test_json_files_parse) ... ok\ntest_lockfiles_exactly_cover_their_tool_configs (test_topology.DataFilesTest.test_lockfiles_exactly_cover_their_tool_configs) ... ok\ntest_nix_formatter_uses_the_contributor_lock (test_topology.DataFilesTest.test_nix_formatter_uses_the_contributor_lock) ... ok\ntest_toml_files_and_lockfiles_parse (test_topology.DataFilesTest.test_toml_files_and_lockfiles_parse) ... ok\ntest_deploy_archive_contains_committed_content_only (test_topology.DeploymentContractTest.test_deploy_archive_contains_committed_content_only) ... ok\ntest_deploy_is_two_explicit_transactions (test_topology.DeploymentContractTest.test_deploy_is_two_explicit_transactions) ... ok\ntest_deploy_rs_activates_exact_system_manager_profile (test_topology.DeploymentContractTest.test_deploy_rs_activates_exact_system_manager_profile) ... ok\ntest_deploy_rs_uses_one_nixpkgs_package_revision (test_topology.DeploymentContractTest.test_deploy_rs_uses_one_nixpkgs_package_revision) ... ok\ntest_finalize_never_deletes_active_repo_when_previous_is_missing (test_topology.DeploymentContractTest.test_finalize_never_deletes_active_repo_when_previous_is_missing) ... ok\ntest_nix_checks_are_realized_in_ci (test_topology.DeploymentContractTest.test_nix_checks_are_realized_in_ci) ... ok\ntest_repository_stage_rolls_back_and_commits (test_topology.DeploymentContractTest.test_repository_stage_rolls_back_and_commits) ... ok\ntest_rollbacks_do_not_double_advance_darwin_profile (test_topology.DeploymentContractTest.test_rollbacks_do_not_double_advance_darwin_profile) ... ok\ntest_upstream_system_manager_tests_remain_enabled (test_topology.DeploymentContractTest.test_upstream_system_manager_tests_remain_enabled) ... ok\ntest_inventory_rejects_intel_and_unsafe_deploy_paths (test_topology.InventoryBehaviorTest.test_inventory_rejects_intel_and_unsafe_deploy_paths) ... ok\ntest_repository_inventory_validates_with_typed_reader (test_topology.InventoryBehaviorTest.test_repository_inventory_validates_with_typed_reader) ... ok\ntest_shell_inventory_falls_back_to_flake_app_without_tomllib (test_topology.InventoryBehaviorTest.test_shell_inventory_falls_back_to_flake_app_without_tomllib) ... ok\ntest_apply_is_system_first_and_stops_before_user_on_system_failure (test_topology.MigrationBehaviorTest.test_apply_is_system_first_and_stops_before_user_on_system_failure) ... ok\ntest_bootstrap_help_pipe_and_clone_handoff (test_topology.MigrationBehaviorTest.test_bootstrap_help_pipe_and_clone_handoff) ... ok\ntest_docker_completion_handoff_is_exact_and_retried_once (test_topology.MigrationBehaviorTest.test_docker_completion_handoff_is_exact_and_retried_once) ... ok\ntest_docker_handoff_never_removes_an_unrelated_symlink (test_topology.MigrationBehaviorTest.test_docker_handoff_never_removes_an_unrelated_symlink) ... mise ERROR completion target '/var/folders/6s/9d_7z_4d41b7n05ypfk6zds40000gp/T/tmp_bdiwekn/prefix/share/fish/vendor_completions.d/docker-compose.fish' already points elsewhere and is not owned by cask 'docker-desktop'\nok\ntest_docker_handoff_restores_link_when_retry_fails (test_topology.MigrationBehaviorTest.test_docker_handoff_restores_link_when_retry_fails) ... ok\ntest_docker_retry_preserves_interactive_stderr_for_sudo (test_topology.MigrationBehaviorTest.test_docker_retry_preserves_interactive_stderr_for_sudo) ... ok\ntest_forced_dotfile_handoff_backs_up_exact_conflicts (test_topology.MigrationBehaviorTest.test_forced_dotfile_handoff_backs_up_exact_conflicts) ... ok\ntest_maison_launcher_preserves_interactive_stderr_for_tasks (test_topology.MigrationBehaviorTest.test_maison_launcher_preserves_interactive_stderr_for_tasks) ... ok\ntest_maison_version_uses_deployment_revision_without_git (test_topology.MigrationBehaviorTest.test_maison_version_uses_deployment_revision_without_git) ... ok\ntest_mise_lockfile_links_are_plannable_and_applied_directly (test_topology.MigrationBehaviorTest.test_mise_lockfile_links_are_plannable_and_applied_directly) ... ok\ntest_update_uses_single_nix_process_and_atomic_lockfile (test_topology.MigrationBehaviorTest.test_update_uses_single_nix_process_and_atomic_lockfile) ... ok\ntest_user_prepare_archives_live_app_backups_idempotently (test_topology.MigrationBehaviorTest.test_user_prepare_archives_live_app_backups_idempotently) ... ok\ntest_user_prepare_keeps_live_app_when_archiving_fails (test_topology.MigrationBehaviorTest.test_user_prepare_keeps_live_app_when_archiving_fails) ... ok\ntest_global_mise_config_and_platform_files_are_deployed (test_topology.OwnershipBoundaryTest.test_global_mise_config_and_platform_files_are_deployed) ... ok\ntest_home_manager_is_removed_from_nix_graph (test_topology.OwnershipBoundaryTest.test_home_manager_is_removed_from_nix_graph) ... ok\ntest_intel_darwin_is_removed_from_supported_surface (test_topology.OwnershipBoundaryTest.test_intel_darwin_is_removed_from_supported_surface) ... ok\ntest_nix_direnv_uses_pinned_direnvrc (test_topology.OwnershipBoundaryTest.test_nix_direnv_uses_pinned_direnvrc) ... ok\ntest_nix_system_package_closure_is_administrative (test_topology.OwnershipBoundaryTest.test_nix_system_package_closure_is_administrative) ... ok\ntest_platform_package_policy_and_single_ownership (test_topology.OwnershipBoundaryTest.test_platform_package_policy_and_single_ownership) ... ok\ntest_privileged_macos_state_remains_in_nix (test_topology.OwnershipBoundaryTest.test_privileged_macos_state_remains_in_nix) ... ok\ntest_repository_tools_are_isolated_from_machine_convergence (test_topology.OwnershipBoundaryTest.test_repository_tools_are_isolated_from_machine_convergence) ... ok\ntest_system_integrations_remain_nix_owned (test_topology.OwnershipBoundaryTest.test_system_integrations_remain_nix_owned) ... ok\ntest_system_outputs_are_explicit (test_topology.OwnershipBoundaryTest.test_system_outputs_are_explicit) ... ok\ntest_user_defaults_do_not_claim_privileged_domains (test_topology.OwnershipBoundaryTest.test_user_defaults_do_not_claim_privileged_domains) ... ok\ntest_all_task_root_discovery_supports_gitless_deployments (test_topology.RepositoryContractTest.test_all_task_root_discovery_supports_gitless_deployments) ... ok\ntest_build_matrix_has_no_home_manager_or_intel_target (test_topology.RepositoryContractTest.test_build_matrix_has_no_home_manager_or_intel_target) ... ok\ntest_inventory_flake_app_is_built_on_every_supported_system (test_topology.RepositoryContractTest.test_inventory_flake_app_is_built_on_every_supported_system) ... ok\ntest_maison_exposes_layered_commands (test_topology.RepositoryContractTest.test_maison_exposes_layered_commands) ... ok\ntest_task_and_script_entrypoints_are_executable (test_topology.RepositoryContractTest.test_task_and_script_entrypoints_are_executable) ... ok\ntest_host_add_restores_inventory_when_override_commit_fails (test_topology.TransactionBehaviorTest.test_host_add_restores_inventory_when_override_commit_fails) ... ok\ntest_package_and_app_add_do_not_record_failed_installs (test_topology.TransactionBehaviorTest.test_package_and_app_add_do_not_record_failed_installs) ... ok\ntest_remove_mutators_leave_config_unchanged_when_target_is_absent (test_topology.TransactionBehaviorTest.test_remove_mutators_leave_config_unchanged_when_target_is_absent) ... ok\ntest_tool_add_commits_config_and_candidate_lock_after_success (test_topology.TransactionBehaviorTest.test_tool_add_commits_config_and_candidate_lock_after_success) ... ok\ntest_tool_add_restores_lock_when_config_commit_fails (test_topology.TransactionBehaviorTest.test_tool_add_restores_lock_when_config_commit_fails) ... ok\ntest_tool_add_rolls_back_config_and_lock_on_resolution_warning (test_topology.TransactionBehaviorTest.test_tool_add_rolls_back_config_and_lock_on_resolution_warning) ... ok\ntest_tool_remove_cannot_remove_maison_runtime_by_version (test_topology.TransactionBehaviorTest.test_tool_remove_cannot_remove_maison_runtime_by_version) ... error: usage is the Maison command runtime and cannot be removed\nok\ntest_tool_remove_relocks_remaining_versions_transactionally (test_topology.TransactionBehaviorTest.test_tool_remove_relocks_remaining_versions_transactionally) ... ok\ntest_tool_remove_updates_config_and_lock_together (test_topology.TransactionBehaviorTest.test_tool_remove_updates_config_and_lock_together) ... ok\n\n----------------------------------------------------------------------\nRan 60 tests in 12.023s\n\nOK\n[check:nix] $ ~/workspace/personal/nix-config/.mise/tasks/check/nix\nfetching git input 'git+file:///Users/DeRoseR/workspace/personal/nix-config'\nfetching git input 'git+file:///Users/DeRoseR/workspace/personal/nix-config'\nfetching git input 'git+file:///Users/DeRoseR/workspace/personal/nix-config'\nfetching git input 'git+file:///Users/DeRoseR/workspace/personal/nix-config'\nfetching git input 'git+file:///Users/DeRoseR/workspace/personal/nix-config'\nfetching git input 'git+file:///Users/DeRoseR/workspace/personal/nix-config'\nfetching git input 'git+file:///Users/DeRoseR/workspace/personal/nix-config'\nfetching git input 'git+file:///Users/DeRoseR/workspace/personal/nix-config'\nfetching git input 'git+file:///Users/DeRoseR/workspace/personal/nix-config'\nfetching git input 'git+file:///Users/DeRoseR/workspace/personal/nix-config'\nfetching git input 'git+file:///Users/DeRoseR/workspace/personal/nix-config'\nfetching git input 'git+file:///Users/DeRoseR/workspace/personal/nix-config'\ntraversed 179 files\nemitted 23 files for processing\nformatted 23 files (0 changed) in 247ms\n",
+    "stdout": "/Users/DeRoseR/workspace/personal/nix-config/inventory.toml is valid\n\u2713 All 44 task(s) validated successfully\nStaged Maison revision 3333333333333333333333333333333333333333 at /var/folders/6s/9d_7z_4d41b7n05ypfk6zds40000gp/T/tmppia_1gkf/home/.maison\nStaged Maison revision 1111111111111111111111111111111111111111 at /var/folders/6s/9d_7z_4d41b7n05ypfk6zds40000gp/T/tmpxyfdnwnh/var/home/.maison\nRolled back Maison repository transaction at /var/folders/6s/9d_7z_4d41b7n05ypfk6zds40000gp/T/tmpxyfdnwnh/var/home/.maison\nStaged Maison revision 2222222222222222222222222222222222222222 at /var/folders/6s/9d_7z_4d41b7n05ypfk6zds40000gp/T/tmpxyfdnwnh/var/home/.maison\nCommitted Maison repository transaction at /var/folders/6s/9d_7z_4d41b7n05ypfk6zds40000gp/T/tmpxyfdnwnh/var/home/.maison\ninstalled\nInstalled and added aqua:gastownhall/beads@1.1.0 to config/mise/config.toml.\nRemoved node@24 from config/mise/config.toml and its generated lock entries. Installed versions were intentionally left in the mise cache.\nRemoved node from config/mise/config.toml and its generated lock entries. Installed versions were intentionally left in the mise cache.\n"
+  },
+  "validation_partitions": []
+}
