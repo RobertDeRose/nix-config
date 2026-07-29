@@ -1379,6 +1379,147 @@ class MigrationBehaviorTest(unittest.TestCase):
             self.assertTrue(target.is_symlink())
             self.assertEqual(target.resolve(), unrelated.resolve())
 
+    def test_user_prepare_archives_live_app_backups_idempotently(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            home = temp / "home"
+            app = (
+                home
+                / ".local/state/maison/backups/bitwarden-20260728T120442Z/Bitwarden.app"
+            )
+            receipt = app / "Contents/_MASReceipt/receipt"
+            receipt.parent.mkdir(parents=True)
+            receipt.write_text("receipt\n")
+            fake_bin = temp / "bin"
+            fake_bin.mkdir()
+            ditto = fake_bin / "ditto"
+            unzip = fake_bin / "unzip"
+            lsregister = fake_bin / "lsregister"
+            register_log = temp / "lsregister.log"
+            executable(
+                ditto,
+                "#!/bin/sh\n"
+                "while [ \"$#\" -gt 2 ]; do shift; done\n"
+                "source=$1\n"
+                "destination=$2\n"
+                "test -s \"$source/Contents/_MASReceipt/receipt\" || exit 81\n"
+                "printf 'archive of %s\\n' \"$source\" > \"$destination\"\n",
+            )
+            executable(unzip, "#!/bin/sh\ntest -s \"$2\"\n")
+            executable(
+                lsregister,
+                "#!/bin/sh\n"
+                "printf '%s\\n' \"$*\" >> \"$TEST_LSREGISTER_LOG\"\n",
+            )
+            env = os.environ.copy()
+            env.update(
+                {
+                    "HOME": str(home),
+                    "MAISON_PLATFORM": "Darwin",
+                    "MAISON_DITTO_BIN": str(ditto),
+                    "MAISON_UNZIP_BIN": str(unzip),
+                    "MAISON_LSREGISTER_BIN": str(lsregister),
+                    "TEST_LSREGISTER_LOG": str(register_log),
+                }
+            )
+
+            preview = subprocess.run(
+                [str(ROOT / "scripts/user-prepare.sh"), "--dry-run"],
+                cwd=ROOT,
+                env=env,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            archive = app.with_name("Bitwarden.app.zip")
+            self.assertIn("Would archive backed-up application", preview.stdout)
+            self.assertTrue(app.is_dir())
+            self.assertFalse(archive.exists())
+            self.assertFalse((home / ".local/state/maison/backups/.metadata_never_index").exists())
+            self.assertFalse(register_log.exists())
+
+            applied = subprocess.run(
+                [str(ROOT / "scripts/user-prepare.sh")],
+                cwd=ROOT,
+                env=env,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertIn("Archived backed-up application", applied.stdout)
+            self.assertFalse(app.exists())
+            self.assertTrue(archive.is_file())
+            self.assertIn(str(app), archive.read_text())
+            marker = home / ".local/state/maison/backups/.metadata_never_index"
+            self.assertTrue(marker.is_file())
+            marker_time = 1_700_000_000_000_000_000
+            os.utime(marker, ns=(marker_time, marker_time))
+            self.assertEqual(register_log.read_text().splitlines(), [f"-u {app}"])
+
+            second = subprocess.run(
+                [str(ROOT / "scripts/user-prepare.sh")],
+                cwd=ROOT,
+                env=env,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotIn("Archived backed-up application", second.stdout)
+            self.assertEqual(list(archive.parent.glob("Bitwarden.app*.zip")), [archive])
+            self.assertEqual(register_log.read_text().splitlines(), [f"-u {app}"])
+            self.assertEqual(marker.stat().st_mtime_ns, marker_time)
+
+    def test_user_prepare_keeps_live_app_when_archiving_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            home = temp / "home"
+            app = home / ".local/state/maison/backups/example/Example.app"
+            receipt = app / "Contents/_MASReceipt/receipt"
+            receipt.parent.mkdir(parents=True)
+            receipt.write_text("receipt\n")
+            fake_bin = temp / "bin"
+            fake_bin.mkdir()
+            ditto = fake_bin / "ditto"
+            unzip = fake_bin / "unzip"
+            lsregister = fake_bin / "lsregister"
+            register_log = temp / "lsregister.log"
+            executable(
+                ditto,
+                "#!/bin/sh\n"
+                "while [ \"$#\" -gt 2 ]; do shift; done\n"
+                "printf 'corrupt archive\\n' > \"$2\"\n",
+            )
+            executable(unzip, "#!/bin/sh\nexit 74\n")
+            executable(
+                lsregister,
+                "#!/bin/sh\n"
+                "printf '%s\\n' \"$*\" >> \"$TEST_LSREGISTER_LOG\"\n",
+            )
+            env = os.environ.copy()
+            env.update(
+                {
+                    "HOME": str(home),
+                    "MAISON_PLATFORM": "Darwin",
+                    "MAISON_DITTO_BIN": str(ditto),
+                    "MAISON_UNZIP_BIN": str(unzip),
+                    "MAISON_LSREGISTER_BIN": str(lsregister),
+                    "TEST_LSREGISTER_LOG": str(register_log),
+                }
+            )
+            result = subprocess.run(
+                [str(ROOT / "scripts/user-prepare.sh")],
+                cwd=ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("archive failed verification", result.stderr)
+            self.assertTrue(app.is_dir())
+            self.assertTrue(receipt.is_file())
+            self.assertFalse(app.with_name("Example.app.zip").exists())
+            self.assertFalse(register_log.exists())
+
     def test_forced_dotfile_handoff_backs_up_exact_conflicts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             temp = Path(directory)

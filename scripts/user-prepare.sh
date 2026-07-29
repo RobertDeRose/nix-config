@@ -6,17 +6,97 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 backup_root="$HOME/.local/state/maison/backups"
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 force_dotfiles=false
+dry_run=false
+platform="${MAISON_PLATFORM:-$(uname -s)}"
+ditto_bin="${MAISON_DITTO_BIN:-/usr/bin/ditto}"
+unzip_bin="${MAISON_UNZIP_BIN:-/usr/bin/unzip}"
+lsregister_default="/System/Library/Frameworks/CoreServices.framework"
+lsregister_default+="/Frameworks/LaunchServices.framework/Support/lsregister"
+lsregister_bin="${MAISON_LSREGISTER_BIN:-$lsregister_default}"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --force-dotfiles) force_dotfiles=true ;;
+    --dry-run) dry_run=true ;;
     *)
-      printf 'usage: %s [--force-dotfiles]\n' "${0##*/}" >&2
+      printf 'usage: %s [--force-dotfiles] [--dry-run]\n' "${0##*/}" >&2
       exit 2
       ;;
   esac
   shift
 done
+
+archive_path_for_app() {
+  local app="$1" archive suffix=0
+  archive="$app.zip"
+  while [ -e "$archive" ] || [ -L "$archive" ]; do
+    suffix=$((suffix + 1))
+    archive="$app.$timestamp.$suffix.zip"
+  done
+  printf '%s\n' "$archive"
+}
+
+archive_backup_application_bundles() {
+  local app archive marker temporary
+
+  [ "$platform" = Darwin ] || return 0
+  [ -d "$backup_root" ] || return 0
+
+  if [ "$dry_run" = false ]; then
+    if [ ! -x "$ditto_bin" ]; then
+      printf 'error: cannot archive application backups because ditto is unavailable: %s\n' "$ditto_bin" >&2
+      return 1
+    fi
+    if [ ! -x "$unzip_bin" ]; then
+      printf 'error: cannot verify application backups because unzip is unavailable: %s\n' "$unzip_bin" >&2
+      return 1
+    fi
+  fi
+
+  # A live .app bundle retains its App Store receipt and install metadata. If it
+  # remains inside a backup directory, macOS Installer can relocate later MAS
+  # updates back into that backup instead of /Applications. Prevent Spotlight
+  # indexing the backup root and convert every app bundle to an inert archive.
+  marker="$backup_root/.metadata_never_index"
+  if [ "$dry_run" = false ] && [ ! -e "$marker" ] && [ ! -L "$marker" ]; then
+    : > "$marker"
+  fi
+
+  while IFS= read -r -d '' app; do
+    archive="$(archive_path_for_app "$app")"
+    if [ "$dry_run" = true ]; then
+      printf 'Would archive backed-up application %s to %s\n' "$app" "$archive"
+      continue
+    fi
+
+    temporary="$archive.tmp.$$"
+    rm -f "$temporary"
+    if ! "$ditto_bin" -c -k --sequesterRsrc --keepParent "$app" "$temporary"; then
+      rm -f "$temporary"
+      printf 'error: failed to archive backed-up application %s\n' "$app" >&2
+      return 1
+    fi
+    if [ ! -s "$temporary" ]; then
+      rm -f "$temporary"
+      printf 'error: application backup archive is empty for %s\n' "$app" >&2
+      return 1
+    fi
+    if ! "$unzip_bin" -tqq "$temporary"; then
+      rm -f "$temporary"
+      printf 'error: application backup archive failed verification for %s\n' "$app" >&2
+      return 1
+    fi
+
+    mv "$temporary" "$archive"
+    if [ -x "$lsregister_bin" ]; then
+      if ! "$lsregister_bin" -u "$app" >/dev/null 2>&1; then
+        printf 'warning: failed to unregister backed-up application %s\n' "$app" >&2
+      fi
+    fi
+    rm -rf "$app"
+    printf 'Archived backed-up application %s to %s\n' "$app" "$archive"
+  done < <(find "$backup_root" -type d -name '*.app' -prune -print0)
+}
 
 backup_conflicting_dotfiles() {
   local output_file status backup_dir conflict target relative backup count
@@ -60,8 +140,14 @@ backup_conflicting_dotfiles() {
 
     relative="${target#"$HOME"/}"
     backup="$backup_dir/$relative"
-    mkdir -p "$(dirname "$backup")"
 
+    if [ "$dry_run" = true ]; then
+      count=$((count + 1))
+      printf 'Would back up conflicting dotfile %s to %s\n' "$target" "$backup"
+      continue
+    fi
+
+    mkdir -p "$(dirname "$backup")"
     if [ -L "$target" ] && [ ! -e "$target" ]; then
       printf '%s\n' "$(readlink "$target")" > "$backup.broken-symlink-target"
     else
@@ -86,8 +172,14 @@ backup_conflicting_dotfiles() {
   fi
 
   rm -f "$output_file"
-  printf 'Dotfile migration backup: %s\n' "$backup_dir"
+  if [ "$dry_run" = true ]; then
+    printf 'Would use dotfile migration backup: %s\n' "$backup_dir"
+  else
+    printf 'Dotfile migration backup: %s\n' "$backup_dir"
+  fi
 }
+
+archive_backup_application_bundles
 
 if [ "$force_dotfiles" = true ]; then
   backup_conflicting_dotfiles
@@ -98,7 +190,12 @@ fi
 # it as an explicit migration backup instead of deleting it.
 legacy_git="$HOME/.gitconfig"
 if [ -e "$legacy_git" ] || [ -L "$legacy_git" ]; then
-  mkdir -p "$backup_root/git"
-  mv "$legacy_git" "$backup_root/git/gitconfig.$timestamp"
-  printf 'Backed up legacy Git configuration to %s\n' "$backup_root/git/gitconfig.$timestamp"
+  legacy_backup="$backup_root/git/gitconfig.$timestamp"
+  if [ "$dry_run" = true ]; then
+    printf 'Would back up legacy Git configuration to %s\n' "$legacy_backup"
+  else
+    mkdir -p "$backup_root/git"
+    mv "$legacy_git" "$legacy_backup"
+    printf 'Backed up legacy Git configuration to %s\n' "$legacy_backup"
+  fi
 fi

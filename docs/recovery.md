@@ -31,6 +31,20 @@ Targeted migration backups are stored under:
 ~/.local/state/maison/backups/pi
 ```
 
+Before package convergence on macOS, Maison also sanitizes this backup tree. Any live `.app` bundle is archived
+in place as `.app.zip`, unregistered from LaunchServices, and removed only after the archive is non-empty and passes ZIP verification.
+Maison also creates `.metadata_never_index` at the backup root. This prevents Mac App Store installers from
+relocating future updates into a backup copy instead of `/Applications`. `maison user plan` previews this
+migration without modifying the backup.
+
+Restore an archived application bundle only for forensic or recovery purposes:
+
+```bash
+ditto -x -k path/to/Application.app.zip /tmp/application-restore
+```
+
+Do not leave an extracted `.app` under the Maison backup tree.
+
 A Docker Desktop completion ownership error is repaired only when the conflicting path is a symlink to its exact known Docker.app completion file. Unrelated paths are not removed. If the retry fails before Docker replaces a removed link, Maison restores that original link and returns the retry failure.
 
 ## Failed remote user deployment
