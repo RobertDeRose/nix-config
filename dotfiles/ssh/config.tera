@@ -1,0 +1,16 @@
+Host *
+{% if os() == "macos" %}
+  IdentityAgent "{{ env.HOME }}/Library/Containers/com.bitwarden.desktop/Data/.bitwarden-ssh-agent.sock"
+{% endif %}
+
+Host dev-som
+  HostName dev-som.checkpoint-device.com
+  User root
+
+Host dev-ab
+  HostName dev-ab.checkpoint-device.com
+  User root
+
+{% if env.USER == "DeRoseR" %}
+Include "{{ env.HOME }}/Library/Application Support/NVIDIA/Sync/config/ssh_config"
+{% endif %}
