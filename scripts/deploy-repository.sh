@@ -136,10 +136,10 @@ as_root rm -rf -- "$staging"
 as_root mkdir -p -- "$staging"
 as_root tar --no-same-owner -xzf "$archive" -C "$staging"
 for required in mise.toml flake.nix .maison-revision; do
-  as_root test -f "$staging/$required" && ! as_root test -L "$staging/$required" || {
+  if ! as_root test -f "$staging/$required" || as_root test -L "$staging/$required"; then
     printf 'error: deployment archive is missing regular file %s\n' "$required" >&2
     exit 1
-  }
+  fi
 done
 revision="$(as_root cat "$staging/.maison-revision")"
 printf '%s\n' "$revision" | grep -Eq '^[0-9a-f]{40}$' || {
@@ -155,10 +155,10 @@ if [ "$(id -un)" != "$managed_user" ]; then
 fi
 
 if as_root test -e "$repo_path" || as_root test -L "$repo_path"; then
-  as_root test -d "$repo_path" && ! as_root test -L "$repo_path" || {
+  if ! as_root test -d "$repo_path" || as_root test -L "$repo_path"; then
     printf 'error: existing repository path is not a real directory: %s\n' "$repo_path" >&2
     exit 1
-  }
+  fi
   # Ignore interactive termination only across the rename and state flag
   # assignment so cleanup never mistakes a failed rename for a committed one.
   trap '' HUP INT TERM

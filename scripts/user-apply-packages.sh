@@ -84,6 +84,8 @@ restore_docker_completion_links() {
 }
 
 output_file="$(mktemp "${TMPDIR:-/tmp}/maison-packages.XXXXXX")"
+# Invoked indirectly by the EXIT trap below.
+# shellcheck disable=SC2329
 cleanup() {
   local status=$?
   trap - EXIT HUP INT TERM

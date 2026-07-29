@@ -44,18 +44,18 @@ case "$parent_real" in
     ;;
 esac
 
-as_root test -f "$state" && ! as_root test -L "$state" || {
+if ! as_root test -f "$state" || as_root test -L "$state"; then
   printf 'error: deployment state is missing or unsafe: %s\n' "$state" >&2
   exit 1
-}
+fi
 state_value="$(as_root cat "$state")"
 case "$state_value" in previous | absent) ;; *) exit 1 ;; esac
 
 if [ "$state_value" = previous ]; then
-  as_root test -d "$previous" && ! as_root test -L "$previous" || {
+  if ! as_root test -d "$previous" || as_root test -L "$previous"; then
     printf 'error: previous repository is missing or unsafe: %s\n' "$previous" >&2
     exit 1
-  }
+  fi
 fi
 
 if [ "$action" = commit ]; then
