@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# [MISE] description="Atomically remove a global mise tool declaration and its lock entries"
+#USAGE arg "<tool>" help="Tool name, optionally name@version"
+set -euo pipefail
+root="${MISE_PROJECT_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)}"
+source "$root/.mise/lib/transaction.sh"
+config="$root/config/mise/config.toml"
+lock="$root/config/mise/mise.lock"
+tool="${usage_tool:?mise did not provide the required tool argument}"
+protected_tool="$tool"
+protected_suffix="${tool##*@}"
+if [[ "$tool" == *@* && "$protected_suffix" != */* ]]; then
+  protected_tool="${tool%@*}"
+fi
+[ "$protected_tool" != usage ] || {
+  printf 'error: usage is the Maison command runtime and cannot be removed\n' >&2
+  exit 2
+}
+transaction_dir="$(transaction_directory)"
+original_config="$transaction_dir/config.original.toml"
+original_lock="$transaction_dir/mise.original.lock"
+candidate_config="$transaction_dir/config.toml"
+candidate_lock="$transaction_dir/mise.lock"
+cp -p "$config" "$original_config"
+cp -p "$config" "$candidate_config"
+lock_existed=false
+if [ -e "$lock" ]; then
+  cp -p "$lock" "$original_lock"
+  cp -p "$lock" "$candidate_lock"
+  lock_existed=true
+else
+  : >"$candidate_lock"
+fi
+config_attempted=false
+lock_attempted=false
+success=false
+
+cleanup() {
+  local status=$?
+  trap - EXIT HUP INT TERM
+  if [ "$success" != true ]; then
+    if [ "$config_attempted" = true ]; then
+      atomic_replace "$original_config" "$config" || true
+    fi
+    if [ "$lock_attempted" = true ]; then
+      if [ "$lock_existed" = true ]; then
+        atomic_replace "$original_lock" "$lock" || true
+      else
+        rm -f "$lock"
+      fi
+    fi
+  fi
+  rm -rf "$transaction_dir"
+  exit "$status"
+}
+trap cleanup EXIT
+transaction_set_signal_traps
+
+python3 "$root/.mise/lib/config_edit.py" tool --file "$candidate_config" --name "$tool" --remove
+if python3 "$root/.mise/lib/config_edit.py" has-tool --file "$candidate_config" --name "$tool"; then
+  tool_name="$tool"
+  suffix="${tool##*@}"
+  if [[ "$tool" == *@* && "$suffix" != */* ]]; then
+    tool_name="${tool%@*}"
+  fi
+  # A version-specific removal can leave other selectors for the same tool.
+  # Ask mise to resolve only that tool against the candidate config so stale
+  # resolved versions are pruned without advancing fuzzy selectors.
+  MISE_AUTO_ENV=false MISE_GLOBAL_CONFIG_FILE="$candidate_config" mise lock --global "$tool_name"
+else
+  python3 "$root/.mise/lib/config_edit.py" lock-remove \
+    --file "$candidate_lock" \
+    --config "$candidate_config" \
+    --name "$tool"
+fi
+python3 "$root/.mise/lib/config_edit.py" validate "$candidate_config" "$candidate_lock"
+
+lock_attempted=true
+atomic_replace "$candidate_lock" "$lock"
+config_attempted=true
+atomic_replace "$candidate_config" "$config"
+success=true
+printf 'Removed %s from %s and its generated lock entries. Installed versions were intentionally left in the mise cache.\n' \
+  "$tool" "${config#"$root"/}"

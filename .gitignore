@@ -12,3 +12,11 @@ book/
 
 # macOS
 .DS_Store
+
+# Local Python and task build artifacts
+__pycache__/
+*.pyc
+.build/
+
+# User-specific Maison/mise settings
+mise.local.toml

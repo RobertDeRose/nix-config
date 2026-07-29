@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# [MISE] description="Converge user tools, applications, preferences, and dotfiles with mise"
+# [MISE] interactive=true
+#USAGE flag "--force-dotfiles" help="Replace conflicting whole-file targets"
+set -euo pipefail
+root="${MISE_PROJECT_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)}"
+cd "$root"
+args=(--yes)
+prepare_args=()
+if [ "${usage_force_dotfiles:-false}" = true ]; then
+  args+=(--force-dotfiles)
+  prepare_args+=(--force-dotfiles)
+fi
+
+mise trust "$root/mise.toml" >/dev/null
+"$root/scripts/user-prepare.sh" "${prepare_args[@]}"
+mise bootstrap --only dotfiles "${args[@]}"
+"$root/scripts/user-link-mise-lock.sh"
+(
+  cd "$HOME"
+  export MISE_AUTO_ENV=true
+  export MISE_GLOBAL_CONFIG_FILE="$HOME/.config/mise/config.toml"
+  "$root/scripts/user-apply-packages.sh"
+  mise bootstrap --skip task --skip packages --skip dotfiles "${args[@]}"
+)
+"$root/scripts/user-finalize.sh"

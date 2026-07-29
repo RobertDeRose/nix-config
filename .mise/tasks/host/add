@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# [MISE] description="Add a host only after a candidate inventory validates"
+#USAGE arg "<hostname>" help="Hostname to add"
+#USAGE flag "--system <system>" help="Nix system, for example aarch64-linux"
+#USAGE flag "--user <user>" help="Existing inventory user"
+#USAGE flag "--profiles <profiles>" help="Comma-separated profiles"
+#USAGE flag "--overrides" help="Create a host-specific system.nix stub"
+set -euo pipefail
+root="${MISE_PROJECT_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)}"
+source "$root/.mise/lib/common.sh"
+source "$root/.mise/lib/platform.sh"
+source "$root/.mise/lib/inventory.sh"
+source "$root/.mise/lib/transaction.sh"
+cd "$root"
+
+host="${usage_hostname:?mise did not provide the required hostname argument}"
+system="${usage_system:-$(current_system)}"
+user="${usage_user:-$(current_user)}"
+validate_hostname "$host" || die "invalid hostname: $host"
+is_supported_system "$system" || die "unsupported system: $system"
+inventory_has_host "$root" "$host" && die "host already exists: $host"
+inventory_has_user "$root" "$user" || die "inventory user does not exist: $user"
+inventory_user_allowed_for_system "$root" "$user" "$system" ||
+  die "inventory user '$user' is not valid for '$system'"
+
+profiles="${usage_profiles:-}"
+if [ -z "$profiles" ]; then
+  case "$system" in
+    *-darwin) profiles=base,dev,mac ;;
+    *-linux) profiles=base,dev,linux ;;
+  esac
+fi
+
+quoted=""
+IFS=',' read -r -a values <<<"$profiles"
+for profile in "${values[@]}"; do
+  profile="$(printf '%s' "$profile" | xargs)"
+  case "$profile:$system" in
+    base:* | dev:* | mac:*-darwin | linux:*-linux) ;;
+    *) die "incompatible or unknown profile: $profile" ;;
+  esac
+  [ -z "$quoted" ] || quoted+=", "
+  quoted+="\"$profile\""
+done
+[ -n "$quoted" ] || die "at least one profile is required"
+
+inventory="$root/inventory.toml"
+override="$root/hosts/$host"
+[ "${usage_overrides:-false}" != true ] || [ ! -e "$override" ] ||
+  die "host override path already exists: ${override#"$root"/}"
+
+transaction_dir="$(transaction_directory)"
+original="$transaction_dir/inventory.original.toml"
+candidate="$transaction_dir/inventory.toml"
+cp -p "$inventory" "$original"
+cp -p "$inventory" "$candidate"
+staged_override="$transaction_dir/host-override"
+inventory_committed=false
+override_committed=false
+success=false
+
+cleanup() {
+  local status=$?
+  trap - EXIT HUP INT TERM
+  if [ "$success" != true ]; then
+    if [ "$override_committed" = true ]; then
+      rm -rf "$override"
+    fi
+    if [ "$inventory_committed" = true ]; then
+      atomic_replace "$original" "$inventory"
+    fi
+  fi
+  rm -rf "$transaction_dir"
+  exit "$status"
+}
+trap cleanup EXIT
+transaction_set_signal_traps
+
+cat >>"$candidate" <<HOST
+
+[hosts.$host]
+system = "$system"
+user = "$user"
+profiles = [$quoted]
+HOST
+
+if [ "${usage_overrides:-false}" = true ]; then
+  mkdir -p "$staged_override"
+  cat >"$staged_override/system.nix" <<'NIX'
+{ ... }:
+{
+  # Host-specific OS-level exceptions only.
+}
+NIX
+fi
+
+python3 "$root/.mise/lib/inventory.py" \
+  --file "$candidate" \
+  --repo-root "$root" \
+  validate >/dev/null
+
+trap '' HUP INT TERM
+atomic_replace "$candidate" "$inventory"
+inventory_committed=true
+transaction_set_signal_traps
+if [ "${usage_overrides:-false}" = true ]; then
+  mkdir -p "$root/hosts"
+  # mkdir is the portable no-clobber operation for directories on both macOS
+  # and Linux. Do not let a concurrent destination be treated as mv's parent.
+  trap '' HUP INT TERM
+  mkdir "$override"
+  override_committed=true
+  transaction_set_signal_traps
+  cp -p "$staged_override/system.nix" "$override/system.nix"
+fi
+
+success=true
+printf 'Added host %s after validating the complete candidate inventory.\n' "$host"
+git --no-pager diff -- inventory.toml "hosts/$host" 2>/dev/null || true
