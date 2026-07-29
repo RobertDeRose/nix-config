@@ -218,6 +218,10 @@ def _validate_inputs(repo_path: Path, managed_user: str) -> Path:
 def _make_namespace(repo_path: Path, managed_user: str, managed_home: Path) -> Path:
     configured = os.environ.get("MAISON_TRANSACTION_ROOT")
     base = Path(configured) if configured else default_transaction_root(repo_path, managed_user, managed_home)
+    base_real = base.absolute().resolve(strict=False)
+    managed_home_real = managed_home.resolve(strict=False)
+    if _is_relative_to(base_real, managed_home_real) or base_real == managed_home_real:
+        raise DeploymentTransactionError(f"transaction root must be outside managed home {managed_home}: {base}")
     namespace = base / repo_hash(repo_path)
     namespace.mkdir(parents=True, mode=0o700, exist_ok=True)
     namespace.chmod(0o700)

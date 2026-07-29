@@ -22,7 +22,7 @@ selection.
 
 | Slug | Feature | Beads root | Roadmap state | Dependencies | Design |
 |------|---------|------------|---------------|--------------|--------|
-| `maison-001-root-owned-deployment-transactions` | MAISON-001: Root-owned deployment transaction state | `maison-mol-6y0` | P0 planned | None | [design](features/maison-001-root-owned-deployment-transactions/design.md) |
+| `maison-001-root-owned-deployment-transactions` | MAISON-001: Root-owned deployment transaction state | `maison-mol-6y0` | Delivered | None | [record](features/maison-001-root-owned-deployment-transactions/index.md) |
 | `maison-002-revision-bound-commit-rollback` | MAISON-002: Revision-bound commit and rollback | `maison-mol-quq` | P0 planned | `maison-001-root-owned-deployment-transactions` | [design](features/maison-002-revision-bound-commit-rollback/design.md) |
 | `maison-003-restricted-deployment-privilege` | MAISON-003: Restricted deployment privilege model | `maison-mol-4v3` | P0 planned | `maison-002-revision-bound-commit-rollback` | [design](features/maison-003-restricted-deployment-privilege/design.md) |
 | `maison-004-private-overlay-configuration` | MAISON-004: Private overlay configuration split | `maison-mol-e9t` | P0 planned | `maison-003-restricted-deployment-privilege` | [design](features/maison-004-private-overlay-configuration/design.md) |

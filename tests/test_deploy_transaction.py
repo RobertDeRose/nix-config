@@ -62,6 +62,25 @@ class DeployTransactionPathContractTest(unittest.TestCase):
                     expected_owner_uid=os.getuid(),
                 )
 
+    def test_configured_transaction_root_under_managed_home_is_not_created(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory).resolve()
+            managed_home = temp / "home" / "maison-test"
+            repo_path = managed_home / ".maison"
+            unsafe_base = managed_home / ".maison-deploy"
+            managed_home.mkdir(parents=True)
+            previous = os.environ.get("MAISON_TRANSACTION_ROOT")
+            os.environ["MAISON_TRANSACTION_ROOT"] = str(unsafe_base)
+            try:
+                with self.assertRaisesRegex(module.DeploymentTransactionError, "outside managed home"):
+                    module._make_namespace(repo_path, "maison-test", managed_home)
+            finally:
+                if previous is None:
+                    os.environ.pop("MAISON_TRANSACTION_ROOT", None)
+                else:
+                    os.environ["MAISON_TRANSACTION_ROOT"] = previous
+            self.assertFalse(unsafe_base.exists())
+
     def test_transaction_root_rejects_symlink_wrong_owner_and_writable_modes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             temp = Path(directory).resolve()

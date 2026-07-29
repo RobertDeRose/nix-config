@@ -6,4 +6,5 @@ Planned or partially implemented work remains in [Planned features](../planned-f
 ## Feature index
 
 <!-- BEGIN IMPLEMENTED FEATURES -->
+- [MAISON-001: Root-owned deployment transaction state](maison-001-root-owned-deployment-transactions/index.md)
 <!-- END IMPLEMENTED FEATURES -->

@@ -38,6 +38,7 @@
   <!-- END FEATURE DESIGNS -->
 [Implemented Features](./features/index.md)
   <!-- BEGIN IMPLEMENTED FEATURES -->
+  - [MAISON-001: Root-owned deployment transaction state](./features/maison-001-root-owned-deployment-transactions/index.md)
   <!-- END IMPLEMENTED FEATURES -->
 [Refactor Report](./refactor-report.md)
 
