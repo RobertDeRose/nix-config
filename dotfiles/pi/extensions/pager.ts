@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { getMarkdownTheme } from "@earendil-works/pi-coding-agent";
+import { copyToClipboard, getMarkdownTheme } from "@earendil-works/pi-coding-agent";
 import { Markdown } from "@earendil-works/pi-tui";
 
 type MarkdownCtor = new (markdown: string, x: number, y: number, theme: any) => { render(width: number): string[] };
@@ -209,7 +209,14 @@ type Heading = {
   number?: string;
   explicitNumber?: string;
 };
-type Rendered = { lines: string[]; headings: Heading[] };
+export type CodeBlock = {
+  code: string;
+  language?: string;
+  sourceLine: number;
+  renderLine: number;
+  renderEndLine: number;
+};
+type Rendered = { lines: string[]; headings: Heading[]; codeBlocks: CodeBlock[] };
 
 const MIN_TOC_TERMINAL_WIDTH = 100;
 const MAX_TOC_WIDTH = 32;
@@ -232,6 +239,51 @@ function padRight(s: string, width: number): string {
 
 function isFence(line: string): boolean {
   return /^\s*(```|~~~)/.test(line);
+}
+
+export function extractFencedCodeBlocks(markdown: string): CodeBlock[] {
+  const source = normalizeMarkdownInput(markdown).split("\n");
+  const blocks: CodeBlock[] = [];
+
+  for (let i = 0; i < source.length; i++) {
+    const opening = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(source[i]!);
+    if (!opening) continue;
+
+    const marker = opening[1]!;
+    const language = opening[2]!.trim().split(/\s+/, 1)[0] || undefined;
+    const closing = new RegExp(`^ {0,3}${marker[0]}{${marker.length},}\\s*$`);
+    let end = i + 1;
+    while (end < source.length && !closing.test(source[end]!)) end++;
+
+    blocks.push({
+      code: source.slice(i + 1, end).join("\n"),
+      language,
+      sourceLine: i,
+      renderLine: -1,
+      renderEndLine: -1,
+    });
+    i = end;
+  }
+
+  return blocks;
+}
+
+function locateRenderedCodeBlocks(lines: string[], blocks: CodeBlock[]): void {
+  let blockIndex = 0;
+  let opening = true;
+
+  for (let i = 0; i < lines.length && blockIndex < blocks.length; i++) {
+    const line = stripAnsi(lines[i]!).trimEnd();
+    if (!line.startsWith("```")) continue;
+
+    if (opening) {
+      blocks[blockIndex]!.renderLine = i;
+    } else {
+      blocks[blockIndex]!.renderEndLine = i;
+      blockIndex++;
+    }
+    opening = !opening;
+  }
 }
 
 function headingFromLine(line: string): { level: number; title: string } | null {
@@ -318,6 +370,9 @@ function renderMarkdown(markdown: string, width: number, Markdown: MarkdownCtor,
     lines.push(...rendered);
   }
 
+  const codeBlocks = extractFencedCodeBlocks(markdown);
+  locateRenderedCodeBlocks(lines, codeBlocks);
+
   if (headings.length === 0) {
     headings.push({ level: 1, title: "Response", sourceLine: 0, renderLine: 0, number: "1" });
   }
@@ -342,16 +397,20 @@ function renderMarkdown(markdown: string, width: number, Markdown: MarkdownCtor,
     h.number = counters.slice(0, lvl).filter((n) => n > 0).join(".");
   }
 
-  return { lines, headings };
+  return { lines, headings, codeBlocks };
 }
 
-class MarkdownPager {
+export class MarkdownPager {
   private scroll = 0;
   private selectedHeading = 0;
   private focus: "body" | "toc" = "body";
   private cachedWidth = 0;
-  private rendered: Rendered = { lines: [], headings: [] };
+  private rendered: Rendered = { lines: [], headings: [], codeBlocks: [] };
   private expandedDepthByTop = new Map<string, number>();
+  private selectedCodeBlock = 0;
+  private closed = false;
+  private copyFeedback?: { index: number; status: "copied" | "failed" };
+  private copyTimer: NodeJS.Timeout | null = null;
   private numBuffer = "";
   private numTimer: NodeJS.Timeout | null = null;
 
@@ -363,12 +422,18 @@ class MarkdownPager {
     private reservedRows: number,
     private Markdown: MarkdownCtor,
     private mdTheme: any,
+    private copyText: (text: string) => Promise<void> = copyToClipboard,
   ) {}
 
   private close() {
+    this.closed = true;
     if (this.numTimer) {
       clearTimeout(this.numTimer);
       this.numTimer = null;
+    }
+    if (this.copyTimer) {
+      clearTimeout(this.copyTimer);
+      this.copyTimer = null;
     }
     this.numBuffer = "";
     this.closePager();
@@ -398,14 +463,18 @@ class MarkdownPager {
       this.rendered = renderMarkdown(this.markdown, contentWidth, this.Markdown, this.mdTheme);
       this.cachedWidth = contentWidth;
       this.scroll = Math.min(this.scroll, this.maxScroll(bodyHeight));
+      this.selectedCodeBlock = Math.min(this.selectedCodeBlock, Math.max(0, this.rendered.codeBlocks.length - 1));
     }
 
     const maxScroll = this.maxScroll(bodyHeight);
     this.scroll = Math.max(0, Math.min(this.scroll, maxScroll));
     this.syncTocToScroll();
+    this.syncCodeBlockToViewport();
 
     const top = this.theme.fg("borderAccent", `╭${"─".repeat(bodyWidth - 2)}╮`);
-    const helpText = `${this.focus === "toc" ? "TOC" : "BODY"} · ↑↓/jk scroll · ←/→ collapse/expand · tab toc · enter jump · q close`;
+    const helpText = this.focus === "toc"
+      ? "TOC · ↑↓/jk select · ←/→ collapse/expand · enter jump · tab body · q close"
+      : "BODY · ↑↓/jk scroll · ←/→ code · c copy · tab toc · q close";
     const bottom = this.theme.fg(
       "borderAccent",
       `╰─ ${helpText} ${"─".repeat(Math.max(0, bodyWidth - visibleWidth(helpText) - 5))}╯`,
@@ -413,7 +482,8 @@ class MarkdownPager {
 
     const bodyLines: string[] = [top];
     for (let i = 0; i < bodyHeight; i++) {
-      const line = this.rendered.lines[this.scroll + i] ?? "";
+      const renderLine = this.scroll + i;
+      const line = this.decorateCodeFence(this.rendered.lines[renderLine] ?? "", renderLine, contentWidth);
       bodyLines.push(
         this.theme.fg("border", "│ ") +
           padRight(truncateToWidth(line, contentWidth, "…"), contentWidth) +
@@ -430,6 +500,21 @@ class MarkdownPager {
       const toc = padRight(truncateToWidth(tocLines[i] ?? "", tocWidth, ""), tocWidth);
       return padRight(truncateToWidth(`${body} ${toc}`, width, ""), width);
     });
+  }
+
+  private decorateCodeFence(line: string, renderLine: number, width: number): string {
+    const index = this.rendered.codeBlocks.findIndex((block) => block.renderLine === renderLine);
+    if (index < 0 || index !== this.selectedCodeBlock) return line;
+
+    const feedback = this.copyFeedback?.index === index ? this.copyFeedback.status : undefined;
+    const label = feedback === "copied"
+      ? this.theme.fg("success", "[copied]")
+      : feedback === "failed"
+        ? this.theme.fg("error", "[copy failed]")
+        : this.theme.fg("accent", `[${this.theme.underline("c")}opy]`);
+    const fence = line.replace(/\s+$/, "");
+    const fenceWidth = Math.max(0, width - visibleWidth(label) - 1);
+    return padRight(`${truncateToWidth(fence, fenceWidth, "…")} ${label}`, width);
   }
 
   private renderToc(width: number, height: number): string[] {
@@ -463,56 +548,59 @@ class MarkdownPager {
     return lines;
   }
 
-handleInput(data: string): void {
-  const bodyHeight = this.bodyHeight();
-  const page = Math.max(1, Math.floor(bodyHeight / 2));
-  const maxScroll = this.maxScroll(bodyHeight);
+  handleInput(data: string): void {
+    const bodyHeight = this.bodyHeight();
+    const page = Math.max(1, Math.floor(bodyHeight / 2));
+    const maxScroll = this.maxScroll(bodyHeight);
 
-  const printable = decodePrintableKey(data) ?? (data.length === 1 ? data : undefined);
+    const printable = decodePrintableKey(data) ?? (data.length === 1 ? data : undefined);
 
-  if (printable && /^[0-9\.]$/.test(printable)) {
-    this.numBuffer += printable;
-    if (this.numTimer) clearTimeout(this.numTimer);
-    const delayMs = this.numBuffer.length === 1 ? 250 : this.numBuffer.endsWith(".") ? 700 : 450;
-    this.numTimer = setTimeout(() => {
-      this.performNumberJump(this.numBuffer);
-      this.numBuffer = "";
-      this.numTimer = null;
+    if (printable && /^[0-9\.]$/.test(printable)) {
+      this.numBuffer += printable;
+      if (this.numTimer) clearTimeout(this.numTimer);
+      const delayMs = this.numBuffer.length === 1 ? 250 : this.numBuffer.endsWith(".") ? 700 : 450;
+      this.numTimer = setTimeout(() => {
+        this.performNumberJump(this.numBuffer);
+        this.numBuffer = "";
+        this.numTimer = null;
+        this.requestRender();
+      }, delayMs);
       this.requestRender();
-    }, delayMs);
+      return;
+    }
+
+    if (this.numTimer) {
+      clearTimeout(this.numTimer);
+      this.numTimer = null;
+      this.numBuffer = "";
+    }
+
+    // Only allow focus-toggle to TOC when the terminal is wide enough to render a TOC.
+    const showToc = (process.stdout.columns || 100) >= MIN_TOC_TERMINAL_WIDTH;
+
+    if (matchesKey(data, Key.escape) || printable === "q" || printable === "Q") this.close();
+    else if (matchesKey(data, Key.tab) && showToc) this.focus = this.focus === "body" ? "toc" : "body";
+    else if (matchesKey(data, Key.enter) && this.focus === "toc") this.jumpToSelected();
+    else if (matchesKey(data, Key.right)) this.focus === "toc" ? this.expandCurrent() : this.selectCodeBlock(1);
+    else if (matchesKey(data, Key.left)) this.focus === "toc" ? this.collapseCurrent() : this.selectCodeBlock(-1);
+    else if (printable === "c" && this.focus === "body") this.copySelectedCodeBlock();
+    else if (matchesKey(data, Key.down) || printable === "j") this.focus === "toc" ? this.moveToc(1) : this.scrollBy(1);
+    else if (matchesKey(data, Key.up) || printable === "k") this.focus === "toc" ? this.moveToc(-1) : this.scrollBy(-1);
+    else if (matchesKey(data, Key.pageDown) || matchesKey(data, Key.space)) this.scrollBy(page);
+    else if (matchesKey(data, Key.pageUp)) this.scrollBy(-page);
+    else if (matchesKey(data, Key.home) || printable === "g") {
+      this.scroll = 0;
+      this.syncTocToScroll();
+      this.syncCodeBlockToViewport();
+    }
+    else if (matchesKey(data, Key.end) || printable === "G") {
+      this.scroll = maxScroll;
+      this.syncTocToScroll();
+      this.syncCodeBlockToViewport();
+    }
+
     this.requestRender();
-    return;
   }
-
-  if (this.numTimer) {
-    clearTimeout(this.numTimer);
-    this.numTimer = null;
-    this.numBuffer = "";
-  }
-
-  // Only allow focus-toggle to TOC when the terminal is wide enough to render a TOC.
-  const showToc = (process.stdout.columns || 100) >= MIN_TOC_TERMINAL_WIDTH;
-
-  if (matchesKey(data, Key.escape) || printable === "q" || printable === "Q") this.close();
-  else if (matchesKey(data, Key.tab) && showToc) this.focus = this.focus === "body" ? "toc" : "body";
-  else if (matchesKey(data, Key.enter) && this.focus === "toc") this.jumpToSelected();
-  else if (matchesKey(data, Key.right) && this.focus === "toc") this.expandCurrent();
-  else if (matchesKey(data, Key.left) && this.focus === "toc") this.collapseCurrent();
-  else if (matchesKey(data, Key.down) || printable === "j") this.focus === "toc" ? this.moveToc(1) : this.scrollBy(1);
-  else if (matchesKey(data, Key.up) || printable === "k") this.focus === "toc" ? this.moveToc(-1) : this.scrollBy(-1);
-  else if (matchesKey(data, Key.pageDown) || matchesKey(data, Key.space)) this.scrollBy(page);
-  else if (matchesKey(data, Key.pageUp)) this.scrollBy(-page);
-  else if (matchesKey(data, Key.home) || printable === "g") {
-    this.scroll = 0;
-    this.syncTocToScroll();
-  }
-  else if (matchesKey(data, Key.end) || printable === "G") {
-    this.scroll = maxScroll;
-    this.syncTocToScroll();
-  }
-
-  this.requestRender();
-}
 
   private performNumberJump(buf: string) {
     const normalized = buf.replace(/\.$/, "");
@@ -545,6 +633,63 @@ handleInput(data: string): void {
   private scrollBy(n: number) {
     this.scroll = Math.max(0, Math.min(this.scroll + n, this.maxScroll()));
     this.syncTocToScroll();
+    this.syncCodeBlockToViewport();
+  }
+
+  private selectCodeBlock(delta: number) {
+    const blocks = this.rendered.codeBlocks;
+    if (blocks.length === 0) return;
+
+    this.selectedCodeBlock = (this.selectedCodeBlock + delta + blocks.length) % blocks.length;
+    const line = blocks[this.selectedCodeBlock]!.renderLine;
+    if (line < 0) return;
+
+    const bodyHeight = this.bodyHeight();
+    if (line < this.scroll) this.scroll = line;
+    else if (line >= this.scroll + bodyHeight) this.scroll = line - bodyHeight + 1;
+    this.scroll = Math.max(0, Math.min(this.scroll, this.maxScroll(bodyHeight)));
+    this.syncTocToScroll();
+  }
+
+  private syncCodeBlockToViewport() {
+    const blocks = this.rendered.codeBlocks;
+    if (blocks.length === 0) return;
+
+    const viewportEnd = this.scroll + this.bodyHeight() - 1;
+    const selectedLine = blocks[this.selectedCodeBlock]?.renderLine ?? -1;
+    if (selectedLine >= this.scroll && selectedLine <= viewportEnd) return;
+
+    const visible = blocks
+      .map((block, index) => ({ index, line: block.renderLine }))
+      .filter(({ line }) => line >= this.scroll && line <= viewportEnd);
+    if (visible.length === 0) return;
+
+    const center = this.scroll + this.bodyHeight() / 2;
+    visible.sort((a, b) => Math.abs(a.line - center) - Math.abs(b.line - center));
+    this.selectedCodeBlock = visible[0]!.index;
+  }
+
+  private copySelectedCodeBlock() {
+    const index = this.selectedCodeBlock;
+    const block = this.rendered.codeBlocks[index];
+    if (!block) return;
+
+    void this.copyText(block.code).then(
+      () => this.showCopyFeedback(index, "copied"),
+      () => this.showCopyFeedback(index, "failed"),
+    );
+  }
+
+  private showCopyFeedback(index: number, status: "copied" | "failed") {
+    if (this.closed) return;
+    if (this.copyTimer) clearTimeout(this.copyTimer);
+    this.copyFeedback = { index, status };
+    this.copyTimer = setTimeout(() => {
+      this.copyFeedback = undefined;
+      this.copyTimer = null;
+      this.requestRender();
+    }, 1200);
+    this.requestRender();
   }
 
   private moveToc(n: number) {
