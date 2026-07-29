@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import pty
 import re
 import shutil
 import stat
@@ -1058,6 +1059,112 @@ class MigrationBehaviorTest(unittest.TestCase):
             self.assertEqual(len(calls), 1)
             self.assertIn("system:apply", calls[0])
 
+    def test_maison_launcher_preserves_interactive_stderr_for_tasks(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            fake_bin = temp / "bin"
+            fake_bin.mkdir()
+            observed = temp / "observed"
+            executable(
+                fake_bin / "mise",
+                textwrap.dedent(
+                    """\
+                    #!/bin/sh
+                    [ -t 2 ] || exit 91
+                    [ -n "${MISE_LOG_FILE:-}" ] || exit 92
+                    printf '%s\\n' "$*" >"$OBSERVED"
+                    """
+                ),
+            )
+            env = os.environ.copy()
+            env.update(
+                {
+                    "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
+                    "MAISON_HOME": str(ROOT),
+                    "OBSERVED": str(observed),
+                }
+            )
+            master_fd, slave_fd = pty.openpty()
+            try:
+                result = subprocess.run(
+                    ["bash", str(ROOT / "bin/maison"), "apply"],
+                    env=env,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=slave_fd,
+                )
+            finally:
+                os.close(slave_fd)
+                os.close(master_fd)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(observed.read_text().strip(), "run apply --")
+
+    def test_docker_retry_preserves_interactive_stderr_for_sudo(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            prefix = temp / "prefix"
+            docker = temp / "Docker.app"
+            target = prefix / "share/fish/vendor_completions.d/docker-compose.fish"
+            source = docker / "Contents/Resources/etc/docker-compose.fish-completion"
+            source.parent.mkdir(parents=True)
+            source.write_text("completion\n")
+            target.parent.mkdir(parents=True)
+            target.symlink_to(source)
+            fake_bin = temp / "bin"
+            fake_bin.mkdir()
+            counter = temp / "counter"
+            observed = temp / "observed"
+            executable(
+                fake_bin / "mise",
+                textwrap.dedent(
+                    """\
+                    #!/bin/sh
+                    [ -t 2 ] || exit 91
+                    [ -n "${MISE_LOG_FILE:-}" ] || exit 92
+                    count=0
+                    [ ! -f "$COUNTER" ] || count=$(cat "$COUNTER")
+                    count=$((count + 1))
+                    printf '%s\\n' "$count" >"$COUNTER"
+                    if [ "$count" -eq 1 ]; then
+                      message="mise ERROR completion target '$TEST_TARGET' already points to"
+                      message="$message '$TEST_SOURCE' and is not owned by cask 'docker-desktop'"
+                      printf '%s\\n' "$message" >&2
+                      printf '%s\\n' "$message" >>"$MISE_LOG_FILE"
+                      exit 1
+                    fi
+                    [ ! -e "$TEST_TARGET" ] || exit 93
+                    printf 'interactive\\n' >"$OBSERVED"
+                    """
+                ),
+            )
+            env = os.environ.copy()
+            env.update(
+                {
+                    "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
+                    "COUNTER": str(counter),
+                    "OBSERVED": str(observed),
+                    "TEST_TARGET": str(target),
+                    "TEST_SOURCE": str(source),
+                    "MAISON_HOMEBREW_PREFIX": str(prefix),
+                    "MAISON_DOCKER_APP": str(docker),
+                }
+            )
+            master_fd, slave_fd = pty.openpty()
+            try:
+                result = subprocess.run(
+                    [str(ROOT / "scripts/user-apply-packages.sh")],
+                    env=env,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=slave_fd,
+                )
+            finally:
+                os.close(slave_fd)
+                os.close(master_fd)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(counter.read_text().strip(), "2")
+            self.assertEqual(observed.read_text(), "interactive\n")
+
     def test_docker_completion_handoff_is_exact_and_retried_once(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             temp = Path(directory)
@@ -1085,6 +1192,7 @@ class MigrationBehaviorTest(unittest.TestCase):
                       message="mise ERROR completion target '$TEST_TARGET' already points to"
                       message="$message '$TEST_SOURCE' and is not owned by cask 'docker-desktop'"
                       printf '%s\\n' "$message" >&2
+                      [ -z "${MISE_LOG_FILE:-}" ] || printf '%s\\n' "$message" >>"$MISE_LOG_FILE"
                       exit 1
                     fi
                     [ ! -e "$TEST_TARGET" ]
@@ -1138,6 +1246,7 @@ class MigrationBehaviorTest(unittest.TestCase):
                       message="mise ERROR completion target '$TEST_TARGET' already points to"
                       message="$message '$TEST_SOURCE' and is not owned by cask 'docker-desktop'"
                       printf '%s\\n' "$message" >&2
+                      [ -z "${MISE_LOG_FILE:-}" ] || printf '%s\\n' "$message" >>"$MISE_LOG_FILE"
                       exit 1
                     fi
                     exit 27
@@ -1183,6 +1292,7 @@ class MigrationBehaviorTest(unittest.TestCase):
                     message="mise ERROR completion target '$TEST_TARGET' already points elsewhere"
                     message="$message and is not owned by cask 'docker-desktop'"
                     printf '%s\\n' "$message" >&2
+                    [ -z "${MISE_LOG_FILE:-}" ] || printf '%s\\n' "$message" >>"$MISE_LOG_FILE"
                     exit 9
                     """
                 ),

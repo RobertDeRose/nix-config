@@ -282,7 +282,15 @@ run_task() {
   output_file="$(mktemp "${TMPDIR:-/tmp}/maison-output.XXXXXX")"
 
   set +e
-  "${command[@]}" > >(tee "$output_file") 2> >(tee -a "$output_file" >&2)
+  if [ -t 2 ]; then
+    # Keep the real terminal attached for nested package operations that may
+    # legitimately prompt through sudo. mise's native log file preserves the
+    # error text needed for the GitHub-authentication hint without changing
+    # the command's terminal semantics.
+    MISE_LOG_FILE="$output_file" MISE_LOG_FILE_LEVEL=info "${command[@]}"
+  else
+    "${command[@]}" > >(tee "$output_file") 2> >(tee -a "$output_file" >&2)
+  fi
   status=$?
   set -e
 
