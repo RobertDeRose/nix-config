@@ -223,8 +223,8 @@ class OwnershipBoundaryTest(unittest.TestCase):
         self.assertFalse(set(common_packages) & set(mac_packages))
 
         tools = common["tools"]
-        self.assertNotIn("bat", tools)
-        self.assertIn("brew:bat", common_packages)
+        self.assertIn("bat", tools)
+        self.assertNotIn("brew:bat", common_packages)
 
         active_tool_tables = {
             "common": tools,
@@ -1114,6 +1114,14 @@ class MigrationBehaviorTest(unittest.TestCase):
             fake_bin.mkdir()
             counter = temp / "counter"
             observed = temp / "observed"
+            sudo_observed = temp / "sudo-observed"
+            executable(
+                fake_bin / "sudo",
+                "#!/bin/sh\n"
+                "[ \"$1\" = -v ] || exit 94\n"
+                "[ -t 2 ] || exit 95\n"
+                "printf 'validated\n' >\"$SUDO_OBSERVED\"\n",
+            )
             executable(
                 fake_bin / "mise",
                 textwrap.dedent(
@@ -1143,6 +1151,8 @@ class MigrationBehaviorTest(unittest.TestCase):
                     "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
                     "COUNTER": str(counter),
                     "OBSERVED": str(observed),
+                    "SUDO_OBSERVED": str(sudo_observed),
+                    "MAISON_SUDO_BIN": str(fake_bin / "sudo"),
                     "TEST_TARGET": str(target),
                     "TEST_SOURCE": str(source),
                     "MAISON_HOMEBREW_PREFIX": str(prefix),
@@ -1164,6 +1174,7 @@ class MigrationBehaviorTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
             self.assertEqual(counter.read_text().strip(), "2")
             self.assertEqual(observed.read_text(), "interactive\n")
+            self.assertEqual(sudo_observed.read_text(), "validated\n")
 
     def test_docker_completion_handoff_is_exact_and_retried_once(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

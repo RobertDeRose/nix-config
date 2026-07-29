@@ -90,6 +90,19 @@ restore_docker_completion_links() {
   done
 }
 
+prepare_docker_privileges() {
+  local sudo_bin="${MAISON_SUDO_BIN:-sudo}"
+
+  # Docker Desktop installs command links beneath root-owned /usr/local/bin.
+  # Authenticate before mise redraws its cask progress display so a password
+  # prompt is visible and the subsequent artifact transaction uses sudo's
+  # credential cache instead of appearing to hang behind the progress UI.
+  [ -t 2 ] || return 0
+  command -v "$sudo_bin" >/dev/null 2>&1 || return 0
+  printf 'maison: Docker Desktop needs administrator access for /usr/local/bin links\n' >&2
+  "$sudo_bin" -v
+}
+
 output_file="$(mktemp "${TMPDIR:-/tmp}/maison-packages.XXXXXX")"
 # Invoked indirectly by the EXIT trap below.
 # shellcheck disable=SC2329
@@ -117,6 +130,14 @@ if grep -Fq "not owned by cask 'docker-desktop'" "$output_file" &&
   grep -Fq "completion target '" "$output_file" &&
   reconcile_docker_completion_links; then
   handoff_pending=true
+  if prepare_docker_privileges; then
+    :
+  else
+    status=$?
+    restore_docker_completion_links
+    handoff_pending=false
+    exit "$status"
+  fi
   printf 'maison: retrying package convergence after Docker Desktop completion handoff\n' >&2
   if run_packages "$output_file" "$@"; then
     handoff_pending=false

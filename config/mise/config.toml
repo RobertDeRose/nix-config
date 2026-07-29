@@ -18,7 +18,6 @@ bat = "latest"
 "github:max-sixty/worktrunk" = "latest"
 "github:ogulcancelik/herdr" = "latest"
 "github:peterldowns/nix-search-cli" = "latest"
-hk = "latest"
 "nix:deadnix" = "nixos/nixpkgs#deadnix"
 "nix:devenv" = "nixos/nixpkgs#devenv"
 node = ["24", "lts"]
@@ -28,7 +27,6 @@ usage = "latest"
 
 [bootstrap.packages]
 "brew:bash" = "latest"
-"brew:bat" = "latest"
 "brew:bitwarden-cli" = "latest"
 "brew:btop" = "latest"
 "brew:curl" = "latest"
