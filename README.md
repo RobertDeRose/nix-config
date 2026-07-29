@@ -1,227 +1,149 @@
-# nix-config
+# Maison
 
-My reproducible system configuration using [Nix flakes](https://nixos.wiki/wiki/Flakes),
-[nix-darwin](https://github.com/LnL7/nix-darwin), [system-manager](https://github.com/numtide/system-manager),
-and [home-manager](https://github.com/nix-community/home-manager).
+Maison is the command interface for a two-layer macOS and Linux configuration repository:
 
-Built on [flake-parts](https://flake.parts) with [easy-hosts](https://github.com/tgirlcloud/easy-hosts)
-for macOS host discovery. Non-NixOS Linux hosts are managed separately with `system-manager`.
+- **Nix/Lix owns operating-system state.** nix-darwin configures Apple Silicon macOS; system-manager configures supported non-NixOS Linux hosts.
+- **mise owns user state.** It installs user tools, ordinary Homebrew formulae and casks, Mac App Store applications, current-user preferences, and dotfiles.
 
-Works on **macOS (Apple Silicon & Intel)** and **Ubuntu Linux (headless servers)**.
-Tasks are managed with [mise](https://mise.jdx.dev). The bootstrap script installs prerequisites,
-then delegates to mise for host creation, Nix installation, and activation.
+Home Manager is intentionally absent. `nh` provides the local nix-darwin workflow, while `deploy-rs` handles remote system-manager profiles and connection-aware system rollback.
 
----
+## Ownership boundary
 
-## Bootstrapping a New Machine
+| Nix/Lix | mise |
+| --- | --- |
+| Nix daemon, caches, GC, and store policy | Developer tools and language runtimes |
+| PAM, Apple Watch/Touch ID sudo, sudoers | Ordinary Homebrew formulae and casks |
+| Hostname, timezone, locale, users | Mac App Store applications |
+| Root-owned files and SSH daemon policy | Git, SSH client, Zsh, Starship, editors |
+| System launchd/systemd services | User LaunchAgents/systemd units |
+| Machine-wide or privileged macOS policy | Current-user macOS preferences |
+| System-wide fonts and OS-integrated installers | User dotfiles and Tera templates |
 
-Run this on a fresh machine — it handles prerequisites, cloning, host scaffolding, Nix installation,
-and config activation:
+A file, package, service, or preference must have exactly one owner.
+
+## Supported systems
+
+- `aarch64-darwin`
+- `aarch64-linux`
+- `x86_64-linux`
+
+Intel macOS is deliberately unsupported rather than partially configured.
+
+## Common commands
 
 ```bash
-sh -c 'curl -sSfL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh | bash -s -- <hostname>'
+maison doctor
+maison plan
+maison apply
+maison update
+
+maison system plan
+maison system apply
+maison system history
+maison system rollback
+maison system clean
+
+maison user plan
+maison user apply
+maison user status
+maison user update
+
+maison deploy dev-som
 ```
 
-Or if you've already cloned the repo:
+The same operations are available as mise tasks, for example `mise run system:plan`.
 
-```bash
-./bootstrap.sh <hostname>
-```
+`maison apply` is deliberately system-first:
 
-### What it does
+1. Build and activate the Nix system configuration.
+2. Converge the mise user environment only after system activation succeeds.
 
-**macOS:**
+A user-layer failure does not roll back the active Nix generation. A system-layer failure prevents the user phase from starting.
 
-1. Installs Xcode Command Line Tools (if missing)
-2. Clones this repo (if not already inside it)
-3. Creates `hosts/<arch>-darwin/<hostname>/` from the Darwin template
-4. Installs Homebrew (if missing)
-5. Installs Nix/Lix (if missing; CppNix is used on Intel macOS)
-6. Builds and activates the nix-darwin configuration
-
-**Ubuntu / Linux (headless):**
-
-1. Clones this repo (if not already inside it)
-2. Creates `systems/<arch>-linux/<hostname>/` from the Linux template
-3. Installs Nix/Lix (if missing)
-4. Builds and activates the system-manager configuration
-5. Builds and activates the Linux home-manager configuration
-
----
-
-## Repository Structure
+## Flake outputs
 
 ```text
-.
-├── flake.nix                  # Entry point — flake-parts, easy-hosts, Linux discovery
-├── mise.toml                  # Task runner (init, switch, deploy, tests, docs)
-├── bootstrap.sh               # One-liner bootstrap entry point
-│
-├── hosts/                     # Darwin hosts only; auto-discovered by easy-hosts
-│   ├── aarch64-darwin/        # macOS Apple Silicon hosts
-│   │   └── <hostname>/
-│   │       ├── default.nix
-│   │       ├── user.nix       # Host user metadata
-│   │       └── home.nix       # Optional per-host macOS HM overrides
-│   └── x86_64-darwin/         # macOS Intel hosts
-│       └── <hostname>/
-│           ├── default.nix
-│           ├── user.nix
-│           └── home.nix
-│
-├── systems/                   # Non-NixOS Linux hosts; consumed by flake.nix
-│   ├── aarch64-linux/
-│   │   └── <hostname>/
-│   │       ├── system.nix     # Optional per-host system-manager overrides
-│   │       ├── user.nix       # Host user metadata
-│   │       └── home.nix       # Optional per-host Linux HM overrides
-│   └── x86_64-linux/
-│       └── <hostname>/
-│           ├── system.nix
-│           ├── user.nix
-│           └── home.nix
-│
-├── templates/                 # Host templates copied by add-host
-│   ├── darwin/
-│   │   ├── default.nix
-│   │   └── home.nix
-│   └── linux/
-│       ├── system.nix
-│       └── home.nix
-│
-├── modules/
-│   ├── common/
-│   │   └── cache.nix          # Shared binary cache endpoints and trusted keys
-│   ├── darwin/
-│   │   ├── config.nix         # nix-darwin and Home Manager wiring
-│   │   ├── system.nix         # macOS system settings (Dock, Finder, trackpad…)
-│   │   ├── apps.nix           # Homebrew casks, MAS apps, and system packages
-│   │   ├── fonts.nix          # macOS fonts
-│   │   ├── homebrew-mas-fix.nix
-│   │   └── iterm2.nix
-│   └── linux/
-│       └── system.nix         # Shared system-manager config (SSH, users, packages…)
-│
-└── home/
-    ├── darwin.nix             # macOS home-manager entry point
-    ├── linux.nix              # Linux home-manager entry point
-    ├── darwin/                # macOS-specific HM modules
-    └── common/
-        ├── default.nix        # Imports all shared home modules
-        ├── core.nix           # Cross-platform CLI tools
-        ├── shell.nix          # zsh, Starship, aliases, PATH, shell integration
-        ├── git.nix            # git, gh, lazygit
-        ├── direnv.nix         # direnv + nix-direnv + mise
-        ├── pi.nix             # Pi coding-agent customization
-        └── *.ts               # Pi UI extension modules
+darwinConfigurations.<host>   nix-darwin system closure
+systemConfigs.<host>           system-manager system closure
+deploy.nodes.<host>            deploy-rs Linux deployment
+packages.<system>.nh           local system UX
+packages.<system>.deploy-rs    remote system deployment
+checks.<system>.*              inventory, host, schema, and activation checks
 ```
 
----
+There are no `homeConfigurations` outputs.
 
-## Day-to-Day Commands
+## Configuration layout
 
-Use `mise run <task>`; `mise.toml` is the source of truth.
+```text
+flake.nix                     system inputs
+inventory.toml                users, hosts, profiles, deploy endpoints
+nix/                          OS-level modules and deployment definitions
+config/mise/                  global user tools, packages, preferences, locks
+dotfiles/                     native user configuration files
+.mise/tasks/system/           Nix/nh/deploy-rs workflows
+.mise/tasks/user/             mise bootstrap workflows
+scripts/                      migration, package, and deployment transactions
+mise.toml                     task discovery and dotfile declarations
+mise.dev.toml                 contributor-only lint, format, and docs tools
+```
+
+Platform-specific mise files are selected through `.miserc.toml` and `auto_env = true`:
+
+- `config.toml`: cross-platform tools and ordinary Homebrew formulae.
+- `config.macos.toml`: macOS-only tools, including AI coding tools, plus current-user preferences.
+- `config.macos-arm64.toml`: Apple Silicon casks, Mac App Store applications, and macOS-only formulae.
+- `config.linux.toml`: Linux-specific package-manager and locale policy.
+
+Repository validation tools are not installed during normal machine convergence. `maison check` explicitly loads `mise.dev.toml`.
+
+## Bootstrap
+
+From an existing checkout:
 
 ```bash
-# List all available tasks
-mise tasks
-
-# Apply config on the current machine (auto-detects hostname + platform)
-mise run nix:switch
-
-# Debug a failing activation with verbose output and Nix traces
-mise run nix:debug
-
-# Dry-run the current host build, or a specific flake target
-mise run nix:dry-run
-mise run nix:dry-run .#systemConfigs.<host>
-
-# Install and use hk hooks/checks
-hk install --mise
-hk check -a
-
-# Update all flake inputs, or one input
-mise run nix:up
-mise run nix:up nixpkgs
-
-# Garbage-collect old generations/store paths
-mise run nix:gc
-mise run nix:clean
-
-# Format Nix files
-mise run nix:fmt
-
-# Build docs
-mise run docs:build
+./bootstrap.sh --host "$(hostname -s)"
 ```
 
----
-
-## Adding a New Host
-
-Adding a host requires **no flake.nix editing**. Darwin hosts are auto-discovered from `hosts/` by
-easy-hosts. Linux hosts are discovered by the custom flake logic from `systems/*-linux/` so they do
-not get interpreted as NixOS hosts by easy-hosts.
-
-### Quick way (from any machine with mise)
+Or from the public repository:
 
 ```bash
-mise run add-host <hostname> [os] [arch] \
-  --user <username> \
-  --fullname "Full Name" \
-  --email user@example.com \
-  --github githubUsername
+curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/main/bootstrap.sh \
+  | bash -s -- --host "$(hostname -s)"
 ```
 
-`os` accepts `darwin|linux`; `arch` accepts `aarch64|x86_64`. Omitted values default to the current
-machine. Missing user metadata is inferred from the current user/git config or prompted for.
+Bootstrap installs mise and Nix/Lix when missing, applies the Nix system layer, then applies user state. The default clone target remains `RobertDeRose/nix-config`; Maison is the command and architecture name, not a required repository rename.
 
-### Manual way
+Before the first real switch on an existing machine:
 
-1. Copy a template directory:
-   ```bash
-   # macOS Apple Silicon
-   mkdir -p hosts/aarch64-darwin/<hostname>
-   cp templates/darwin/* hosts/aarch64-darwin/<hostname>/
+```bash
+maison check
+maison system plan
+maison user plan
+```
 
-   # Ubuntu ARM
-   mkdir -p systems/aarch64-linux/<hostname>
-   cp templates/linux/* systems/aarch64-linux/<hostname>/
-   ```
-2. Add `user.nix` in the host directory with `username`, `fullname`, `useremail`, and `githubUsername`.
-3. `git add -A && git commit`
-4. Run `./bootstrap.sh <hostname>` on the target machine.
+## Deployment safety
 
----
+`maison deploy <host>` requires a clean working tree. It creates a revision-stamped archive from `git archive`, so `.git`, ignored files, untracked files, local credentials, and dirty edits are never transferred.
 
-## Notes
+The remote repository replacement is a transaction:
 
-- **`flake.lock` is committed** — this pins all inputs for reproducible builds. Run `mise run nix:up` to update.
-- **Homebrew** is macOS-only. The init path installs it automatically on a fresh machine.
-- **Linux system config** is managed via [system-manager](https://github.com/numtide/system-manager) — packages, services, users, SSH, sudoers, hostname, locale, and timezone.
-- **Linux user config** is managed via home-manager in `home/linux.nix`.
-- Darwin host directories live under `hosts/<arch>-darwin/<hostname>/`.
-- Linux host directories live under `systems/<arch>-linux/<hostname>/`.
-- Optional per-host home-manager overrides can be added as `home.nix` inside a host directory.
-- Cross-platform CLI tools live in `home/common/core.nix`.
-- Platform-specific shell behavior in `home/common/shell.nix` is guarded with `pkgs.stdenv.isDarwin` or `pkgs.stdenv.isLinux`.
+1. Validate that `repo_path` is a normalized descendant of `/home/<managed-user>`.
+2. Extract into `<repo_path>.next.<pid>` and verify the expected Maison files.
+3. Move the old repository to `<repo_path>.previous` and write `<repo_path>.deploy-state`.
+4. Run `user:apply` as the managed user.
+5. Delete the previous repository only after success; otherwise restore it automatically.
 
-### Git Hooks (hk)
+Deploy-rs still owns the separate system-profile rollback boundary.
 
-- This repo uses [`hk`](https://hk.jdx.dev/) for pre-commit and pre-push checks.
-- `mise.toml` is the source of truth for hk tooling and environment (`HK_MISE=1`).
-- Hooks auto-install via mise postinstall (`hk install --mise`).
-- You can also install manually once per clone: `hk install --mise`.
-- `hk` configuration lives in `hk.pkl` and uses builtins for formatting, shell/yaml/workflow checks, and security checks.
+## Package convergence
 
----
+Configuration mutators stage and validate candidate files before replacing repository state. `tool:add`, `package:add`, `app:add`, and `host:add` leave the checked-in configuration unchanged when resolution, installation, or validation fails.
 
-## Learning Resources
+Docker Desktop can leave completion symlinks that predate mise's cask ownership record. During `user:apply`, Maison handles only that exact conflict: a symlink is removed only when it resolves to Docker.app's known completion source, after which package convergence is retried once. Unrelated files and unrelated cask failures remain errors.
 
-- [NixOS & Flakes Book](https://github.com/ryan4yin/nixos-and-flakes-book)
-- [flake-parts](https://flake.parts)
-- [easy-hosts](https://flake.parts/options/easy-hosts.html)
-- [nix-darwin options](https://daiderd.com/nix-darwin/manual/index.html)
-- [home-manager options](https://nix-community.github.io/home-manager/options.html)
-- [system-manager docs](https://system-manager.net/)
-- [mise tasks docs](https://mise.jdx.dev/tasks/)
+## Reproducibility boundary
+
+Nix inputs are pinned by `flake.lock`. Mise lockfiles preserve resolved user and contributor tool versions where metadata exists, but user configuration intentionally retains `latest` declarations and permits network resolution for missing entries. This is repeatable workstation convergence, not strict offline or byte-for-byte reproduction.
+
+Review the [architecture](docs/architecture.md), [deployment guide](docs/deployment.md), [migration contract](docs/migration-contract.md), and [recovery guide](docs/recovery.md) before deleting old generations or backups.

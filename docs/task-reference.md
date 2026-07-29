@@ -1,0 +1,49 @@
+# Task reference
+
+## Aggregate commands
+
+| Task | Behavior |
+| --- | --- |
+| `doctor` | Diagnose both ownership layers without mutation |
+| `plan` | Preview the Nix system layer, then the mise user layer |
+| `apply` | Apply Nix system state, then mise user state; system failure stops the sequence |
+| `update [input] [--check]` | Update flake inputs atomically; optionally run full validation |
+| `deploy <host>` | Deploy Linux system state, then transactionally stage source and converge remote user state |
+| `rollback` | Roll back only the Nix system generation |
+| `bootstrap` | Install or repair Nix, then converge both layers system-first |
+| `check` | Load `mise.dev.toml`, validate data and scripts, run behavioral tests, and build Nix checks |
+
+## System commands
+
+| Task | Behavior |
+| --- | --- |
+| `system:plan` | `nh darwin build` or build a system-manager closure |
+| `system:apply` | `nh darwin switch` or system-manager switch |
+| `system:deploy` | deploy-rs Linux system profile |
+| `system:history` | List canonical system-profile generations |
+| `system:rollback` | Select and activate the previous generation |
+| `system:clean [age]` | Remove old system generations and collect the store |
+
+## User commands
+
+| Task | Behavior |
+| --- | --- |
+| `user:plan` | Preview dotfile handoff, packages, tools, preferences, and lock links without mutation |
+| `user:apply` | Apply dotfiles, packages, tools, apps, and preferences; back up explicitly forced conflicts |
+| `user:status` | Report user-environment drift |
+| `user:update` | Show outdated mise tools, then upgrade those tools |
+| `package:update` | Upgrade configured Homebrew formulae |
+| `app:update` | Upgrade configured Homebrew casks and Mac App Store apps |
+
+## Configuration commands
+
+| Task | Behavior |
+| --- | --- |
+| `host:add` / `host:list` / `host:validate` | Manage inventory through the typed `tomllib` interface |
+| `tool:add` / `tool:remove` | Atomically edit global mise tool configuration and locks |
+| `package:add` / `package:remove` / `package:search` | Manage common or platform bootstrap packages transactionally |
+| `app:add` / `app:remove` | Manage Apple Silicon macOS casks transactionally |
+| `iterm:export` | Refresh the checked-in iTerm plist |
+| `docs:build` / `docs:serve` | Load the contributor environment and build or serve this book |
+
+Hidden `nix:*` tasks are compatibility aliases to the corresponding `system:*` tasks and contain no separate activation logic.

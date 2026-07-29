@@ -1,0 +1,102 @@
+# Architecture
+
+## Principle
+
+Maison separates configuration by privilege boundary:
+
+```text
+Nix/Lix system layer
+├── nix-darwin on Apple Silicon macOS
+├── system-manager on Linux
+├── nh for local Darwin builds and switches
+└── deploy-rs for remote Linux system profiles
+
+mise user layer
+├── tools and runtimes
+├── ordinary Homebrew formulae, casks, and MAS apps
+├── dotfiles and Tera templates
+├── current-user macOS defaults
+└── user services
+```
+
+The supported systems are `aarch64-darwin`, `aarch64-linux`, and `x86_64-linux`. Intel macOS is rejected by bootstrap, inventory validation, mise lock platforms, Nix outputs, and CI.
+
+## Nix system layer
+
+The flake exports `darwinConfigurations`, `systemConfigs`, and `deploy`.
+
+### macOS
+
+nix-darwin owns Nix/Lix daemon policy, primary-user registration, system shells, Apple Watch and Touch ID sudo, PAM, login-window policy, Caps Lock remapping, host identity, time zone, services, system-wide fonts, and OS-integrated installers such as FUSE-T.
+
+Ordinary applications and interactive CLI packages do not belong in `environment.systemPackages`.
+
+### Linux
+
+system-manager owns hostname, locale, time zone, managed users, sudoers, SSH daemon includes, root-owned Nix configuration, authorized-key refresh, and system services. The system closure also retains the minimal curl, Git, and tar prerequisites required before the mise user layer exists.
+
+`/nix/var/nix/profiles/system-manager-profiles/system-manager` is the canonical Linux system profile.
+
+Upstream system-manager Rust tests remain enabled. Maison no longer overrides `rustPlatform.buildRustPackage` to disable checks.
+
+## nh
+
+Darwin planning and activation use:
+
+```bash
+nh darwin build  . -H <host>
+nh darwin switch . -H <host>
+```
+
+Tasks fall back to `nix run .#nh` before the system profile has installed `nh`. Linux local activation remains a small adapter around the pinned system-manager CLI because `nh` does not currently expose a system-manager command.
+
+## deploy-rs
+
+Each deploy-enabled Linux inventory host becomes `deploy.nodes.<host>`. Its system profile:
+
+- Uses the canonical system-manager profile path.
+- Runs as root.
+- Activates the exact closure selected by deploy-rs through `$PROFILE/bin/activate` for normal and boot activation.
+- Supports a side-effect-free dry activation check.
+- Enables `autoRollback` and `magicRollback` from inventory.
+
+The local deploy-rs adapter uses the same `pkgs.deploy-rs` package for the CLI, remote activation binary, and matching JSON schema. CI builds the schema and activation checks instead of merely evaluating their derivation paths.
+
+## mise user layer
+
+The repository `mise.toml` contains only task discovery and dotfile declarations. The installed global configuration owns the Maison runtime tool (`usage`). Contributor tooling lives in `mise.dev.toml` and is loaded explicitly by `maison check`, documentation tasks, and CI.
+
+The installed global user configuration owns:
+
+- Cross-platform versioned tools in `config.toml`.
+- Cross-platform ordinary Homebrew formulae in `config.toml`.
+- macOS-only tools, including AI coding tools, in `config.macos.toml`.
+- Apple Silicon casks, MAS applications, and macOS-only formulae in `config.macos-arm64.toml`.
+- Linux-specific policy in `config.linux.toml`.
+- Current-user macOS preferences and environment variables.
+
+Application configuration remains in native formats under `dotfiles/`; Tera is used only where host, user, or platform interpolation is required.
+
+## macOS defaults boundary
+
+Mise may write current-user preference domains such as Dock, Finder, trackpad, screenshots, and application preferences. It must not own `sudo defaults` domains, `/Library/Preferences`, login-window policy, authentication policy, PAM, or host-scoped `defaults -currentHost` values.
+
+## Single ownership
+
+Package declarations merge across mise's configuration hierarchy, so common packages are declared once in `config.toml`. Platform files contain only platform-specific additions. A binary must not be declared simultaneously as a mise tool and a bootstrap package; for example, `bat` is owned only by `brew:bat`.
+
+## Inventory interface
+
+Shell tasks do not parse TOML with awk. `.mise/lib/inventory.py` uses Python's `tomllib` for validation and typed lookups, and Nix mirrors the core host and platform constraints before constructing outputs. In particular, remote repository paths must be normalized descendants of `/home/<managed-user>` and cannot be `/`, a home directory, or a path containing traversal segments.
+
+## Transaction boundaries
+
+```text
+maison apply
+  1. system:apply  (Nix generation semantics)
+  2. user:apply    (mise convergence semantics)
+```
+
+A failed system activation stops before user convergence. A failed user convergence leaves the active system generation in place.
+
+Remote deployment has an additional repository transaction around the user phase. The old repository is retained until `user:apply` succeeds and restored automatically on failure. Deploy-rs independently protects the Linux system profile.
