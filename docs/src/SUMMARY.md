@@ -19,7 +19,22 @@
 [Tooling Reference](./reference/tooling.md)
 [Planned Features](./planned-features.md)
   <!-- BEGIN FEATURE DESIGNS -->
-  <!-- Add planned feature design pages here, indented by two spaces. -->
+  - [MAISON-001: Root-owned deployment transaction state](./features/maison-001-root-owned-deployment-transactions/design.md)
+  - [MAISON-002: Revision-bound commit and rollback](./features/maison-002-revision-bound-commit-rollback/design.md)
+  - [MAISON-003: Restricted deployment privilege model](./features/maison-003-restricted-deployment-privilege/design.md)
+  - [MAISON-004: Private overlay configuration split](./features/maison-004-private-overlay-configuration/design.md)
+  - [MAISON-005: Verified bootstrap artifacts](./features/maison-005-verified-bootstrap-artifacts/design.md)
+  - [MAISON-006: Review-gated dependency updates](./features/maison-006-review-gated-dependency-updates/design.md)
+  - [MAISON-007: Parser-backed TOML mutations](./features/maison-007-parser-backed-toml-mutations/design.md)
+  - [MAISON-008: Repository mutation locking and journals](./features/maison-008-repository-mutation-locking/design.md)
+  - [MAISON-009: Authoring checkout guard](./features/maison-009-authoring-checkout-guard/design.md)
+  - [MAISON-010: Shared inventory schema validation](./features/maison-010-shared-inventory-schema/design.md)
+  - [MAISON-011: Bounded deterministic test suite](./features/maison-011-deterministic-test-suite/design.md)
+  - [MAISON-012: Plan/apply semantic parity](./features/maison-012-plan-apply-parity/design.md)
+  - [MAISON-013: Exact dotfile backup manifests](./features/maison-013-dotfile-backup-manifests/design.md)
+  - [MAISON-014: Remote convergence restoration](./features/maison-014-remote-convergence-restoration/design.md)
+  - [MAISON-015: Linux runtime activation verification](./features/maison-015-linux-runtime-verification/design.md)
+  - [MAISON-016: Pi TypeScript validation boundary](./features/maison-016-pi-typescript-validation/design.md)
   <!-- END FEATURE DESIGNS -->
 [Implemented Features](./features/index.md)
   <!-- BEGIN IMPLEMENTED FEATURES -->
