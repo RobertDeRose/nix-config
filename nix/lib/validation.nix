@@ -15,19 +15,19 @@ let
     value:
     builtins.isString value
     && builtins.match "[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?" value != null;
-  validRemoteHostname = value:
+  validRemoteHostname =
+    value:
     builtins.isString value
     && value != ""
     && builtins.stringLength value <= 253
     && !lib.hasSuffix "." value
     && lib.all validHostname (lib.splitString "." value);
-  validUsername = value:
-    builtins.isString value
-    && value != "root"
-    && builtins.match "[a-z_][a-z0-9_-]*" value != null;
-  validSshUsername = value:
-    builtins.isString value
-    && (value == "root" || builtins.match "[a-z_][a-z0-9_-]*" value != null);
+  validUsername =
+    value:
+    builtins.isString value && value != "root" && builtins.match "[a-z_][a-z0-9_-]*" value != null;
+  validSshUsername =
+    value:
+    builtins.isString value && (value == "root" || builtins.match "[a-z_][a-z0-9_-]*" value != null);
   validGithub =
     value:
     builtins.isString value

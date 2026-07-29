@@ -19,7 +19,8 @@ let
     }
     .${system} or (throw "nixfmt-rs is not locked for unsupported system ${system}");
   artifact = entry.${platformKey} or (throw "mise.dev.lock is missing nixfmt-rs ${platformKey}");
-  checksum = artifact.checksum or (throw "mise.dev.lock is missing the nixfmt-rs checksum for ${platformKey}");
+  checksum =
+    artifact.checksum or (throw "mise.dev.lock is missing the nixfmt-rs checksum for ${platformKey}");
 in
 assert lib.hasPrefix "sha256:" checksum;
 pkgs.stdenvNoCC.mkDerivation {
