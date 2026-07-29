@@ -31,6 +31,5 @@ jobs:
           install: false
       - name: Install tools and run linter
         run: |
-          mise plugin install nix https://github.com/jbadeau/mise-nix.git
-          mise install
-          hk check -a
+          mise -E dev install
+          mise -E dev exec -- hk check -a

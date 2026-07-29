@@ -1,0 +1,16 @@
+# Contributor-only validation, formatting, and documentation tools. Machine
+# convergence does not load this environment; use `mise -E dev install`.
+[tools]
+actionlint = "latest"
+"aqua:Mic92/nixfmt-rs" = "latest"
+hk = "latest"
+"github:rust-lang/mdBook" = "latest"
+shellcheck = "latest"
+shfmt = "latest"
+tombi = "latest"
+
+[env]
+HK_MISE = 1
+
+[hooks]
+postinstall = "command -v hk >/dev/null && hk install --mise || true"

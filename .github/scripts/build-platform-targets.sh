@@ -1,72 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SYSTEM="$1"
+SYSTEM="${1:?usage: build-platform-targets.sh <nix-system>}"
+REPO_ROOT="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+case "$SYSTEM" in
+  aarch64-darwin | aarch64-linux | x86_64-linux) ;;
+  *)
+    printf 'Unsupported system: %s\n' "$SYSTEM" >&2
+    exit 1
+    ;;
+esac
 
 build_target() {
   local target="$1"
-
-  echo "==> Building ${target}"
+  printf '==> Building %s\n' "$target"
   nix build --accept-flake-config --no-link "$target"
 }
 
-collect_hosts() {
-  local dir="$1"
-
-  if [ ! -d "$dir" ]; then
-    return 0
-  fi
-
-  for path in "$dir"/*; do
-    [ -d "$path" ] || continue
-    basename "$path"
-  done | sort
-}
-
-read_hosts() {
-  local dir="$1"
-  local host
-
-  hosts=()
-  while IFS= read -r host; do
-    [ -n "$host" ] || continue
-    hosts+=("$host")
-  done < <(collect_hosts "$dir")
-}
-
-read_user_field() {
-  local host_dir="$1"
-  local field="$2"
-  local user_file="$PWD/$host_dir/user.nix"
-
-  [ -f "$user_file" ] || return 1
-
-  nix eval --impure --raw --expr \
-    "let user = import (builtins.toPath \"$user_file\"); in user.${field}"
-}
-
 ensure_linux_user() {
-  local username="$1"
-  local fullname="$2"
-
-  if id -u "$username" > /dev/null 2>&1; then
-    return 0
-  fi
-
+  local username="$1" fullname="$2"
+  id -u "$username" > /dev/null 2>&1 && return 0
   sudo useradd --create-home --comment "$fullname" --shell /bin/bash "$username"
 }
 
 ensure_darwin_user() {
-  local username="$1"
-  local fullname="$2"
-  local next_uid
-
-  if id -u "$username" > /dev/null 2>&1; then
-    return 0
-  fi
-
+  local username="$1" fullname="$2" next_uid
+  id -u "$username" > /dev/null 2>&1 && return 0
   next_uid="$(dscl . -list /Users UniqueID | awk 'BEGIN { max = 500 } { if ($2 > max) max = $2 } END { print max + 1 }')"
-
   sudo dscl . -create "/Users/$username"
   sudo dscl . -create "/Users/$username" UserShell /bin/zsh
   sudo dscl . -create "/Users/$username" RealName "$fullname"
@@ -77,99 +39,51 @@ ensure_darwin_user() {
 }
 
 ensure_runner_user() {
-  local username="$1"
-  local fullname="$2"
-
-  [ -n "$username" ] || return 0
-
-  case "$(uname -s)" in
-    Darwin)
-      ensure_darwin_user "$username" "$fullname"
-      ;;
-
-    Linux)
-      ensure_linux_user "$username" "$fullname"
-      ;;
+  local username="$1" fullname="$2"
+  case "$SYSTEM" in
+    *-darwin) ensure_darwin_user "$username" "$fullname" ;;
+    *-linux) ensure_linux_user "$username" "$fullname" ;;
   esac
 }
 
-prepare_host_user() {
-  local host_dir="$1"
-  local username fullname
-
-  username="$(read_user_field "$host_dir" username 2> /dev/null || true)"
-  fullname="$(read_user_field "$host_dir" fullname 2> /dev/null || true)"
-
-  if [ -n "$username" ]; then
-    ensure_runner_user "$username" "${fullname:-$username}"
-  fi
+host_rows() {
+  python3 "$REPO_ROOT/.mise/lib/inventory.py" \
+    --file "$REPO_ROOT/inventory.toml" \
+    --repo-root "$REPO_ROOT" \
+    host-rows \
+    --system "$SYSTEM"
 }
 
-generate_host() {
-  local os hostname user fullname email github_username host_dir
-
-  os="${SYSTEM#*-}"
-  hostname="cache-refresh-${SYSTEM//_/-}"
-  user="$(whoami)"
-  fullname="${CACHE_REFRESH_FULLNAME:-CI User}"
-  email="${CACHE_REFRESH_EMAIL:-ci@localhost}"
-  github_username="${CACHE_REFRESH_GITHUB_USERNAME:-RobertDeRose}"
-  host_dir="$([ "$os" = "darwin" ] && printf 'hosts/%s/%s' "$SYSTEM" "$hostname" || printf 'systems/%s/%s' "$SYSTEM" "$hostname")"
-
-  echo "No hosts found for ${SYSTEM}; generating ${hostname}" >&2
-
-  mkdir -p "$host_dir"
-  cp -R "templates/${os}/." "$host_dir/"
-
-  cat > "$host_dir/user.nix" << EOF
-{
-  username = "$user";
-  fullname = "$fullname";
-  useremail = "$email";
-  githubUsername = "$github_username";
-}
-EOF
-
-  git add "$host_dir"
-
-  printf '%s\n' "$hostname"
+attribute_names() {
+  nix eval --accept-flake-config --json "$1" --apply builtins.attrNames \
+    | python3 -c 'import json, sys; print("\n".join(json.load(sys.stdin)))'
 }
 
-case "$SYSTEM" in
-  aarch64-darwin | x86_64-darwin | aarch64-linux | x86_64-linux)
-    ;;
+while IFS= read -r package; do
+  [ -n "$package" ] || continue
+  build_target ".#packages.\"$SYSTEM\".\"$package\""
+done < <(attribute_names ".#packages.\"$SYSTEM\"")
 
-  *)
-    echo "Unsupported system: $SYSTEM" >&2
-    exit 1
-    ;;
-esac
+while IFS= read -r check; do
+  [ -n "$check" ] || continue
+  build_target ".#checks.\"$SYSTEM\".\"$check\""
+done < <(attribute_names ".#checks.\"$SYSTEM\"")
 
-case "$SYSTEM" in
-  aarch64-darwin | x86_64-darwin)
-    read_hosts "hosts/$SYSTEM"
+found=false
+while IFS=$'\t' read -r host username fullname; do
+  [ -n "$host" ] || continue
+  found=true
+  ensure_runner_user "$username" "$fullname"
+  case "$SYSTEM" in
+    *-darwin)
+      build_target ".#darwinConfigurations.\"$host\".system"
+      ;;
+    *-linux)
+      build_target ".#systemConfigs.\"$host\""
+      ;;
+  esac
+done < <(host_rows)
 
-    if [ "${#hosts[@]}" -eq 0 ]; then
-      hosts=("$(generate_host)")
-    fi
-
-    for host in "${hosts[@]}"; do
-      prepare_host_user "hosts/$SYSTEM/$host"
-      build_target ".#darwinConfigurations.\"${host}\".system"
-    done
-    ;;
-
-  aarch64-linux | x86_64-linux)
-    read_hosts "systems/$SYSTEM"
-
-    if [ "${#hosts[@]}" -eq 0 ]; then
-      hosts=("$(generate_host)")
-    fi
-
-    for host in "${hosts[@]}"; do
-      prepare_host_user "systems/$SYSTEM/$host"
-      build_target ".#systemConfigs.\"${host}\""
-      build_target ".#homeConfigurations.\"${host}\".activationPackage"
-    done
-    ;;
-esac
+if [ "$found" = false ]; then
+  printf '==> No inventory hosts target %s; package outputs were still validated.\n' "$SYSTEM"
+fi
