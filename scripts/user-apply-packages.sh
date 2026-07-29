@@ -11,9 +11,16 @@ handoff_pending=false
 run_packages() {
   local output_file="$1"
   shift
+
+  # Capture mise's structured log without piping stderr. mise only permits
+  # passworded sudo when stderr is attached to a terminal; piping through tee
+  # made an interactive `maison apply` appear non-interactive precisely when a
+  # cask needed to update a root-owned artifact such as /usr/local/bin/docker.
+  : > "$output_file"
   set +e
-  mise bootstrap packages apply --yes "$@" 2>&1 | tee "$output_file"
-  local status="${PIPESTATUS[0]}"
+  MISE_LOG_FILE="$output_file" MISE_LOG_FILE_LEVEL=info \
+    mise bootstrap packages apply --yes "$@"
+  local status=$?
   set -e
   return "$status"
 }
@@ -110,7 +117,6 @@ if grep -Fq "not owned by cask 'docker-desktop'" "$output_file" &&
   grep -Fq "completion target '" "$output_file" &&
   reconcile_docker_completion_links; then
   handoff_pending=true
-  : > "$output_file"
   printf 'maison: retrying package convergence after Docker Desktop completion handoff\n' >&2
   if run_packages "$output_file" "$@"; then
     handoff_pending=false
