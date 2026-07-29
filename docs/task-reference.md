@@ -8,7 +8,7 @@
 | `plan` | Preview the Nix system layer, then the mise user layer |
 | `apply` | Apply Nix system state, then mise user state; system failure stops the sequence |
 | `update [input] [--check]` | Update flake inputs atomically; optionally run full validation |
-| `deploy <host>` | Deploy Linux system state, then transactionally stage source and converge remote user state |
+| `deploy <host>` | Deploy Linux system state, then stage source through a root-owned repository transaction and converge remote user state |
 | `rollback` | Roll back only the Nix system generation |
 | `bootstrap` | Install or repair Nix, then converge both layers system-first |
 | `check` | Load `mise.dev.toml`, validate data and scripts, run behavioral tests, and build Nix checks |

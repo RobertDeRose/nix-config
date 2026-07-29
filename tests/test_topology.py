@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import pty
@@ -491,9 +492,14 @@ class DeploymentContractTest(unittest.TestCase):
                 "MAISON_MANAGED_HOME": str(home),
                 "MAISON_TEST_REAL_MV": real_mv,
                 "MAISON_TEST_REAL_TAR": real_tar,
+                "MAISON_TRANSACTION_EXPECTED_OWNER_UID": str(os.getuid()),
             }
         )
         return user, env
+
+    def transaction_namespace(self, repo: Path, user: str, home: Path) -> Path:
+        digest = hashlib.sha256(str(repo).encode()).hexdigest()[:16]
+        return home.parent / ".maison-deploy" / "transactions" / user / digest
 
     def test_deploy_rs_activates_exact_system_manager_profile(self) -> None:
         deployment = read("nix/lib/deployments.nix")
@@ -545,9 +551,9 @@ class DeploymentContractTest(unittest.TestCase):
     def test_deploy_is_two_explicit_transactions(self) -> None:
         script = read(".mise/tasks/deploy")
         self.assertIn("scripts/create-deploy-archive.sh", script)
-        self.assertIn("scripts/deploy-repository.sh", script)
-        self.assertIn("scripts/finalize-deploy-repository.sh", script)
+        self.assertIn("scripts/maison_deploy_transaction.py", script)
         self.assertIn("mktemp /tmp/maison-deploy.XXXXXX.tar.gz", script)
+        self.assertIn("mktemp /tmp/maison-deploy-helper.XXXXXX.py", script)
         self.assertNotIn("maison-deploy-${host}-$$", script)
         self.assertIn("mise run system:deploy", script)
         self.assertIn("mise run user:apply", script)
@@ -593,13 +599,8 @@ class DeploymentContractTest(unittest.TestCase):
     def test_repository_stage_rolls_back_and_commits(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             temp = Path(directory)
-            physical_root = temp / "private"
-            physical_root.mkdir()
-            alias_root = temp / "var"
-            alias_root.symlink_to(physical_root, target_is_directory=True)
-            home = alias_root / "home"
+            home = temp / "home"
             home.mkdir()
-            self.assertNotEqual(home, home.resolve())
             user, env = self.deployment_environment(temp, home)
             repo = home / ".maison"
             repo.mkdir()
@@ -623,15 +624,20 @@ class DeploymentContractTest(unittest.TestCase):
                 env=env,
                 check=True,
             )
+            namespace = self.transaction_namespace(repo, user, home)
             self.assertEqual((repo / ".maison-revision").read_text().strip(), revision_one)
-            self.assertTrue((Path(f"{repo}.previous") / "old-marker").exists())
+            active = namespace / "active.json"
+            record = json.loads(active.read_text())
+            self.assertTrue((Path(record["rollback_dir"]) / "old-marker").exists())
+            self.assertTrue(Path(record["journal_path"]).exists())
+            self.assertTrue((namespace / "transaction.lock").exists())
             subprocess.run(
                 [str(ROOT / "scripts/finalize-deploy-repository.sh"), str(repo), user, "rollback"],
                 env=env,
                 check=True,
             )
             self.assertTrue((repo / "old-marker").exists())
-            self.assertFalse(Path(f"{repo}.deploy-state").exists())
+            self.assertFalse(active.exists())
 
             archive = temp / "two.tar.gz"
             revision_two = "2" * 40
@@ -647,8 +653,7 @@ class DeploymentContractTest(unittest.TestCase):
                 check=True,
             )
             self.assertEqual((repo / ".maison-revision").read_text().strip(), revision_two)
-            self.assertFalse(Path(f"{repo}.previous").exists())
-            self.assertFalse(Path(f"{repo}.deploy-state").exists())
+            self.assertFalse((namespace / "active.json").exists())
 
             unsafe = subprocess.run(
                 [str(ROOT / "scripts/deploy-repository.sh"), str(temp / "outside"), user, str(temp / "missing")],
@@ -679,6 +684,67 @@ class DeploymentContractTest(unittest.TestCase):
             self.assertNotEqual(symlink_archive.returncode, 0)
             self.assertIn("regular non-symlink", symlink_archive.stderr)
 
+    def test_repository_stage_restores_active_repo_when_archive_is_invalid(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            home = temp / "home"
+            home.mkdir()
+            user, env = self.deployment_environment(temp, home)
+            repo = home / ".maison"
+            repo.mkdir()
+            (repo / "old-marker").write_text("old\n")
+            source = temp / "invalid-source"
+            source.mkdir()
+            (source / "mise.toml").write_text("[settings]\n")
+            (source / ".maison-revision").write_text(f"{'4' * 40}\n")
+            archive = temp / "invalid.tar.gz"
+            with tarfile.open(archive, "w:gz") as bundle:
+                for child in source.iterdir():
+                    bundle.add(child, arcname=child.name)
+
+            failed = subprocess.run(
+                [str(ROOT / "scripts/deploy-repository.sh"), str(repo), user, str(archive)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+
+            namespace = self.transaction_namespace(repo, user, home)
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertIn("missing regular file flake.nix", failed.stderr)
+            self.assertTrue((repo / "old-marker").exists())
+            self.assertFalse((namespace / "active.json").exists())
+
+    def test_repository_stage_rejects_symlink_archive_members(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            home = temp / "home"
+            home.mkdir()
+            user, env = self.deployment_environment(temp, home)
+            repo = home / ".maison"
+            source = temp / "source"
+            source.mkdir()
+            (source / "mise.toml").write_text("[settings]\n")
+            (source / "flake.nix").write_text("{}\n")
+            (source / ".maison-revision").write_text(f"{'5' * 40}\n")
+            (source / "link").symlink_to("mise.toml")
+            archive = temp / "symlink-member.tar.gz"
+            with tarfile.open(archive, "w:gz") as bundle:
+                for child in source.iterdir():
+                    bundle.add(child, arcname=child.name)
+
+            failed = subprocess.run(
+                [str(ROOT / "scripts/deploy-repository.sh"), str(repo), user, str(archive)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+
+            namespace = self.transaction_namespace(repo, user, home)
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertIn("unsupported type: link", failed.stderr)
+            self.assertFalse(repo.exists())
+            self.assertFalse((namespace / "active.json").exists())
 
     def test_finalize_never_deletes_active_repo_when_previous_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -706,7 +772,10 @@ class DeploymentContractTest(unittest.TestCase):
                 env=env,
                 check=True,
             )
-            shutil.rmtree(Path(f"{repo}.previous"))
+            namespace = self.transaction_namespace(repo, user, home)
+            active = namespace / "active.json"
+            record = json.loads(active.read_text())
+            shutil.rmtree(Path(record["rollback_dir"]))
             failed = subprocess.run(
                 [str(ROOT / "scripts/finalize-deploy-repository.sh"), str(repo), user, "rollback"],
                 env=env,
@@ -716,7 +785,7 @@ class DeploymentContractTest(unittest.TestCase):
             self.assertNotEqual(failed.returncode, 0)
             self.assertIn("previous repository is missing or unsafe", failed.stderr)
             self.assertEqual((repo / ".maison-revision").read_text().strip(), revision)
-            self.assertTrue(Path(f"{repo}.deploy-state").exists())
+            self.assertTrue(active.exists())
 
 
 

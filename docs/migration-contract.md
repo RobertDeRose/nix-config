@@ -30,7 +30,7 @@ This document records where behavior moved before Home Manager and bespoke deplo
 | FUSE-T filesystem integration | nix-darwin plus minimal nix-homebrew module | Mount and SSHFS integration test |
 | Home Manager generations | Removed | No `homeConfigurations` or Home Manager input |
 | Linux user activation after deploy | remote `mise run user:apply`; system closure retains curl/Git/tar prerequisites | Separate user convergence result |
-| Remote repository replacement | committed-only revision archive with `.deploy-state` and automatic `.previous` rollback | Failed user convergence restores the prior repository |
+| Remote repository replacement | committed-only revision archive with root-owned same-filesystem transaction state | Failed user convergence restores the prior repository |
 | Linux “rollback” by deactivation | Real profile rollback plus activation | Generation A/B rollback test |
 
 ## Required staged verification
@@ -51,7 +51,7 @@ Do not delete these until the new topology has been used successfully:
 
 - `/etc/nix/nix.conf.before-nix-darwin`
 - `/etc/nix/nix.custom.conf.before-nix-darwin`
-- `<remote repo>.previous`
+- Incomplete root-owned Maison transaction rollback trees under `/home/.maison-deploy/transactions/`
 - `~/.local/state/maison/backups/git/*`
 - `~/.local/state/maison/backups/dotfiles/*`
 - `~/.local/state/maison/backups/pi/*`

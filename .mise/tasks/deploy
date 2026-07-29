@@ -16,15 +16,22 @@ require_inventory_host "$root" "$host"
 
 archive=""
 remote_archive=""
+remote_helper=""
 hostname=""
 ssh_user=""
 cleanup() {
   local status=$?
   trap - EXIT HUP INT TERM
   [ -z "$archive" ] || rm -f "$archive"
-  if [ -n "$remote_archive" ] && [ -n "$hostname" ] && [ -n "$ssh_user" ]; then
-    quoted_cleanup="$(printf '%q' "$remote_archive")"
-    # shellcheck disable=SC2029 # validated mktemp path is shell-escaped above
+  cleanup_paths=()
+  [ -z "$remote_archive" ] || cleanup_paths+=("$remote_archive")
+  [ -z "$remote_helper" ] || cleanup_paths+=("$remote_helper")
+  if [ "${#cleanup_paths[@]}" -gt 0 ] && [ -n "$hostname" ] && [ -n "$ssh_user" ]; then
+    quoted_cleanup=""
+    for cleanup_path in "${cleanup_paths[@]}"; do
+      quoted_cleanup+=" $(printf '%q' "$cleanup_path")"
+    done
+    # shellcheck disable=SC2029 # validated mktemp paths are shell-escaped above
     ssh "$ssh_user@$hostname" "rm -f -- $quoted_cleanup" >/dev/null 2>&1 || true
   fi
   exit "$status"
@@ -49,19 +56,24 @@ repo_path="$(inventory_deploy_repo_path "$root" "$host")"
 remote_archive="$(ssh "$ssh_user@$hostname" 'umask 077; mktemp /tmp/maison-deploy.XXXXXX.tar.gz')"
 [[ "$remote_archive" =~ ^/tmp/maison-deploy\.[A-Za-z0-9]+\.tar\.gz$ ]] ||
   die "remote mktemp returned an unsafe archive path: $remote_archive"
+remote_helper="$(ssh "$ssh_user@$hostname" 'umask 077; mktemp /tmp/maison-deploy-helper.XXXXXX.py')"
+[[ "$remote_helper" =~ ^/tmp/maison-deploy-helper\.[A-Za-z0-9]+\.py$ ]] ||
+  die "remote mktemp returned an unsafe helper path: $remote_helper"
 
 quoted_archive="$(printf '%q' "$remote_archive")"
-# shellcheck disable=SC2029 # destination is shell-escaped above
+quoted_helper="$(printf '%q' "$remote_helper")"
+# shellcheck disable=SC2029 # destinations are shell-escaped above
 ssh "$ssh_user@$hostname" "cat > $quoted_archive" <"$archive"
+# shellcheck disable=SC2029 # destinations are shell-escaped above
+ssh "$ssh_user@$hostname" "cat > $quoted_helper" <"$root/scripts/maison_deploy_transaction.py"
 
 quoted_repo="$(printf '%q' "$repo_path")"
 quoted_user="$(printf '%q' "$user")"
 quoted_remote_archive="$(printf '%q' "$remote_archive")"
 # shellcheck disable=SC2029 # all arguments are shell-escaped above
 ssh "$ssh_user@$hostname" \
-  "sh -s -- $quoted_repo $quoted_user $quoted_remote_archive" \
-  <"$root/scripts/deploy-repository.sh"
-# The staging script removes the remote archive after extracting it. Avoid a
+  "python3 $quoted_helper stage $quoted_repo $quoted_user $quoted_remote_archive"
+# The staging helper removes the remote archive after extracting it. Avoid a
 # second SSH cleanup attempt on every successful deployment.
 remote_archive=""
 
@@ -96,10 +108,9 @@ fi
 quoted_action="$(printf '%q' "$action")"
 # shellcheck disable=SC2029 # all arguments are shell-escaped above
 if ! ssh "$ssh_user@$hostname" \
-  "sh -s -- $quoted_repo $quoted_user $quoted_action" \
-  <"$root/scripts/finalize-deploy-repository.sh"; then
+  "python3 $quoted_helper finalize $quoted_repo $quoted_user $quoted_action"; then
   if [ "$action" = rollback ]; then
-    printf 'error: remote user convergence failed and repository rollback also failed; inspect %s.deploy-state\n' "$repo_path" >&2
+    printf 'error: remote user convergence failed and repository rollback also failed; inspect the root-owned Maison transaction state for %s\n' "$repo_path" >&2
   else
     printf 'error: remote convergence succeeded but repository transaction cleanup failed; the previous repository remains recoverable\n' >&2
   fi
