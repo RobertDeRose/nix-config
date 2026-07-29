@@ -1,4 +1,5 @@
 #!/usr/bin/env -S usage bash
+# shellcheck shell=bash
 # Maison is the location-independent command interface to the repository's mise tasks.
 #
 #USAGE about "Put your workstation in order."
