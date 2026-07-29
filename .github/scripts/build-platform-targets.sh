@@ -55,8 +55,8 @@ host_rows() {
 }
 
 attribute_names() {
-  nix eval --accept-flake-config --json "$1" --apply builtins.attrNames \
-    | python3 -c 'import json, sys; print("\n".join(json.load(sys.stdin)))'
+  nix eval --accept-flake-config --json "$1" --apply builtins.attrNames |
+    python3 -c 'import json, sys; print("\n".join(json.load(sys.stdin)))'
 }
 
 while IFS= read -r package; do

@@ -17,7 +17,7 @@ if [[ -n ${MANPATH:-} ]]; then
   manpath=($default_manpath $extra_manpath)
 fi
 
-if command -v direnv >/dev/null 2>&1; then
+if command -v direnv > /dev/null 2>&1; then
   eval "$(direnv hook zsh)"
 fi
 

@@ -14,13 +14,13 @@ if [ -e "$old_extension" ]; then
   mv "$old_extension" "$HOME/.local/state/maison/backups/pi/interface-overlays.ts.$timestamp"
 fi
 mkdir -p "$(dirname "$settings")"
-[ -s "$settings" ] || printf '{}\n' >"$settings"
-if command -v jq >/dev/null 2>&1; then
+[ -s "$settings" ] || printf '{}\n' > "$settings"
+if command -v jq > /dev/null 2>&1; then
   tmp="$(mktemp)"
   if jq --slurpfile defaults "$defaults" '
     . * $defaults[0]
     | .packages = (((.packages // []) + ($defaults[0].packages // [])) | unique)
-  ' "$settings" >"$tmp"; then
+  ' "$settings" > "$tmp"; then
     mv "$tmp" "$settings"
     chmod 600 "$settings"
   else
@@ -31,7 +31,7 @@ fi
 
 # Keep the repository CLI and its Usage runtime location-independent.
 ln -sfn "$root/bin/maison" "$HOME/.local/bin/maison"
-usage_bin="$(mise -C "$root" which usage 2>/dev/null || true)"
+usage_bin="$(mise -C "$root" which usage 2> /dev/null || true)"
 if [ -x "$usage_bin" ]; then
   ln -sfn "$usage_bin" "$HOME/.local/bin/usage"
 fi

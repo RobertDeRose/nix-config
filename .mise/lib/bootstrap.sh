@@ -62,7 +62,6 @@ sandbox = false"
   verify_nix || die "Nix/Lix installation completed but the nix command is not functional"
 }
 
-
 ensure_github_auth() {
   local token=""
   token="$(mise token github --raw 2> /dev/null || true)"

@@ -41,7 +41,7 @@ y() {
   local tmp cwd
   tmp="$(mktemp -t yazi-cwd.XXXXXX)" || return
   command yazi "$@" --cwd-file="$tmp"
-  cwd="$(cat -- "$tmp" 2>/dev/null)"
+  cwd="$(cat -- "$tmp" 2> /dev/null)"
   if [[ -n $cwd && $cwd != $PWD ]]; then
     builtin cd -- "$cwd" || return
   fi
