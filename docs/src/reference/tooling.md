@@ -67,7 +67,7 @@ configured.
 | `docs:deployment:enable` | Configure Pages and enable its repository gate through external `gh`. |
 | `docs:serve`             | Serve mdBook on port 3000 by default or a supplied port.              |
 
-The committed lock targets `linux-x64`, `linux-arm64`, `macos-x64`, and `macos-arm64`. Windows is not part of this
+The committed lock targets `linux-x64`, `linux-arm64`, and `macos-arm64`. Intel macOS and Windows are not part of this
 POSIX-shell task contract.
 
 The mise environment routes hooks through mise with `HK_MISE=1` and sets `GIT_CONFIG_PARAMETERS="'merge.ff=only'"`, so

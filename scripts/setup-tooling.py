@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 
-PLATFORMS = ("linux-x64", "linux-arm64", "macos-x64", "macos-arm64")
+PLATFORMS = ("linux-x64", "linux-arm64", "macos-arm64")
 LOCK_COMMAND = ["mise", "-E", "dev", "lock", "--yes", "--platform", ",".join(PLATFORMS)]
 INSTALL_COMMAND = ["mise", "-E", "dev", "install", "--locked"]
 HOOK_COMMAND = ["mise", "-E", "dev", "x", "--", "hk", "install", "--mise"]
