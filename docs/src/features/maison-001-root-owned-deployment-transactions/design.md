@@ -69,7 +69,11 @@ reader documentation under `docs/` describes the target operations and must be r
 
 ## Proposed Design
 
-Replace `<repo>.next.<pid>`, `<repo>.previous`, and `<repo>.deploy-state` with a root-owned transaction manager implemented in tested Python stdlib code. Mise task files may invoke that Python task implementation directly. The manager allocates a random transaction directory, writes a journal before each irreversible step, validates path ownership with directory-file-descriptor based no-follow checks where available, and exposes a narrow command surface for stage, finalize, abort, and recover.
+Replace `<repo>.next.<pid>`, `<repo>.previous`, and `<repo>.deploy-state` with a root-owned transaction manager implemented in tested Python stdlib code. Mise task files may invoke that Python task implementation directly.
+
+The transaction manager uses a root-owned transaction root on the same filesystem as the destination repository. For the default `/home/<managed-user>/.maison` repository path, the default transaction root is a root-owned sibling namespace under `/home`, not under `/home/<managed-user>`, for example `/home/.maison-deploy/transactions/<managed-user>/<repo-hash>/`. If no same-filesystem transaction root exists outside a managed-user-writable ancestor, deployment fails with an actionable error rather than falling back to managed-user-controlled state. A later private overlay may configure an equivalent root-owned transaction root, but the configured path must pass the same same-filesystem, ownership, permission, and no-follow validation.
+
+Each transaction allocates an unpredictable ID beneath that transaction root, creates staging and rollback directories there, writes an explicit journal before each irreversible step, and validates path ownership with directory-file-descriptor based no-follow checks where available. The command surface is limited to stage, finalize, abort, and inspect-incomplete. Revision-bound startup recovery and non-destructive rollback semantics are owned by MAISON-002; this feature only establishes the root-owned state boundary and journal foundation.
 
 ## Architecture Consistency
 
@@ -106,11 +110,11 @@ and external package-manager side effects when those concerns apply.
 
 | Exact page | Create or update | Planned change | Owning Beads task |
 |------------|------------------|----------------|-------------------|
-| README.md | Update | Align reader-facing contract with MAISON-001: Root-owned deployment transaction state | Implementation tasks |
-| docs/deployment.md | Update | Align reader-facing contract with MAISON-001: Root-owned deployment transaction state | Implementation tasks |
-| docs/recovery.md | Update | Align reader-facing contract with MAISON-001: Root-owned deployment transaction state | Implementation tasks |
-| docs/architecture.md | Update | Align reader-facing contract with MAISON-001: Root-owned deployment transaction state | Implementation tasks |
-| docs/task-reference.md | Update | Align reader-facing contract with MAISON-001: Root-owned deployment transaction state | Implementation tasks |
+| README.md | Update | Replace managed-user-controlled transaction path claims with the root-owned transaction-root contract | `transaction-contract`, `transaction-engine` |
+| docs/deployment.md | Update | Document transaction-root placement, validation, journals, locks, staging, and finalization command behavior | `transaction-contract`, `transaction-engine` |
+| docs/recovery.md | Update | Document how to inspect incomplete root-owned transaction journals and where rollback state lives | `transaction-contract`, `transaction-engine` |
+| docs/architecture.md | Update | Record the privileged repository transaction boundary and ownership invariant | `transaction-contract` |
+| docs/task-reference.md | Update | Summarize the deploy task's root-owned repository transaction behavior | `transaction-engine` |
 | `docs/src/features/maison-001-root-owned-deployment-transactions/index.md` | Create during close-out | Preserve delivery and audit history | Close-out documentation |
 | `docs/src/planned-features.md` | Update | Track roadmap status and Beads root | Planning |
 | `docs/src/SUMMARY.md` | Update | Register this design and delivered record links | Planning / close-out |
@@ -124,14 +128,14 @@ and external package-manager side effects when those concerns apply.
 
 ## Implementation Decomposition
 
-- `maison-001-root-owned-deployment-transactions transaction-contract` — Add root-owned transaction contract and tamper tests.
-- `maison-001-root-owned-deployment-transactions transaction-engine` — Implement root-owned transaction staging and journals.
+- `maison-001-root-owned-deployment-transactions transaction-contract` — Add root-owned transaction contract, documentation contract, and tamper tests. This task owns the failing tests and reader-facing contract for transaction-root placement, same-filesystem enforcement, no-follow rejection, ownership validation, journals, and locks.
+- `maison-001-root-owned-deployment-transactions transaction-engine` — Implement root-owned transaction staging and journals after the contract task. This task owns the production implementation and updates task-reference/deployment details that depend on the implemented command surface.
 
 ## Dependencies and Parallelism
 
-This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. Sibling
-implementation tasks may run in parallel only when they do not edit the same command path, test file, or documentation
-page.
+This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. The
+`transaction-engine` task depends on `transaction-contract` so tests and documentation contract land before production
+implementation. No implementation task may run until `spec-reconcile` closes.
 
 ## Rollout and Migration
 
