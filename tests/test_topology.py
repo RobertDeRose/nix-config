@@ -35,19 +35,76 @@ def copy_files(destination: Path, *names: str) -> None:
         shutil.copy2(source, target)
 
 
+def fixture_git_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    return env
+
+
 def git_init(path: Path) -> None:
-    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=path, check=True)
-    subprocess.run(["git", "config", "user.name", "Maison Tests"], cwd=path, check=True)
-    subprocess.run(["git", "config", "user.email", "tests@example.invalid"], cwd=path, check=True)
+    env = fixture_git_env()
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=path, env=env, check=True)
+    subprocess.run(
+        ["git", "config", "user.name", "Maison Tests"], cwd=path, env=env, check=True
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "tests@example.invalid"], cwd=path, env=env, check=True
+    )
+    subprocess.run(
+        ["git", "config", "commit.gpgSign", "false"], cwd=path, env=env, check=True
+    )
 
 
 def git_commit_all(path: Path, message: str = "fixture") -> str:
-    subprocess.run(["git", "add", "-A"], cwd=path, check=True)
-    subprocess.run(["git", "commit", "-q", "-m", message], cwd=path, check=True)
-    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=path, text=True).strip()
+    env = fixture_git_env()
+    subprocess.run(["git", "add", "-A"], cwd=path, env=env, check=True)
+    subprocess.run(
+        ["git", "commit", "--no-gpg-sign", "-q", "-m", message],
+        cwd=path,
+        env=env,
+        check=True,
+    )
+    return subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=path, env=env, text=True
+    ).strip()
 
 
 class DataFilesTest(unittest.TestCase):
+    def test_git_fixtures_ignore_global_commit_signing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            hostile_config = root / "hostile-gitconfig"
+            hostile_config.write_text(
+                textwrap.dedent(
+                    """\
+                    [commit]
+                        gpgSign = true
+                    [gpg]
+                        format = ssh
+                    [user]
+                        signingKey = /definitely/missing/test-signing-key.pub
+                    """
+                )
+            )
+            previous = os.environ.get("GIT_CONFIG_GLOBAL")
+            os.environ["GIT_CONFIG_GLOBAL"] = str(hostile_config)
+            try:
+                repo = root / "repo"
+                repo.mkdir()
+                git_init(repo)
+                (repo / "first").write_text("first\n")
+                first = git_commit_all(repo, "first")
+                (repo / "second").write_text("second\n")
+                second = git_commit_all(repo, "second")
+            finally:
+                if previous is None:
+                    os.environ.pop("GIT_CONFIG_GLOBAL", None)
+                else:
+                    os.environ["GIT_CONFIG_GLOBAL"] = previous
+
+            self.assertNotEqual(first, second)
+
     def test_toml_files_and_lockfiles_parse(self) -> None:
         paths = sorted(ROOT.glob("*.toml")) + sorted((ROOT / "config/mise").glob("*.toml"))
         paths += [path for path in (ROOT / "mise.lock", ROOT / "mise.dev.lock") if path.exists()]
