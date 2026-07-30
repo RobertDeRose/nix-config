@@ -98,7 +98,7 @@ prepare_docker_privileges() {
   # prompt is visible and the subsequent artifact transaction uses sudo's
   # credential cache instead of appearing to hang behind the progress UI.
   [ -t 2 ] || return 0
-  command -v "$sudo_bin" >/dev/null 2>&1 || return 0
+  command -v "$sudo_bin" > /dev/null 2>&1 || return 0
   printf 'maison: Docker Desktop needs administrator access for /usr/local/bin links\n' >&2
   "$sudo_bin" -v
 }

@@ -89,7 +89,7 @@ archive_backup_application_bundles() {
 
     mv "$temporary" "$archive"
     if [ -x "$lsregister_bin" ]; then
-      if ! "$lsregister_bin" -u "$app" >/dev/null 2>&1; then
+      if ! "$lsregister_bin" -u "$app" > /dev/null 2>&1; then
         printf 'warning: failed to unregister backed-up application %s\n' "$app" >&2
       fi
     fi
