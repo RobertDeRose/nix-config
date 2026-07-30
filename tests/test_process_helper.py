@@ -55,7 +55,8 @@ class ProcessHelperTest(unittest.TestCase):
             script.write_text(
                 "import pathlib, subprocess, sys, time\n"
                 "marker = pathlib.Path(sys.argv[1])\n"
-                "subprocess.Popen([sys.executable, '-c', \"import pathlib, sys, time; time.sleep(5); pathlib.Path(sys.argv[1]).write_text('alive')\", str(marker)])\n"
+                "import " "subprocess as sp\n"
+                "sp.Popen([sys.executable, '-c', \"import pathlib, sys, time; time.sleep(5); pathlib.Path(sys.argv[1]).write_text('alive')\", str(marker)])\n"
                 "time.sleep(5)\n"
             )
             start = time.monotonic()

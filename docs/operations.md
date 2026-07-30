@@ -51,10 +51,15 @@ maison system history
 ```bash
 maison check
 mise install
+mise run check:tests
 mise exec -- hk check
 ```
 
-Repository development tools are owned by the checkout `mise.toml`; normal user convergence does not install them from the global user config.
+Repository development tools are owned by the checkout `mise.toml`; normal user convergence does not install them from
+the global user config. The Python regression suite is split by subsystem and uses bounded subprocess helpers, so full
+`check:tests` runs are deterministic and expected to complete within five minutes on a warm supported development
+checkout. Contributors can run focused `python3 -m unittest -v tests.test_<subsystem>` commands while editing one area,
+then run `mise -E dev run check` before committing broad validation changes.
 
 Run authoring commands from a Git checkout of the public Maison repository or the private overlay repository being
 edited. Deployed snapshots contain `.maison-revision` but not `.git`; they are for runtime apply, plan, status,

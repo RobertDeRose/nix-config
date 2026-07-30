@@ -62,7 +62,8 @@ configured.
 
 | Task                     | Behavior                                                              |
 |--------------------------|-----------------------------------------------------------------------|
-| `check`                  | Run all hk checks without requesting fixes.                           |
+| `check`                  | Install repository tools, then run data, shell, Python test, and Nix checks. |
+| `check:tests`            | Run bounded Python `unittest` discovery across `tests/test_*.py`.     |
 | `fix`                    | Apply deterministic hk fixes to the working tree.                     |
 | `docs:check`             | Build the book, then validate documentation metadata and navigation.  |
 | `docs:build`             | Build the mdBook site.                                                |
@@ -75,6 +76,12 @@ POSIX-shell task contract.
 Inventory validation fixtures live under `tests/fixtures/inventory/` and are consumed by both Python tests and Nix
 evaluation checks. Add fixture cases when changing inventory fields, defaults, profile compatibility, deploy path rules,
 or overlay host override layout.
+
+Python tests are partitioned by subsystem: inventory and overlay behavior, deployment and bootstrap contracts,
+migration behavior, ownership boundaries, repository contracts and mutation locking, transaction behavior, configuration
+editing, deploy-transaction internals, and shared inventory schema fixtures. External processes in tests must run
+through `tests/support/processes.py`, which provides process-group cleanup, stdout/stderr capture, bounded diagnostics,
+a 30 second default timeout, and explicit per-call overrides up to 300 seconds. Document any override at the call site.
 
 The mise environment routes hooks through mise with `HK_MISE=1` and sets `GIT_CONFIG_PARAMETERS="'merge.ff=only'"`, so
 Git rejects merges that require a merge commit.

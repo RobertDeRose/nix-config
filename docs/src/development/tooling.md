@@ -10,6 +10,13 @@ Use the same commands locally and in automation:
 
 ```bash
 mise run check
+mise run check:tests
+python3 -m unittest -v tests.test_inventory_behavior
+python3 -m unittest -v tests.test_deployment_contracts
+python3 -m unittest -v tests.test_migration_behavior
+python3 -m unittest -v tests.test_ownership_boundary
+python3 -m unittest -v tests.test_repository_contracts tests.test_repository_mutation
+python3 -m unittest -v tests.test_transaction_behavior
 mise run fix
 mise run docs:check
 mise run docs:build
@@ -31,6 +38,16 @@ two output-sensitive edges: `gofumpt` follows `goimports`, then fix-only module 
 
 No recognized language profile is active; only the universal tooling baseline
 runs.
+
+The Python regression suite is split by subsystem. `check:tests` runs `unittest` discovery across every
+`tests/test_*.py` file and is expected to complete within five minutes on a warm supported development checkout. Use the
+focused commands above while editing a subsystem, then run `mise -E dev run check` once before committing broad or shared
+test changes.
+
+Tests that execute external commands use the shared helper in `tests/support/processes.py`. It defaults to a 30 second
+timeout, starts commands in an isolated process group where supported, terminates the group on timeout, captures stdout
+and stderr, and truncates failure diagnostics. Longer timeouts must be explicit, documented at the call site, and no
+longer than 300 seconds.
 
 Maison's TOML mutation helper uses a pinned `tomlkit` wheel checked in under `.mise/vendor/`. The helper verifies the
 wheel digest before importing it, so configuration repair commands still work when normal mise project tool resolution

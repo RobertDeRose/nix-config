@@ -13,6 +13,10 @@ from typing import Any
 DEFAULT_TIMEOUT = 30.0
 MAX_TIMEOUT = 300.0
 DIAGNOSTIC_LIMIT = 1200
+PIPE = subprocess.PIPE
+DEVNULL = subprocess.DEVNULL
+STDOUT = subprocess.STDOUT
+CompletedProcess = subprocess.CompletedProcess
 
 
 class CommandTimeout(AssertionError):
@@ -104,9 +108,7 @@ def run(
     """Run a test subprocess with bounded time, captured diagnostics, and group cleanup."""
 
     budget = _validate_timeout(timeout)
-    if capture_output:
-        if stdout is not None or stderr is not None:
-            raise ValueError("stdout and stderr arguments may not be used with capture_output")
+    if capture_output and stdout is None and stderr is None:
         stdout = subprocess.PIPE
         stderr = subprocess.PIPE
     process = subprocess.Popen(
@@ -146,6 +148,32 @@ def check_output(
 ) -> str | bytes:
     result = run(args, timeout=timeout, cwd=cwd, env=env, check=True, text=text)
     return result.stdout
+
+
+def start_process(
+    args: Sequence[str | os.PathLike[str]] | str,
+    *,
+    cwd: str | os.PathLike[str] | None = None,
+    env: Mapping[str, str] | None = None,
+    text: bool = True,
+    stdout: int | None = None,
+    stderr: int | None = None,
+    stdin: int | None = None,
+) -> subprocess.Popen[Any]:
+    return subprocess.Popen(
+        args,
+        cwd=cwd,
+        env=None if env is None else dict(env),
+        stdin=stdin,
+        stdout=stdout,
+        stderr=stderr,
+        text=text,
+        **_start_new_process_group_kwargs(),
+    )
+
+
+def terminate_process_tree(process: subprocess.Popen[Any]) -> None:
+    _terminate_process_tree(process)
 
 
 @contextlib.contextmanager

@@ -4,12 +4,19 @@ import importlib.util
 import os
 import shutil
 import stat
-import subprocess
 import sys
 import tempfile
 import time
 import unittest
 from pathlib import Path
+
+from tests.support.processes import (
+    CompletedProcess,
+    DEVNULL,
+    run,
+    start_process,
+    terminate_process_tree,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 HELPER = ROOT / ".mise/lib/repository_mutation.py"
@@ -24,10 +31,10 @@ def load_helper():
 
 
 class RepositoryMutationLockTest(unittest.TestCase):
-    def helper(self, state_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    def helper(self, state_root: Path, *args: str) -> CompletedProcess[str]:
         env = os.environ.copy()
         env["MAISON_REPOSITORY_MUTATION_STATE_DIR"] = str(state_root)
-        return subprocess.run(
+        return run(
             [sys.executable, str(HELPER), *args],
             capture_output=True,
             text=True,
@@ -56,7 +63,7 @@ class RepositoryMutationLockTest(unittest.TestCase):
             repo = temp / "repo"
             repo.mkdir()
             state_root = temp / "state"
-            holder = subprocess.Popen(
+            holder = start_process(
                 [
                     sys.executable,
                     str(HELPER),
@@ -69,8 +76,8 @@ class RepositoryMutationLockTest(unittest.TestCase):
                     "import time; time.sleep(5)",
                 ],
                 env={**os.environ, "MAISON_REPOSITORY_MUTATION_STATE_DIR": str(state_root)},
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=DEVNULL,
+                stderr=DEVNULL,
                 text=True,
             )
             try:
@@ -99,8 +106,7 @@ class RepositoryMutationLockTest(unittest.TestCase):
                 self.assertIn("repository mutation lock is busy", blocked.stderr)
                 self.assertIn(str(repo.resolve()), blocked.stderr)
             finally:
-                holder.terminate()
-                holder.wait(timeout=10)
+                terminate_process_tree(holder)
 
     def test_recovery_restores_original_for_incomplete_journal_states(self) -> None:
         helper = load_helper()
@@ -163,8 +169,8 @@ class RepositoryMutationLockTest(unittest.TestCase):
 
 
 class AuthoringCheckoutGuardTest(unittest.TestCase):
-    def helper(self, *args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
+    def helper(self, *args: str) -> CompletedProcess[str]:
+        return run(
             [sys.executable, str(HELPER), *args],
             capture_output=True,
             text=True,
@@ -301,7 +307,7 @@ class MaisonCommandDeployedSnapshotTest(unittest.TestCase):
             os.chmod(fake_mise, 0o755)
             log = temp / "mise.log"
 
-            result = subprocess.run(
+            result = run(
                 [str(bin_dir / "maison"), "user", "status"],
                 capture_output=True,
                 text=True,

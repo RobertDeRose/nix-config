@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import importlib.util
-import subprocess
 import sys
 import tempfile
 import tomllib
 import unittest
 from pathlib import Path
+
+from tests.support.processes import run
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("config_edit", ROOT / ".mise/lib/config_edit.py")
@@ -90,7 +91,7 @@ class ConfigEditTest(unittest.TestCase):
                 '[tools] # trailing comments used to break section matching\n'
                 'node = "24"\n'
             )
-            result = subprocess.run(
+            result = run(
                 [
                     sys.executable,
                     "-S",

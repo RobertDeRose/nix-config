@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess
 import sys
 import tomllib
 import unittest
 from pathlib import Path
+
+from tests.support.processes import CompletedProcess, run
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests/fixtures/inventory"
@@ -57,8 +58,8 @@ class InventorySchemaFixtureContractTest(unittest.TestCase):
             "/home/<managed-user>/*",
         )
 
-    def run_python_inventory(self, fixture: Path) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
+    def run_python_inventory(self, fixture: Path) -> CompletedProcess[str]:
+        return run(
             [
                 sys.executable,
                 str(INVENTORY),
@@ -72,7 +73,7 @@ class InventorySchemaFixtureContractTest(unittest.TestCase):
             text=True,
         )
 
-    def run_nix_inventory(self, fixture: Path) -> subprocess.CompletedProcess[str]:
+    def run_nix_inventory(self, fixture: Path) -> CompletedProcess[str]:
         if shutil.which("nix") is None:
             self.skipTest("nix is required for shared inventory fixture parity")
         expr = f"""
@@ -83,7 +84,7 @@ class InventorySchemaFixtureContractTest(unittest.TestCase):
             validated = import {ROOT / 'nix/lib/inventory.nix'} {{ inherit lib inventory; }};
           in builtins.deepSeq validated true
         """
-        return subprocess.run(
+        return run(
             [
                 "nix",
                 "--extra-experimental-features",
