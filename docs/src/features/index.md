@@ -14,4 +14,5 @@ Planned or partially implemented work remains in [Planned features](../planned-f
 - [MAISON-006: Review-gated dependency updates](maison-006-review-gated-dependency-updates/index.md)
 - [MAISON-007: Parser-backed TOML mutations](maison-007-parser-backed-toml-mutations/index.md)
 - [MAISON-008: Repository mutation locking and journals](maison-008-repository-mutation-locking/index.md)
+- [MAISON-009: Authoring checkout guard](maison-009-authoring-checkout-guard/index.md)
 <!-- END IMPLEMENTED FEATURES -->

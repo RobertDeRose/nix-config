@@ -46,6 +46,7 @@
   - [MAISON-006: Review-gated dependency updates](./features/maison-006-review-gated-dependency-updates/index.md)
   - [MAISON-007: Parser-backed TOML mutations](./features/maison-007-parser-backed-toml-mutations/index.md)
   - [MAISON-008: Repository mutation locking and journals](./features/maison-008-repository-mutation-locking/index.md)
+  - [MAISON-009: Authoring checkout guard](./features/maison-009-authoring-checkout-guard/index.md)
   <!-- END IMPLEMENTED FEATURES -->
 [Refactor Report](./refactor-report.md)
 
