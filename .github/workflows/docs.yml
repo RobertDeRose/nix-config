@@ -8,8 +8,7 @@ on:
       - .mise/tasks/docs/build
       - .github/workflows/docs.yml
       - mise.toml
-      - mise.dev.toml
-      - mise.dev.lock
+      - mise.lock
   workflow_dispatch:
 
 permissions:
@@ -36,7 +35,7 @@ jobs:
           install: false
 
       - name: Build docs
-        run: mise -E dev run docs:build
+        run: mise run docs:build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5

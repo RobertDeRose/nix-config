@@ -6,7 +6,29 @@ lockfile = true
 lockfile_platforms = ["macos-arm64", "linux-arm64", "linux-x64"]
 
 # User tools, including the `usage` runtime required by the Maison command,
-# live in config/mise/config.toml. Contributor tools live in mise.dev.toml.
+# live in config/mise/config.toml. Repository development tools live here.
+
+[tools]
+actionlint = "latest"
+"aqua:Mic92/nixfmt-rs" = "latest"
+cocogitto = "latest"
+harper-cli = "latest"
+hk = "latest"
+"github:rust-lang/mdBook" = "latest"
+"npm:@contextlint/cli" = { version = "latest", aube_args = "--allow-low-downloads" }
+"npm:markdown-table-formatter" = "latest"
+rumdl = "latest"
+shellcheck = "latest"
+shfmt = "latest"
+tombi = "latest"
+typos = "latest"
+uv = "latest"
+
+[env]
+HK_MISE = 1
+
+[hooks]
+postinstall = "command -v hk >/dev/null && hk install --mise || true"
 
 [task_config]
 includes = [".mise/tasks"]

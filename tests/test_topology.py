@@ -108,7 +108,7 @@ class DataFilesTest(unittest.TestCase):
 
     def test_toml_files_and_lockfiles_parse(self) -> None:
         paths = sorted(ROOT.glob("*.toml")) + sorted((ROOT / "config/mise").glob("*.toml"))
-        paths += [path for path in (ROOT / "mise.lock", ROOT / "mise.dev.lock") if path.exists()]
+        paths += [path for path in (ROOT / "mise.lock",) if path.exists()]
         paths += sorted((ROOT / "config/mise").glob("*.lock"))
         self.assertTrue(paths)
         for path in paths:
@@ -120,7 +120,7 @@ class DataFilesTest(unittest.TestCase):
         pairs = (
             ("config/mise/config.toml", "config/mise/mise.lock"),
             ("config/mise/config.macos.toml", "config/mise/config.macos.lock"),
-            ("mise.dev.toml", "mise.dev.lock"),
+            ("mise.toml", "mise.lock"),
         )
         for config_name, lock_name in pairs:
             with self.subTest(config=config_name, lock=lock_name):
@@ -151,8 +151,8 @@ class DataFilesTest(unittest.TestCase):
         self.assertNotIn("home-manager", serialized)
         self.assertNotIn('"deploy-rs"', serialized)
 
-    def test_nix_formatter_uses_the_contributor_lock(self) -> None:
-        lock = tomllib.loads(read("mise.dev.lock"))
+    def test_nix_formatter_uses_the_repository_lock(self) -> None:
+        lock = tomllib.loads(read("mise.lock"))
         entries = lock["tools"]["aqua:Mic92/nixfmt-rs"]
         self.assertEqual(len(entries), 1)
         entry = entries[0]
@@ -170,7 +170,7 @@ class DataFilesTest(unittest.TestCase):
 
         package = read("nix/lib/nixfmt-rs.nix")
         outputs = read("nix/outputs.nix")
-        self.assertIn("builtins.readFile ../../mise.dev.lock", package)
+        self.assertIn("builtins.readFile ../../mise.lock", package)
         for system, platform_key in platform_keys.items():
             self.assertIn(f'{system} = "{platform_key}";', package)
         self.assertIn("pkgs.nixfmt-tree.override { inherit nixfmtPackage; }", outputs)
@@ -287,7 +287,7 @@ class OwnershipBoundaryTest(unittest.TestCase):
         active_tool_tables = {
             "common": tools,
             "mac": mac["tools"],
-            "dev": tomllib.loads(read("mise.dev.toml"))["tools"],
+            "repo": tomllib.loads(read("mise.toml"))["tools"],
         }
         for left_name, left in active_tool_tables.items():
             for right_name, right in active_tool_tables.items():
@@ -324,7 +324,7 @@ class OwnershipBoundaryTest(unittest.TestCase):
             ROOT / "nix/outputs.nix",
         ]
         candidates += list((ROOT / "docs").rglob("*.md"))
-        candidates += [path for path in (ROOT / "mise.lock", ROOT / "mise.dev.lock") if path.exists()]
+        candidates += [path for path in (ROOT / "mise.lock",) if path.exists()]
         candidates += list((ROOT / "config/mise").glob("*.lock"))
         for path in candidates:
             with self.subTest(path=path.relative_to(ROOT)):
@@ -335,15 +335,15 @@ class OwnershipBoundaryTest(unittest.TestCase):
 
     def test_repository_tools_are_isolated_from_machine_convergence(self) -> None:
         base = tomllib.loads(read("mise.toml"))
-        dev = tomllib.loads(read("mise.dev.toml"))
-        self.assertNotIn("tools", base)
-        self.assertEqual(tomllib.loads(read("config/mise/config.toml"))["tools"]["usage"], "latest")
+        user_tools = tomllib.loads(read("config/mise/config.toml"))["tools"]
+        self.assertEqual(user_tools["usage"], "latest")
         for tool in ("actionlint", "hk", "shellcheck", "shfmt", "tombi"):
-            self.assertIn(tool, dev["tools"])
-        self.assertNotIn("jq", dev["tools"])
+            self.assertIn(tool, base["tools"])
+            self.assertNotIn(tool, user_tools)
+        self.assertNotIn("jq", base["tools"])
         user_apply = read(".mise/tasks/user/apply")
         self.assertNotIn("mise install", user_apply)
-        self.assertIn("mise -E dev install", read(".mise/tasks/check/_default"))
+        self.assertIn("mise install", read(".mise/tasks/check/_default"))
 
     def test_nix_direnv_uses_pinned_direnvrc(self) -> None:
         root_config = read("mise.toml")

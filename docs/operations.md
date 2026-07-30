@@ -34,11 +34,11 @@ maison system history
 
 ```bash
 maison check
-mise -E dev install
-mise -E dev exec -- hk check -a
+mise install
+mise exec -- hk check -a
 ```
 
-Contributor tools are isolated in `mise.dev.toml`; normal user convergence does not install them.
+Repository development tools are owned by the checkout `mise.toml`; normal user convergence does not install them from the global user config.
 
 ## Update
 

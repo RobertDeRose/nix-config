@@ -7,7 +7,7 @@ python3 - <<'PY'
 from pathlib import Path
 import json, tomllib
 paths = sorted(Path('.').glob('*.toml')) + sorted(Path('config/mise').glob('*.toml'))
-paths += [path for path in (Path('mise.lock'), Path('mise.dev.lock')) if path.exists()]
+paths += [path for path in (Path('mise.lock'),) if path.exists()]
 paths += sorted(Path('config/mise').glob('*.lock'))
 for p in paths:
     with p.open('rb') as f: tomllib.load(f)

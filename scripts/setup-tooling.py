@@ -16,12 +16,12 @@ from typing import Any
 
 
 PLATFORMS = ("linux-x64", "linux-arm64", "macos-arm64")
-LOCK_COMMAND = ["mise", "-E", "dev", "lock", "--yes", "--platform", ",".join(PLATFORMS)]
-INSTALL_COMMAND = ["mise", "-E", "dev", "install", "--locked"]
-HOOK_COMMAND = ["mise", "-E", "dev", "x", "--", "hk", "install", "--mise"]
+LOCK_COMMAND = ["mise", "lock", "--yes", "--platform", ",".join(PLATFORMS)]
+INSTALL_COMMAND = ["mise", "install", "--locked"]
+HOOK_COMMAND = ["mise", "x", "--", "hk", "install", "--mise"]
 RERUN_COMMAND = "python3 scripts/setup-tooling.py --json"
 MAX_ERROR_CHARS = 2_000
-NIXFMT_TOOL = "github:Mic92/nixfmt-rs"
+NIXFMT_TOOL = "aqua:Mic92/nixfmt-rs"
 NIXFMT_UNSUPPORTED_PLATFORM = "macos-x64"
 NIXFMT_SUPPORTED_PLATFORMS = ("linux-x64", "linux-arm64", "macos-arm64")
 EXTERNAL_MISE_CONFIG_VARS = (
@@ -45,7 +45,7 @@ def skipped_result() -> dict[str, Any]:
     return {
         "status": "skipped",
         "mise": "skipped",
-        "lock": stage("skipped", path="mise.dev.lock"),
+        "lock": stage("skipped", path="mise.lock"),
         "install": stage("skipped"),
         "hooks": stage("skipped"),
         "platforms": list(PLATFORMS),
@@ -124,10 +124,10 @@ def _provision(project_root: Path, config_dir: Path) -> dict[str, Any]:
         return result
 
     lock = run(LOCK_COMMAND, project_root, config_dir=config_dir)
-    lock_path = project_root / "mise.dev.lock"
+    lock_path = project_root / "mise.lock"
     if lock.returncode or not lock_path.is_file() or lock_path.stat().st_size == 0:
-        error = command_error(lock) if lock.returncode else "mise lock did not create a nonempty mise.dev.lock"
-        result["lock"] = stage("failed", path="mise.dev.lock", error=error)
+        error = command_error(lock) if lock.returncode else "mise lock did not create a nonempty mise.lock"
+        result["lock"] = stage("failed", path="mise.lock", error=error)
         result["recovery"] = [RERUN_COMMAND]
         return result
     normalization_error = normalize_nixfmt_lock(project_root, lock_path)
@@ -135,7 +135,7 @@ def _provision(project_root: Path, config_dir: Path) -> dict[str, Any]:
         result["lock"] = stage("failed", path="mise.lock", error=normalization_error)
         result["recovery"] = [RERUN_COMMAND]
         return result
-    result["lock"] = stage("succeeded", path="mise.dev.lock")
+    result["lock"] = stage("succeeded", path="mise.lock")
 
     install = run(INSTALL_COMMAND, project_root, config_dir=config_dir)
     if install.returncode:

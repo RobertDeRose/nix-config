@@ -31,5 +31,5 @@ jobs:
           install: false
       - name: Install tools and run linter
         run: |
-          mise -E dev install
-          mise -E dev exec -- hk check -a
+          mise install
+          mise exec -- hk check -a

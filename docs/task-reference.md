@@ -11,7 +11,7 @@
 | `deploy <host>` | Deploy Linux system state using the configured deployment account (`maison-deploy` by default), then stage source through a root-owned repository transaction and converge remote user state with revision-bound commit/rollback checks |
 | `rollback` | Roll back only the Nix system generation |
 | `bootstrap` | Install or repair Nix, then converge both layers system-first |
-| `check` | Load `mise.dev.toml`, validate data and scripts, run behavioral tests, and build Nix checks |
+| `check` | Install repository `mise.toml` tools, validate data and scripts, run behavioral tests, and build Nix checks |
 
 ## System commands
 

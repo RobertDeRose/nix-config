@@ -84,8 +84,8 @@ dotfiles/                     native user configuration files
 .mise/tasks/system/           Nix/nh/deploy-rs workflows
 .mise/tasks/user/             mise bootstrap workflows
 scripts/                      migration, package, and deployment transactions
-mise.toml                     task discovery and dotfile declarations
-mise.dev.toml                 contributor-only lint, format, and docs tools
+mise.toml                     repository tools, task discovery, and dotfile declarations
+mise.lock                     locked repository development tool artifacts
 ```
 
 Platform-specific mise files are selected through `.miserc.toml` and `auto_env = true`:
@@ -95,8 +95,7 @@ Platform-specific mise files are selected through `.miserc.toml` and `auto_env =
 - `config.macos-arm64.toml`: Apple Silicon casks, Mac App Store applications, and macOS-only formulae.
 - `config.linux.toml`: Linux-specific package-manager and locale policy.
 
-Repository validation tools are not installed during normal machine convergence. `maison check` explicitly loads `mise.dev.toml`.
-The flake formatter reads the `nixfmt-rs` artifact from `mise.dev.lock`, so hooks and `nix fmt` cannot drift to different formatter versions.
+Repository validation tools are owned by the checkout `mise.toml`, not the global user config. Normal machine convergence does not install them unless it is run from this repository. The flake formatter reads the `nixfmt-rs` artifact from `mise.lock`, so hooks and `nix fmt` cannot drift to different formatter versions.
 
 ## Bootstrap
 

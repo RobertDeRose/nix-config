@@ -64,7 +64,7 @@ The local deploy-rs adapter uses the same `pkgs.deploy-rs` package for the CLI, 
 
 ## mise user layer
 
-The repository `mise.toml` contains only task discovery and dotfile declarations. The installed global configuration owns the Maison runtime tool (`usage`). Contributor tooling lives in `mise.dev.toml` and is loaded explicitly by `maison check`, documentation tasks, and CI.
+The repository `mise.toml` owns repository development tools, task discovery, and dotfile declarations. The installed global configuration owns the Maison runtime tool (`usage`) and ordinary user tools. Repository development tools are installed explicitly for this checkout by `maison check`, documentation tasks, and CI.
 
 The installed global user configuration owns:
 
@@ -100,4 +100,3 @@ maison apply
 A failed system activation stops before user convergence. A failed user convergence leaves the active system generation in place.
 
 Remote deployment has an additional repository transaction around the user phase. Transaction journals, locks, staging trees, and rollback trees are privileged state and live in a root-owned same-filesystem transaction root outside the managed user's writable home. The managed user may read and apply the staged repository, but must not be able to unlink, replace, or edit transaction control state. Deploy-rs independently protects the Linux system profile while only the `maison-deploy` account can launch privileged activation actions.
-
