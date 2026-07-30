@@ -787,6 +787,190 @@ class DeploymentContractTest(unittest.TestCase):
             self.assertEqual((repo / ".maison-revision").read_text().strip(), revision)
             self.assertTrue(active.exists())
 
+    def test_repository_stage_records_revision_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            home = temp / "home"
+            home.mkdir()
+            user, env = self.deployment_environment(temp, home)
+
+            repo = home / ".maison"
+            repo.mkdir()
+            old_revision = "1" * 40
+            (repo / "mise.toml").write_text("[settings]\n")
+            (repo / "flake.nix").write_text("{}\n")
+            (repo / ".maison-revision").write_text(f"{old_revision}\n")
+
+            source = temp / "source"
+            source.mkdir()
+            new_revision = "2" * 40
+            (source / "mise.toml").write_text("[settings]\n")
+            (source / "flake.nix").write_text("{}\n")
+            (source / ".maison-revision").write_text(f"{new_revision}\n")
+            archive = temp / "deploy.tar.gz"
+            with tarfile.open(archive, "w:gz") as bundle:
+                for child in source.iterdir():
+                    bundle.add(child, arcname=child.name)
+
+            subprocess.run(
+                [str(ROOT / "scripts/deploy-repository.sh"), str(repo), user, str(archive)],
+                env=env,
+                check=True,
+            )
+            namespace = self.transaction_namespace(repo, user, home)
+            active = namespace / "active.json"
+            record = json.loads(active.read_text())
+            self.assertEqual(record["revision"], new_revision)
+            self.assertEqual(record["expected_new_revision"], new_revision)
+            self.assertEqual(record["expected_old_revision"], old_revision)
+            self.assertEqual(record["state"], "previous")
+
+            journal = [json.loads(line) for line in Path(record["journal_path"]).read_text().splitlines()]
+            self.assertTrue(any(line["event"] == "archive-extracted" for line in journal))
+            self.assertTrue(any(line["event"] == "staged" for line in journal))
+            self.assertEqual(Path(record["journal_path"]).exists(), True)
+
+            subprocess.run(
+                [str(ROOT / "scripts/finalize-deploy-repository.sh"), str(repo), user, "rollback"],
+                env=env,
+                check=True,
+            )
+
+    def test_finalize_rejects_previous_revision_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            home = temp / "home"
+            home.mkdir()
+            user, env = self.deployment_environment(temp, home)
+
+            repo = home / ".maison"
+            repo.mkdir()
+            old_revision = "1" * 40
+            (repo / "mise.toml").write_text("[settings]\n")
+            (repo / "flake.nix").write_text("{}\n")
+            (repo / ".maison-revision").write_text(f"{old_revision}\n")
+
+            source = temp / "source"
+            source.mkdir()
+            new_revision = "2" * 40
+            (source / "mise.toml").write_text("[settings]\n")
+            (source / "flake.nix").write_text("{}\n")
+            (source / ".maison-revision").write_text(f"{new_revision}\n")
+            archive = temp / "deploy.tar.gz"
+            with tarfile.open(archive, "w:gz") as bundle:
+                for child in source.iterdir():
+                    bundle.add(child, arcname=child.name)
+
+            subprocess.run(
+                [str(ROOT / "scripts/deploy-repository.sh"), str(repo), user, str(archive)],
+                env=env,
+                check=True,
+            )
+            namespace = self.transaction_namespace(repo, user, home)
+            record = json.loads((namespace / "active.json").read_text())
+            rollback_repo = Path(record["rollback_dir"])
+            (rollback_repo / ".maison-revision").write_text("b" * 40 + "\n")
+
+            failed = subprocess.run(
+                [str(ROOT / "scripts/finalize-deploy-repository.sh"), str(repo), user, "commit"],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertIn("previous repository revision mismatch", failed.stderr)
+
+            subprocess.run(
+                [str(ROOT / "scripts/finalize-deploy-repository.sh"), str(repo), user, "rollback"],
+                env=env,
+                check=True,
+            )
+
+    def test_finalize_rejects_active_revision_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            home = temp / "home"
+            home.mkdir()
+            user, env = self.deployment_environment(temp, home)
+
+            repo = home / ".maison"
+            repo.mkdir()
+            old_revision = "1" * 40
+            (repo / "mise.toml").write_text("[settings]\n")
+            (repo / "flake.nix").write_text("{}\n")
+            (repo / ".maison-revision").write_text(f"{old_revision}\n")
+
+            source = temp / "source"
+            source.mkdir()
+            new_revision = "2" * 40
+            (source / "mise.toml").write_text("[settings]\n")
+            (source / "flake.nix").write_text("{}\n")
+            (source / ".maison-revision").write_text(f"{new_revision}\n")
+            archive = temp / "deploy.tar.gz"
+            with tarfile.open(archive, "w:gz") as bundle:
+                for child in source.iterdir():
+                    bundle.add(child, arcname=child.name)
+
+            subprocess.run(
+                [str(ROOT / "scripts/deploy-repository.sh"), str(repo), user, str(archive)],
+                env=env,
+                check=True,
+            )
+            (repo / ".maison-revision").write_text("9" * 40 + "\n")
+
+            failed = subprocess.run(
+                [str(ROOT / "scripts/finalize-deploy-repository.sh"), str(repo), user, "commit"],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertIn("active repository revision mismatch", failed.stderr)
+
+    def test_recover_rolls_back_incomplete_transaction(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            home = temp / "home"
+            home.mkdir()
+            user, env = self.deployment_environment(temp, home)
+
+            repo = home / ".maison"
+            repo.mkdir()
+            old_revision = "1" * 40
+            (repo / "mise.toml").write_text("[settings]\n")
+            (repo / "flake.nix").write_text("{}\n")
+            (repo / ".maison-revision").write_text(f"{old_revision}\n")
+
+            source = temp / "source"
+            source.mkdir()
+            new_revision = "2" * 40
+            (source / "mise.toml").write_text("[settings]\n")
+            (source / "flake.nix").write_text("{}\n")
+            (source / ".maison-revision").write_text(f"{new_revision}\n")
+            archive = temp / "deploy.tar.gz"
+            with tarfile.open(archive, "w:gz") as bundle:
+                for child in source.iterdir():
+                    bundle.add(child, arcname=child.name)
+
+            subprocess.run(
+                [str(ROOT / "scripts/deploy-repository.sh"), str(repo), user, str(archive)],
+                env=env,
+                check=True,
+            )
+            namespace = self.transaction_namespace(repo, user, home)
+            self.assertTrue((namespace / "active.json").exists())
+            self.assertEqual((repo / ".maison-revision").read_text().strip(), new_revision)
+
+            recovered = subprocess.run(
+                [str(ROOT / "scripts/maison_deploy_transaction.py"), "recover", str(repo), user],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(recovered.returncode, 0)
+            self.assertIn(f"Recovered incomplete Maison repository transaction at {repo}", recovered.stdout)
+            self.assertEqual((repo / ".maison-revision").read_text().strip(), old_revision)
+            self.assertFalse((namespace / "active.json").exists())
 
 
 class TransactionBehaviorTest(unittest.TestCase):

@@ -26,8 +26,10 @@ After successful system activation, Maison:
 3. Allocates a root-owned transaction root on the same filesystem outside any managed-user-writable ancestor.
 4. Creates an unpredictable transaction ID, acquires the repository transaction lock, and journals each privileged step.
 5. Stages the new source tree and rollback source under the root-owned transaction root.
-6. Runs `user:apply` as the managed user from the staged repository.
-7. Finalizes or rolls back by reading the root-owned journal and refusing unsafe ownership, symlink, permission, or cross-filesystem state.
+6. Records expected old/new revisions before finalize.
+7. Runs `user:apply` as the managed user from the staged repository.
+8. Performs startup recovery of any incomplete repository transaction before proceeding.
+9. Finalizes or rolls back by reading the root-owned journal and refusing unsafe ownership, symlink, permission, or cross-filesystem state.
 
 For the default `/home/<user>/.maison` repository path, the default transaction namespace is a root-owned sibling under `/home`, such as `/home/.maison-deploy/transactions/<user>/<repo-hash>/`. Maison fails closed when no same-filesystem root-owned transaction root exists outside the managed user's control.
 

@@ -21,6 +21,7 @@ import sys
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 
 class DeploymentTransactionError(ValueError):
@@ -228,36 +229,96 @@ def _make_namespace(repo_path: Path, managed_user: str, managed_home: Path) -> P
     return namespace
 
 
+def _fsync_file(handle: int) -> None:
+    try:
+        os.fsync(handle)
+    except OSError:
+        # Some filesystems/environments disable fsync on temporary descriptors.
+        return
+
+
+def _fsync_dir(path: Path) -> None:
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    except (FileNotFoundError, NotADirectoryError, OSError):
+        return
+    try:
+        _fsync_file(descriptor)
+    finally:
+        os.close(descriptor)
+
+
 def _write_journal(path: Path, event: str, **fields: object) -> None:
     path.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps({"event": event, **fields}, sort_keys=True) + "\n")
         handle.flush()
-        os.fsync(handle.fileno())
+        _fsync_file(handle.fileno())
+    _fsync_dir(path.parent)
 
 
-def _active_record(paths: TransactionPaths, repo_path: Path, managed_user: str, state: str, revision: str) -> dict[str, str]:
+def _safe_rename(src: Path, dst: Path) -> None:
+    if dst.exists() or dst.is_symlink():
+        raise DeploymentTransactionError(f"move destination already exists: {dst}")
+    src.replace(dst)
+
+
+def _read_journal_events(path: Path) -> list[dict[str, object]]:
+    if not path.is_file():
+        return []
+    events: list[dict[str, object]] = []
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            events.append(json.loads(line))
+    return events
+
+
+def _has_terminal_event(path: Path) -> bool:
+    events = _read_journal_events(path)
+    if not events:
+        return False
+    terminal = {"commit", "rollback"}
+    return any(event.get("event") in terminal for event in events[-1:])
+
+
+def _active_record(
+    paths: TransactionPaths,
+    *,
+    repo_path: Path,
+    managed_user: str,
+    state: str,
+    new_revision: str,
+    old_revision: str | None,
+    recovery_action: str | None = None,
+) -> dict[str, Any]:
     return {
         "transaction_id": paths.transaction_id,
         "repo_path": str(repo_path),
         "managed_user": managed_user,
         "state": state,
-        "revision": revision,
+        "revision": new_revision,
+        "expected_old_revision": old_revision,
+        "expected_new_revision": new_revision,
+        "recovery_action": recovery_action,
         "transaction_dir": str(paths.transaction_dir),
         "rollback_dir": str(paths.rollback_dir / "repository"),
         "journal_path": str(paths.journal_path),
     }
 
 
-def _write_active(paths: TransactionPaths, record: dict[str, str]) -> None:
+def _write_active(paths: TransactionPaths, record: dict[str, Any]) -> None:
     temporary = paths.active_path.with_suffix(".tmp")
     temporary.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     with temporary.open("r+", encoding="utf-8") as handle:
-        os.fsync(handle.fileno())
+        _fsync_file(handle.fileno())
     temporary.replace(paths.active_path)
+    _fsync_dir(paths.active_path.parent)
 
 
-def _load_active(namespace: Path, repo_path: Path, managed_user: str) -> dict[str, str]:
+def _load_active(namespace: Path, repo_path: Path, managed_user: str) -> dict[str, Any]:
     active_path = namespace / "active.json"
     if not active_path.is_file() or active_path.is_symlink():
         raise DeploymentTransactionError(f"deployment state is missing or unsafe: {active_path}")
@@ -279,29 +340,81 @@ def _safe_extract(archive: Path, destination: Path) -> None:
         bundle.extractall(destination)
 
 
-def _revision(staging_repo: Path) -> str:
+def _revision(source: Path) -> str:
     for required in ("mise.toml", "flake.nix", ".maison-revision"):
-        path = staging_repo / required
+        path = source / required
         if not path.is_file() or path.is_symlink():
             raise DeploymentTransactionError(f"deployment archive is missing regular file {required}")
-    revision = (staging_repo / ".maison-revision").read_text(encoding="utf-8").strip()
+    revision = (source / ".maison-revision").read_text(encoding="utf-8").strip()
     if not re.fullmatch(r"[0-9a-f]{40}", revision):
         raise DeploymentTransactionError("deployment archive has an invalid revision stamp")
-    if (staging_repo / ".git").exists() or (staging_repo / ".git").is_symlink():
+    if (source / ".git").exists() or (source / ".git").is_symlink():
         raise DeploymentTransactionError("deployment archive unexpectedly contains .git")
     return revision
 
 
-def _replace_absent(source: Path, destination: Path) -> None:
-    if destination.exists() or destination.is_symlink():
-        raise DeploymentTransactionError(f"move destination already exists: {destination}")
-    source.replace(destination)
+def _active_revision(repo_path: Path) -> str:
+    return _revision(repo_path)
+
+
+def _ensure_directory(path: Path) -> None:
+    path.mkdir(parents=True, exist_ok=True)
+    _fsync_dir(path)
+
+
+def _verify_revision(expected: str | None, actual: str, label: str) -> None:
+    if expected is None:
+        return
+    if actual != expected:
+        raise DeploymentTransactionError(f"{label} revision mismatch: expected {expected}, found {actual}")
+
+
+def _cleanup_transaction(
+    *,
+    namespace: Path,
+    transaction_dir: Path,
+    active_path: Path,
+    rescue_path: Path | None = None,
+) -> None:
+    if rescue_path is not None and rescue_path.exists() and not rescue_path.is_symlink():
+        shutil.rmtree(rescue_path, ignore_errors=True)
+    active_path.unlink(missing_ok=True)
+    shutil.rmtree(transaction_dir, ignore_errors=True)
+    _fsync_dir(namespace)
+
+
+def _rescue_path(repo_path: Path, transaction_id: str) -> Path:
+    return repo_path.with_name(f"{repo_path.name}.maison-deploy-rescue-{transaction_id}")
+
+
+def _transaction_dir_paths(namespace: Path, record: dict[str, Any]) -> TransactionPaths:
+    required = {
+        "transaction_id",
+        "journal_path",
+        "transaction_dir",
+        "rollback_dir",
+    }
+    missing = required - record.keys()
+    if missing:
+        raise DeploymentTransactionError(f"deployment state is missing fields: {', '.join(sorted(missing))}")
+
+    return TransactionPaths(
+        root=namespace,
+        transaction_id=str(record["transaction_id"]),
+        transaction_dir=Path(record["transaction_dir"]),
+        staging_dir=Path(record["transaction_dir"]) / "staging",
+        rollback_dir=Path(record["rollback_dir"]),
+        journal_path=Path(record["journal_path"]),
+        lock_path=namespace / "transaction.lock",
+        active_path=namespace / "active.json",
+    )
 
 
 def stage(repo_path: Path, managed_user: str, archive: Path) -> str:
     managed_home = _validate_inputs(repo_path, managed_user)
     if not archive.is_file() or archive.is_symlink():
         raise DeploymentTransactionError(f"deployment archive must be a regular non-symlink file: {archive}")
+
     namespace = _make_namespace(repo_path, managed_user, managed_home)
     paths = allocate_transaction_paths(
         repo_path=repo_path,
@@ -310,10 +423,12 @@ def stage(repo_path: Path, managed_user: str, archive: Path) -> str:
         transaction_root=namespace.parent,
         expected_owner_uid=_expected_owner_uid(),
     )
+
     with paths.lock_path.open("a+", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         if paths.active_path.exists() or paths.active_path.is_symlink():
             raise DeploymentTransactionError(f"unfinished Maison deployment state exists at {paths.active_path}")
+
         paths.transaction_dir.mkdir(mode=0o700)
         paths.staging_dir.mkdir(mode=0o700)
         paths.rollback_dir.mkdir(mode=0o700)
@@ -321,33 +436,53 @@ def stage(repo_path: Path, managed_user: str, archive: Path) -> str:
         rollback_repo = paths.rollback_dir / "repository"
         repo_moved = False
         installed = False
+
         try:
             _write_journal(paths.journal_path, "created", repo_path=str(repo_path))
             staged_repo.mkdir(mode=0o700)
             _safe_extract(archive, staged_repo)
-            revision = _revision(staged_repo)
-            _write_journal(paths.journal_path, "archive-extracted", revision=revision)
+            new_revision = _revision(staged_repo)
+            _write_journal(paths.journal_path, "archive-extracted", revision=new_revision)
+
             state = "absent"
+            old_revision: str | None = None
             if repo_path.exists() or repo_path.is_symlink():
                 if not repo_path.is_dir() or repo_path.is_symlink():
                     raise DeploymentTransactionError(f"existing repository path is not a real directory: {repo_path}")
+                repo_marker = repo_path / ".maison-revision"
+                required_for_revision = ("mise.toml", "flake.nix", ".maison-revision")
+                if all((repo_path / name).is_file() for name in required_for_revision):
+                    old_revision = _active_revision(repo_path)
                 _write_journal(paths.journal_path, "move-active-to-rollback", rollback_path=str(rollback_repo))
-                _replace_absent(repo_path, rollback_repo)
+                _safe_rename(repo_path, rollback_repo)
                 repo_moved = True
                 state = "previous"
-            _write_active(paths, _active_record(paths, repo_path, managed_user, state, revision))
+
+            _write_active(
+                paths,
+                _active_record(
+                    paths,
+                    repo_path=repo_path,
+                    managed_user=managed_user,
+                    state=state,
+                    new_revision=new_revision,
+                    old_revision=old_revision,
+                ),
+            )
             _write_journal(paths.journal_path, "install-staged", destination=str(repo_path))
-            repo_path.parent.mkdir(parents=True, exist_ok=True)
-            _replace_absent(staged_repo, repo_path)
+            _ensure_directory(repo_path.parent)
+            _safe_rename(staged_repo, repo_path)
+            _fsync_dir(repo_path.parent)
             installed = True
             archive.unlink(missing_ok=True)
-            _write_journal(paths.journal_path, "staged", revision=revision)
-            return revision
+            _write_journal(paths.journal_path, "staged", revision=new_revision)
+            _fsync_dir(paths.transaction_dir)
+            return new_revision
         except Exception:
-            if installed and (repo_path.exists() or repo_path.is_symlink()):
+            if installed and repo_path.exists() and not repo_path.is_symlink():
                 shutil.rmtree(repo_path)
             if repo_moved and rollback_repo.is_dir() and not rollback_repo.is_symlink() and not repo_path.exists():
-                _replace_absent(rollback_repo, repo_path)
+                _safe_rename(rollback_repo, repo_path)
             paths.active_path.unlink(missing_ok=True)
             shutil.rmtree(paths.transaction_dir, ignore_errors=True)
             raise
@@ -362,34 +497,138 @@ def finalize(repo_path: Path, managed_user: str, action: str) -> None:
         transaction_root=namespace,
         expected_owner_uid=_expected_owner_uid(),
     )
-    lock_path = namespace / "transaction.lock"
-    with lock_path.open("a+", encoding="utf-8") as lock:
+
+    with (namespace / "transaction.lock").open("a+", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         record = _load_active(namespace, repo_path, managed_user)
-        transaction_dir = Path(record["transaction_dir"])
-        journal_path = Path(record["journal_path"])
+        paths = _transaction_dir_paths(namespace, record)
+        expected_old_revision = record.get("expected_old_revision")
+        if expected_old_revision is not None:
+            expected_old_revision = str(expected_old_revision)
+        expected_new_revision = record.get("expected_new_revision", record.get("revision"))
+        if expected_new_revision is not None:
+            expected_new_revision = str(expected_new_revision)
+
         rollback_repo = Path(record["rollback_dir"])
         state = record["state"]
+
         if state not in {"previous", "absent"}:
             raise DeploymentTransactionError("deployment state has invalid repository state")
+
         if state == "previous" and (not rollback_repo.is_dir() or rollback_repo.is_symlink()):
             raise DeploymentTransactionError(f"previous repository is missing or unsafe: {rollback_repo}")
+
         if action == "commit":
-            _write_journal(journal_path, "commit")
+            _write_journal(
+                paths.journal_path,
+                "finalize-start",
+                recovery_action="commit",
+                destination=str(repo_path),
+                expected_old_revision=expected_old_revision,
+                expected_new_revision=expected_new_revision,
+            )
+
+            if state == "previous" and expected_old_revision is not None:
+                _verify_revision(
+                    expected_old_revision,
+                    _active_revision(rollback_repo),
+                    "previous repository",
+                )
+            _verify_revision(
+                expected_new_revision,
+                _active_revision(repo_path),
+                "active repository",
+            )
+            if not _has_terminal_event(paths.journal_path):
+                _write_journal(
+                    paths.journal_path,
+                    "commit",
+                    destination=str(repo_path),
+                    expected_old_revision=expected_old_revision,
+                    expected_new_revision=expected_new_revision,
+                )
             if rollback_repo.exists():
                 shutil.rmtree(rollback_repo)
-            shutil.rmtree(transaction_dir, ignore_errors=True)
-            (namespace / "active.json").unlink(missing_ok=True)
+            _cleanup_transaction(
+                namespace=namespace,
+                transaction_dir=paths.transaction_dir,
+                active_path=paths.active_path,
+            )
             return
+
         if action != "rollback":
             raise DeploymentTransactionError(f"invalid finalize action: {action}")
-        _write_journal(journal_path, "rollback")
-        if repo_path.exists() or repo_path.is_symlink():
-            shutil.rmtree(repo_path)
-        if state == "previous":
-            _replace_absent(rollback_repo, repo_path)
-        shutil.rmtree(transaction_dir, ignore_errors=True)
-        (namespace / "active.json").unlink(missing_ok=True)
+
+        _write_journal(
+            paths.journal_path,
+            "finalize-start",
+            recovery_action="rollback",
+            destination=str(repo_path),
+            expected_old_revision=expected_old_revision,
+            expected_new_revision=expected_new_revision,
+        )
+
+        _verify_revision(
+            expected_new_revision,
+            _active_revision(repo_path) if repo_path.exists() and not repo_path.is_symlink() else expected_new_revision,
+            "active repository",
+        )
+
+        rescue = _rescue_path(repo_path, paths.transaction_id)
+        rescued_active = False
+        try:
+            if repo_path.exists() or repo_path.is_symlink():
+                if not repo_path.is_dir() or repo_path.is_symlink():
+                    raise DeploymentTransactionError(f"repository path is not a real directory: {repo_path}")
+                _safe_rename(repo_path, rescue)
+                rescued_active = True
+            _safe_rename(rollback_repo, repo_path) if state == "previous" else None
+            if repo_path.parent.exists():
+                _fsync_dir(repo_path.parent)
+        except Exception:
+            if rescued_active and (not repo_path.exists() or repo_path.is_symlink()):
+                if not rescue.is_symlink() and not repo_path.exists():
+                    _safe_rename(rescue, repo_path)
+            raise
+
+        if not _has_terminal_event(paths.journal_path):
+            _write_journal(paths.journal_path, "rollback", destination=str(repo_path))
+        _cleanup_transaction(
+            namespace=namespace,
+            transaction_dir=paths.transaction_dir,
+            active_path=paths.active_path,
+            rescue_path=rescue if rescued_active else None,
+        )
+
+
+def recover(repo_path: Path, managed_user: str) -> None:
+    managed_home = _validate_inputs(repo_path, managed_user)
+    namespace = _make_namespace(repo_path, managed_user, managed_home)
+    validate_transaction_root(
+        repo_path=repo_path,
+        managed_home=managed_home,
+        transaction_root=namespace,
+        expected_owner_uid=_expected_owner_uid(),
+    )
+
+    active_path = namespace / "active.json"
+    if not active_path.exists() or active_path.is_symlink():
+        return
+
+    record = _load_active(namespace, repo_path, managed_user)
+    journal_path = Path(record.get("journal_path", ""))
+    if _has_terminal_event(journal_path):
+        _cleanup_transaction(
+            namespace=namespace,
+            transaction_dir=Path(record["transaction_dir"]),
+            active_path=active_path,
+        )
+        return
+
+    if record.get("recovery_action") in {"commit", "rollback"}:
+        finalize(repo_path, managed_user, str(record["recovery_action"]))
+    else:
+        finalize(repo_path, managed_user, "rollback")
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -399,10 +638,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     stage_parser.add_argument("repo_path", type=Path)
     stage_parser.add_argument("managed_user")
     stage_parser.add_argument("archive", type=Path)
+
     finalize_parser = subcommands.add_parser("finalize")
     finalize_parser.add_argument("repo_path", type=Path)
     finalize_parser.add_argument("managed_user")
     finalize_parser.add_argument("action", choices=("commit", "rollback"))
+
+    recover_parser = subcommands.add_parser("recover")
+    recover_parser.add_argument("repo_path", type=Path)
+    recover_parser.add_argument("managed_user")
+
     return parser.parse_args(argv)
 
 
@@ -412,10 +657,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "stage":
             revision = stage(args.repo_path, args.managed_user, args.archive)
             print(f"Staged Maison revision {revision} at {args.repo_path}")
-        else:
+        elif args.command == "finalize":
             finalize(args.repo_path, args.managed_user, args.action)
             verb = "Committed" if args.action == "commit" else "Rolled back"
             print(f"{verb} Maison repository transaction at {args.repo_path}")
+        else:
+            recover(args.repo_path, args.managed_user)
+            print(f"Recovered incomplete Maison repository transaction at {args.repo_path}")
     except DeploymentTransactionError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

@@ -7,4 +7,5 @@ Planned or partially implemented work remains in [Planned features](../planned-f
 
 <!-- BEGIN IMPLEMENTED FEATURES -->
 - [MAISON-001: Root-owned deployment transaction state](maison-001-root-owned-deployment-transactions/index.md)
+- [MAISON-002: Revision-bound commit and rollback](maison-002-revision-bound-commit-rollback/index.md)
 <!-- END IMPLEMENTED FEATURES -->

@@ -39,6 +39,7 @@
 [Implemented Features](./features/index.md)
   <!-- BEGIN IMPLEMENTED FEATURES -->
   - [MAISON-001: Root-owned deployment transaction state](./features/maison-001-root-owned-deployment-transactions/index.md)
+  - [MAISON-002: Revision-bound commit and rollback](./features/maison-002-revision-bound-commit-rollback/index.md)
   <!-- END IMPLEMENTED FEATURES -->
 [Refactor Report](./refactor-report.md)
 

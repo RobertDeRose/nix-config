@@ -69,7 +69,14 @@ ssh "$ssh_user@$hostname" "cat > $quoted_helper" <"$root/scripts/maison_deploy_t
 
 quoted_repo="$(printf '%q' "$repo_path")"
 quoted_user="$(printf '%q' "$user")"
+# shellcheck disable=SC2029 # argument escaping handled above
+if ! ssh "$ssh_user@$hostname" "python3 $quoted_helper recover $quoted_repo $quoted_user"; then
+  printf 'error: existing transaction state recovery failed for %s\n' "$repo_path" >&2
+  exit 1
+fi
+
 quoted_remote_archive="$(printf '%q' "$remote_archive")"
+quoted_helper="$(printf '%q' "$remote_helper")"
 # shellcheck disable=SC2029 # all arguments are shell-escaped above
 ssh "$ssh_user@$hostname" \
   "python3 $quoted_helper stage $quoted_repo $quoted_user $quoted_remote_archive"

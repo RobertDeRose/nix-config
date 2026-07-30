@@ -18,7 +18,7 @@ maison user apply
 maison apply
 ```
 
-`maison apply` activates system state first. The user phase starts only after system success. Use `--host` for an inventory host. Use `--force-dotfiles` only after reviewing `user:plan`; Maison backs up the exact refused targets before replacement.
+`maison apply` activates system state first. The user phase starts only after system success. Repository deployment uses revision-bound finalize checks and startup recovery under the root-owned transaction namespace before user convergence restarts. Use `--host` for an inventory host. Use `--force-dotfiles` only after reviewing `user:plan`; Maison backs up the exact refused targets before replacement.
 
 User package convergence handles one known Docker Desktop cask migration conflict. It removes only six known completion symlinks when each resolves to its exact Docker.app completion source, then retries once. Any regular file, unrelated symlink, or unrelated installer failure remains an error. If the retry fails before Docker replaces a removed link, Maison restores the original link and returns the retry failure.
 
