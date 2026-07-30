@@ -11,21 +11,28 @@ nix = "https://github.com/jbadeau/mise-nix.git"
 # in config.macos.toml so Linux hosts never resolve or install them.
 [tools]
 acli = "latest"
+actionlint = "latest"
 "aqua:gastownhall/beads" = "latest"
+"aqua:Mic92/nixfmt-rs" = "latest"
 "aqua:sethvargo/ratchet" = "latest"
 bat = "latest"
 "github:ctxrs/ctx" = "latest"
 "github:max-sixty/worktrunk" = "latest"
 "github:ogulcancelik/herdr" = "latest"
 "github:peterldowns/nix-search-cli" = "latest"
+hk = "latest"
 "nix:deadnix" = "nixos/nixpkgs#deadnix"
 "nix:devenv" = "nixos/nixpkgs#devenv"
 node = ["24", "lts"]
 pkl = "latest"
 python = "latest"
+shellcheck = "latest"
+shfmt = "latest"
+tombi = "latest"
 usage = "latest"
 
 [bootstrap.packages]
+"brew-cask:google-gemini" = "latest"
 "brew:bash" = "latest"
 "brew:bitwarden-cli" = "latest"
 "brew:btop" = "latest"
