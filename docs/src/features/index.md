@@ -13,4 +13,5 @@ Planned or partially implemented work remains in [Planned features](../planned-f
 - [MAISON-005: Verified bootstrap artifacts](maison-005-verified-bootstrap-artifacts/index.md)
 - [MAISON-006: Review-gated dependency updates](maison-006-review-gated-dependency-updates/index.md)
 - [MAISON-007: Parser-backed TOML mutations](maison-007-parser-backed-toml-mutations/index.md)
+- [MAISON-008: Repository mutation locking and journals](maison-008-repository-mutation-locking/index.md)
 <!-- END IMPLEMENTED FEATURES -->

@@ -45,6 +45,7 @@
   - [MAISON-005: Verified bootstrap artifacts](./features/maison-005-verified-bootstrap-artifacts/index.md)
   - [MAISON-006: Review-gated dependency updates](./features/maison-006-review-gated-dependency-updates/index.md)
   - [MAISON-007: Parser-backed TOML mutations](./features/maison-007-parser-backed-toml-mutations/index.md)
+  - [MAISON-008: Repository mutation locking and journals](./features/maison-008-repository-mutation-locking/index.md)
   <!-- END IMPLEMENTED FEATURES -->
 [Refactor Report](./refactor-report.md)
 
