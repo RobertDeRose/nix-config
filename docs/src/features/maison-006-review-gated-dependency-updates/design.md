@@ -68,7 +68,9 @@ reader documentation under `docs/` describes the target operations and must be r
 
 ## Proposed Design
 
-Split the cache-refresh workflow into cache realization and optional PR update stages. Automation may open or update a branch and PR, but merging is left to normal protected-branch review. Cache warming can run against proposed dependency changes without granting approval.
+Update `.github/workflows/cache-refresh.yml` so cache realization and dependency approval are separate. Automation may update `flake.lock`, build the proposed closure matrix, warm Cachix, and open or update an `automation/refresh-flake-lock` pull request after cache warming succeeds. It must not merge that PR, use `gh pr merge --admin`, enable auto-merge, or otherwise bypass ordinary branch protection.
+
+GitHub pull request review and protected-branch checks remain the only dependency approval mechanism. This feature does not introduce a second approval service or a new operator command. Cache warming can run against proposed dependency changes without granting approval; accepting the dependency update remains a normal reviewed PR merge.
 
 ## Architecture Consistency
 
@@ -105,16 +107,17 @@ and external package-manager side effects when those concerns apply.
 
 | Exact page | Create or update | Planned change | Owning Beads task |
 |------------|------------------|----------------|-------------------|
-| docs/operations.md | Update | Align reader-facing contract with MAISON-006: Review-gated dependency updates | Implementation tasks |
-| docs/development/tooling.md | Update | Align reader-facing contract with MAISON-006: Review-gated dependency updates | Implementation tasks |
-| docs/reference/tooling.md | Update | Align reader-facing contract with MAISON-006: Review-gated dependency updates | Implementation tasks |
+| docs/operations.md | Update | Explain that automated cache warming may prepare a flake update PR, but dependency approval remains review-gated | Implementation tasks |
+| docs/src/development/tooling.md | Update | Document cache-refresh workflow behavior for contributors and CI maintainers | Implementation tasks |
+| docs/src/reference/tooling.md | Update | List `.github/workflows/cache-refresh.yml` and its no-admin-merge contract | Implementation tasks |
 | `docs/src/features/maison-006-review-gated-dependency-updates/index.md` | Create during close-out | Preserve delivery and audit history | Close-out documentation |
 | `docs/src/planned-features.md` | Update | Track roadmap status and Beads root | Planning |
 | `docs/src/SUMMARY.md` | Update | Register this design and delivered record links | Planning / close-out |
 
 ## Validation Strategy
 
-- Workflow tests or source guards reject `--admin` merge in dependency automation.
+- Workflow tests or source guards reject `--admin` merge, auto-merge enablement, and any dependency-automation job that invokes `gh pr merge`.
+- Workflow tests or source guards prove cache warming can run without granting dependency approval and that update PR creation/update remains separate from merge approval.
 - Actionlint on updated workflows.
 - `mise -E dev run check` and `uv run scripts/check-docs.py`.
 
@@ -125,9 +128,9 @@ and external package-manager side effects when those concerns apply.
 
 ## Dependencies and Parallelism
 
-This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. Sibling
-implementation tasks may run in parallel only when they do not edit the same command path, test file, or documentation
-page.
+This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. The
+contract task blocks the implementation task so workflow safety guards land before the workflow change. The two planned
+implementation tasks are not parallel-safe because both touch workflow safety expectations and related tests/docs.
 
 ## Rollout and Migration
 
