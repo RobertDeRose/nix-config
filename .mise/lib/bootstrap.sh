@@ -8,6 +8,66 @@ wait_for_nix_daemon() {
   return 1
 }
 
+bootstrap_manifest_path() {
+  printf '%s/bootstrap/artifacts.toml\n' "${MISE_PROJECT_ROOT:-$(repo_root "${BASH_SOURCE[0]}")}"
+}
+
+manifest_value() {
+  local manifest="$1" artifact="$2" key="$3" system="${4:-}" section
+  section="artifacts.$artifact"
+  [ -z "$system" ] || section="artifacts.$artifact.platforms.$system"
+  awk -v section="$section" -v key="$key" '
+    $0 ~ "^\\[" section "\\]$" { active = 1; next }
+    $0 ~ /^\[/ { active = 0 }
+    active && $1 == key { sub(/^[^=]*= */, ""); gsub(/^\"|\"$/, ""); print; exit }
+  ' "$manifest"
+}
+
+verify_sha256_file() {
+  local path="$1" expected="${2#sha256:}" actual=""
+  if command -v sha256sum > /dev/null 2>&1; then
+    actual="$(sha256sum "$path" | awk '{print $1}')"
+  elif command -v shasum > /dev/null 2>&1; then
+    actual="$(shasum -a 256 "$path" | awk '{print $1}')"
+  else
+    die "sha256 verification requires sha256sum or shasum"
+    return 1
+  fi
+  [ "$actual" = "$expected" ] || die "checksum mismatch for $path: expected sha256:$expected, got sha256:$actual"
+}
+
+fetch_verified_bootstrap_artifact() {
+  local artifact="$1" destination="$2" manifest system url sha
+  manifest="$(bootstrap_manifest_path)"
+  system="$(current_system)"
+  url="$(manifest_value "$manifest" "$artifact" url "$system")"
+  sha="$(manifest_value "$manifest" "$artifact" sha256 "$system")"
+  [ -n "$url" ] || die "missing bootstrap artifact URL for $artifact on $system"
+  [ -n "$sha" ] || die "missing bootstrap artifact checksum for $artifact on $system"
+  curl -fsSL "$url" -o "$destination"
+  verify_sha256_file "$destination" "$sha"
+}
+
+install_mise_if_missing() {
+  local temp_dir artifact
+  if command -v mise > /dev/null 2>&1; then
+    return 0
+  fi
+  if [ -x "$HOME/.local/bin/mise" ]; then
+    export PATH="$HOME/.local/bin:$PATH"
+    command -v mise > /dev/null 2>&1 && return 0
+  fi
+  log_info "Installing verified mise"
+  temp_dir="$(mktemp -d)"
+  artifact="$temp_dir/mise"
+  fetch_verified_bootstrap_artifact mise "$artifact"
+  chmod 0755 "$artifact"
+  mkdir -p "$HOME/.local/bin"
+  cp "$artifact" "$HOME/.local/bin/mise"
+  rm -rf "$temp_dir"
+  export PATH="$HOME/.local/bin:$PATH"
+}
+
 verify_nix() {
   if ! command -v nix > /dev/null 2>&1 && [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
     set +u
@@ -52,8 +112,14 @@ sandbox = false"
     return 1
   fi
 
-  log_info "Installing Lix"
-  curl -sSfL https://install.lix.systems/lix | bash -s -- install || installer_rc=$?
+  log_info "Installing verified Lix"
+  local temp_dir installer
+  temp_dir="$(mktemp -d)"
+  installer="$temp_dir/lix-installer"
+  fetch_verified_bootstrap_artifact lix "$installer"
+  chmod 0755 "$installer"
+  "$installer" install || installer_rc=$?
+  rm -rf "$temp_dir"
   if [ "$installer_rc" -ne 0 ]; then
     log_warn "Lix installer exited with status $installer_rc; verifying daemon readiness"
   fi

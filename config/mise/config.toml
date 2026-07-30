@@ -5,7 +5,7 @@ lockfile = true
 lockfile_platforms = ["macos-arm64", "linux-arm64", "linux-x64"]
 
 [plugins]
-nix = "https://github.com/jbadeau/mise-nix.git"
+nix = "https://github.com/jbadeau/mise-nix.git#e310c4c20e8273ba850298c10fbe97d0c858c300"
 
 # Cross-platform user tools. macOS-only AI tools and App Store integration live
 # in config.macos.toml so Linux hosts never resolve or install them.
@@ -23,7 +23,7 @@ bat = "latest"
 node = ["24", "lts"]
 pkl = "latest"
 python = "latest"
-usage = "latest"
+usage = "4.0.0"
 
 [bootstrap.packages]
 "brew-cask:google-gemini" = "latest"

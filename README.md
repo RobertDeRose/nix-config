@@ -117,14 +117,15 @@ From an existing checkout:
 ./bootstrap.sh --host "$(hostname -s)" --overlay GIT-URL-OR-PATH
 ```
 
-Or from the public repository:
+Or from a downloaded bootstrap artifact:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/dev/bootstrap.sh \
-  | bash -s -- --host "$(hostname -s)" --overlay GIT-URL-OR-PATH
+curl -fsSLO https://raw.githubusercontent.com/RobertDeRose/nix-config/dev/bootstrap.sh
+# Verify bootstrap.sh against the reviewed release checksum before running it.
+bash bootstrap.sh --host "$(hostname -s)" --overlay GIT-URL-OR-PATH
 ```
 
-Bootstrap installs mise and Nix/Lix when missing, stores or refreshes the overlay source, applies the Nix system layer, then applies user state. The default clone target remains `RobertDeRose/nix-config`; Maison is the command and architecture name, not a required repository rename. Non-interactive setup fails with an actionable message when an overlay is required but no source is available.
+Bootstrap installs verified pinned mise and Nix/Lix artifacts when missing, stores or refreshes the overlay source, applies the Nix system layer, then applies user state. Bootstrap verification metadata lives in `bootstrap/artifacts.toml`. The default clone target remains `RobertDeRose/nix-config`; Maison is the command and architecture name, not a required repository rename. Non-interactive setup fails with an actionable message when an overlay is required but no source is available.
 
 Before the first real switch on an existing machine:
 

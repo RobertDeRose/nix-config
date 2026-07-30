@@ -1,5 +1,11 @@
 # Recovery
 
+## Bootstrap verification recovery
+
+Bootstrap verification metadata lives in `bootstrap/artifacts.toml`. If a mise or Lix artifact fails verification, do not execute it manually. Retry once to rule out a partial download; if it still fails, inspect the artifact URL and checksum in the manifest, update the manifest only after reviewing the upstream release, or manually install the pinned artifact after verifying the same SHA-256 digest.
+
+For Lix installer failures after checksum verification, fix the reported Nix installer issue and rerun bootstrap. For mise failures after checksum verification, install the verified binary as `~/.local/bin/mise`, ensure it is executable, and rerun bootstrap.
+
 ## Overlay recovery
 
 Maison's overlay selection is local state:

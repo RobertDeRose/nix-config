@@ -336,7 +336,7 @@ class OwnershipBoundaryTest(unittest.TestCase):
     def test_repository_tools_are_isolated_from_machine_convergence(self) -> None:
         base = tomllib.loads(read("mise.toml"))
         user_tools = tomllib.loads(read("config/mise/config.toml"))["tools"]
-        self.assertEqual(user_tools["usage"], "latest")
+        self.assertEqual(user_tools["usage"], "4.0.0")
         for tool in ("actionlint", "hk", "shellcheck", "shfmt", "tombi"):
             self.assertIn(tool, base["tools"])
             self.assertNotIn(tool, user_tools)
@@ -768,7 +768,7 @@ class VerifiedBootstrapContractTest(unittest.TestCase):
     def test_public_bootstrap_docs_do_not_recommend_pipe_to_shell(self) -> None:
         pattern = re.compile(r"curl[^\n]*\|\s*(?:bash|sh)\b")
         offenders = []
-        for name in ("README.md", "docs/operations.md", "docs/task-reference.md"):
+        for name in ("README.md", "docs/operations.md", "docs/deployment.md", "docs/task-reference.md"):
             text = read(name)
             if pattern.search(text):
                 offenders.append(name)
@@ -785,12 +785,18 @@ class VerifiedBootstrapContractTest(unittest.TestCase):
             with self.subTest(artifact=name):
                 artifact = artifacts.get(name) if isinstance(artifacts, dict) else None
                 self.assertIsInstance(artifact, dict)
-                for field in ("version", "url", "systems", "recovery_hint"):
+                for field in ("version", "systems", "recovery_hint"):
                     self.assertIsInstance(artifact.get(field), str if field != "systems" else list)
                     self.assertTrue(artifact.get(field))
-                verification = artifact.get("sha256") or artifact.get("signature")
-                self.assertIsInstance(verification, str)
-                self.assertTrue(verification)
+                platforms = artifact.get("platforms")
+                self.assertIsInstance(platforms, dict)
+                for system in ("aarch64-darwin", "aarch64-linux", "x86_64-linux"):
+                    with self.subTest(artifact=name, system=system):
+                        platform_data = platforms.get(system)
+                        self.assertIsInstance(platform_data, dict)
+                        self.assertIsInstance(platform_data.get("url"), str)
+                        verification = platform_data.get("sha256") or platform_data.get("signature")
+                        self.assertRegex(verification, r"^sha256:[0-9a-f]{64}$")
 
     def test_bootstrap_verifier_accepts_match_and_rejects_mismatch(self) -> None:
         helper = ROOT / "scripts/verify_bootstrap_artifact.py"

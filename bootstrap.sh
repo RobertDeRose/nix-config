@@ -3,8 +3,9 @@
 #
 # Usage:
 #   ./bootstrap.sh [--host HOST] [--overlay GIT-URL-OR-PATH] [--repo OWNER/REPO|URL|PATH] [--ref REF]
-#   curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/dev/bootstrap.sh \
-#     | bash -s -- --host HOST --overlay GIT-URL-OR-PATH --repo RobertDeRose/nix-config --ref dev
+#   Download this file from a reviewed release, verify it against the published
+#   checksum, then run:
+#     bash bootstrap.sh --host HOST --overlay GIT-URL-OR-PATH --repo RobertDeRose/nix-config --ref dev
 
 set -euo pipefail
 
@@ -181,13 +182,7 @@ source "$repo_root/.mise/lib/common.sh"
 source "$repo_root/.mise/lib/platform.sh"
 # shellcheck source=.mise/lib/bootstrap.sh
 source "$repo_root/.mise/lib/bootstrap.sh"
-if ! command -v mise > /dev/null 2>&1; then
-  if [ ! -x "$HOME/.local/bin/mise" ]; then
-    log "Installing mise"
-    curl -fsSL https://mise.run | sh
-  fi
-  export PATH="$HOME/.local/bin:$PATH"
-fi
+install_mise_if_missing
 command -v mise > /dev/null 2>&1 || bootstrap_die "mise installation did not place the executable on PATH"
 
 install_nix_or_lix_if_missing

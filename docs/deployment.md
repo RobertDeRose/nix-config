@@ -37,7 +37,7 @@ Remote system and repository actions now run through a separate deployment SSH a
 
 Existing hosts that do not yet have a reachable `maison-deploy` account need one bootstrap deployment through an explicitly configured privileged account, such as `ssh_user = "root"`. After that system deployment creates the deployment account and sudoers policy, switch the inventory back to the `maison-deploy` default.
 
-Use `--system-only` to skip repository transfer and user convergence.
+When the remote managed user does not yet have mise, the user-convergence fallback reads `bootstrap/artifacts.toml` from the staged repository, downloads the pinned mise artifact to disk, verifies its SHA-256 digest, and installs only the verified local binary. Use `--system-only` to skip repository transfer and user convergence.
 
 ## Overlay inventory
 

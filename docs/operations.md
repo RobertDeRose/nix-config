@@ -8,6 +8,8 @@ Use `--overlay` during bootstrap, or set `MAISON_OVERLAY_SOURCE` from the enviro
 ./bootstrap.sh --host "$(hostname -s)" --overlay GIT-URL-OR-PATH
 ```
 
+Bootstrap downloads Maison-owned mise and Lix artifacts to disk, verifies the pinned metadata in `bootstrap/artifacts.toml`, and executes only verified local files. Do not use pipe-to-shell bootstrap examples.
+
 Maison stores the selected source in `${XDG_STATE_HOME:-$HOME/.local/state}/maison/overlay.toml` and clones or updates it at `${XDG_DATA_HOME:-$HOME/.local/share}/maison/overlay`. Interactive bootstrap may prompt for the overlay source when it is required; non-interactive bootstrap fails instead of continuing with public starter data for a real machine.
 
 `maison host add` mutates the active inventory repository. With an overlay inventory, new hosts and optional `hosts/<name>/system.nix` stubs are written to the overlay clone, not to public Maison.

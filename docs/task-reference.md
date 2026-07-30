@@ -10,7 +10,7 @@
 | `update [input] [--check]` | Update flake inputs atomically; optionally run full validation |
 | `deploy <host>` | Deploy Linux system state using the configured deployment account (`maison-deploy` by default), then stage source through a root-owned repository transaction and converge remote user state with revision-bound commit/rollback checks |
 | `rollback` | Roll back only the Nix system generation |
-| `bootstrap [--overlay SOURCE]` | Store or refresh the private overlay source, install or repair Nix, then converge both layers system-first |
+| `bootstrap [--overlay SOURCE]` | Store or refresh the private overlay source, verify pinned mise and Lix artifacts, install or repair Nix, then converge both layers system-first |
 | `check` | Install repository `mise.toml` tools, validate data and scripts, run behavioral tests, and build Nix checks |
 
 ## System commands
@@ -51,3 +51,7 @@ Hidden `nix:*` tasks are compatibility aliases to the corresponding `system:*` t
 ## Overlay-aware behavior
 
 `--overlay` is a bootstrap flag. After bootstrap, tasks read the saved overlay state from `${XDG_STATE_HOME:-$HOME/.local/state}/maison/overlay.toml`. If the clone contains `inventory.toml`, inventory lookups, `host:add`, system planning, Nix evaluation, and deployment target selection use that overlay file and its sibling `hosts/` tree. Public starter files remain the fallback when no overlay inventory is present.
+
+## Verified bootstrap artifacts
+
+Bootstrap artifact metadata is checked in at `bootstrap/artifacts.toml`. Maison downloads the selected mise or Lix artifact to disk, verifies its SHA-256 digest for the current supported system, then executes or installs only that verified local file. The remote deployment mise fallback uses the same repository metadata.

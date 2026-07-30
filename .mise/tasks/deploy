@@ -99,8 +99,13 @@ set -eu
 repo_path="$1"
 shift
 if ! command -v mise >/dev/null 2>&1; then
-  curl -fsSL https://mise.run | sh
-  export PATH="$HOME/.local/bin:$PATH"
+  # shellcheck source=.mise/lib/common.sh
+  . "$repo_path/.mise/lib/common.sh"
+  # shellcheck source=.mise/lib/platform.sh
+  . "$repo_path/.mise/lib/platform.sh"
+  # shellcheck source=.mise/lib/bootstrap.sh
+  . "$repo_path/.mise/lib/bootstrap.sh"
+  install_mise_if_missing
 fi
 cd "$repo_path"
 export MISE_TRUSTED_CONFIG_PATHS="$repo_path${MISE_TRUSTED_CONFIG_PATHS:+:$MISE_TRUSTED_CONFIG_PATHS}"
