@@ -39,9 +39,10 @@ is unsafe or unsupported, Maison fails with an actionable message instead of sil
 
 ### Functional Requirements
 
-- Pin `tomlkit` in contributor/runtime tooling used by mutation scripts.
-- Replace section-splicing logic in `config_edit.py` with parser-backed edits.
-- Add regression tests for trailing comments, quoted keys, arrays of tables, CRLF input, unrelated following sections, and malformed structures.
+- Pin `tomlkit` for mutation scripts through a deterministic repository-controlled runtime path that does not rely on ambient Python site-packages.
+- Preserve `tool:add` and `tool:remove` repairability when mise project tool resolution is broken; parser-backed editing must still work on the `--skip-tools` path.
+- Replace section-splicing logic in `config_edit.py` with parser-backed edits for tools, bootstrap packages/apps, lock entries, and inventory host additions.
+- Add regression tests for trailing comments, quoted keys, arrays of tables, CRLF input, unrelated following sections, malformed structures, lock blocks, and host inventory additions.
 - Mutation commands write only after successful parse, edit, validation, and lock reconciliation.
 
 ### Quality Requirements
@@ -68,7 +69,11 @@ reader documentation under `docs/` describes the target operations and must be r
 
 ## Proposed Design
 
-Introduce a small Python TOML mutation module built on pinned `tomlkit`. Existing authoring commands call typed operations for adding and removing tools, packages, apps, hosts, and lock entries rather than editing text sections directly. The module preserves formatting where `tomlkit` can round-trip and refuses unsupported malformed input without replacing files.
+Introduce a small Python TOML mutation module built on pinned `tomlkit`. Existing TOML authoring surfaces call typed operations for adding and removing tools, bootstrap packages/apps, lock entries, and inventory hosts rather than editing text sections directly. Shell task transaction wrappers and command names remain unchanged.
+
+The `tomlkit` runtime must be deterministic and repository-controlled because `tool:add` and `tool:remove` intentionally bypass mise project tool resolution when repairing invalid tool configuration. The implementation may vendor the exact reviewed `tomlkit` runtime or use an equivalently pinned checked-in dependency mechanism, but it must not depend on unpinned ambient site-packages.
+
+The module preserves formatting where `tomlkit` can round-trip, including comments, quoted keys, table boundaries, arrays of tables, and CRLF newlines covered by tests. Unsupported malformed input is rejected before replacing files. Non-TOML authoring artifacts are outside this feature.
 
 ## Architecture Consistency
 
@@ -105,17 +110,18 @@ and external package-manager side effects when those concerns apply.
 
 | Exact page | Create or update | Planned change | Owning Beads task |
 |------------|------------------|----------------|-------------------|
-| docs/development/tooling.md | Update | Align reader-facing contract with MAISON-007: Parser-backed TOML mutations | Implementation tasks |
-| docs/task-reference.md | Update | Align reader-facing contract with MAISON-007: Parser-backed TOML mutations | Implementation tasks |
-| docs/add-a-tool.md | Update | Align reader-facing contract with MAISON-007: Parser-backed TOML mutations | Implementation tasks |
-| docs/add-an-app.md | Update | Align reader-facing contract with MAISON-007: Parser-backed TOML mutations | Implementation tasks |
+| docs/src/development/tooling.md | Update | Document the pinned parser-backed TOML mutation runtime for contributors | Implementation tasks |
+| docs/task-reference.md | Update | Document parser-backed transactional TOML mutation guarantees for configuration commands | Implementation tasks |
+| docs/add-a-tool.md | Update | Explain tool/package edits preserve supported TOML formatting and fail without partial writes | Implementation tasks |
+| docs/add-an-app.md | Update | Explain app edits preserve supported TOML formatting and fail without partial writes | Implementation tasks |
 | `docs/src/features/maison-007-parser-backed-toml-mutations/index.md` | Create during close-out | Preserve delivery and audit history | Close-out documentation |
 | `docs/src/planned-features.md` | Update | Track roadmap status and Beads root | Planning |
 | `docs/src/SUMMARY.md` | Update | Register this design and delivered record links | Planning / close-out |
 
 ## Validation Strategy
 
-- Focused `tests/test_config_edit.py` regression corpus for comments, quoted keys, arrays of tables, CRLF input, malformed TOML, and unrelated sections.
+- Focused `tests/test_config_edit.py` regression corpus for comments, quoted keys, arrays of tables, CRLF input, malformed TOML, lock blocks, host inventory additions, and unrelated sections.
+- Tests proving the pinned `tomlkit` runtime is used without ambient site-packages and remains available on the `tool:add`/`tool:remove` `--skip-tools` path.
 - Behavioral authoring command tests.
 - `mise -E dev run check` and `uv run scripts/check-docs.py`.
 
@@ -126,9 +132,9 @@ and external package-manager side effects when those concerns apply.
 
 ## Dependencies and Parallelism
 
-This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. Sibling
-implementation tasks may run in parallel only when they do not edit the same command path, test file, or documentation
-page.
+This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. The
+contract task blocks the implementation task so regression coverage lands first. The two planned implementation tasks
+are not parallel-safe because both touch the mutation helper, authoring behavior, and related tests/docs.
 
 ## Rollout and Migration
 
