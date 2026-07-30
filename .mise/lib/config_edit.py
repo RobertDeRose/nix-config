@@ -1,17 +1,10 @@
 #!/usr/bin/env python3
-"""Small deterministic editor for Maison's mise TOML tables.
-
-The writer only replaces selected top-level tables or lockfile tool blocks and
-leaves comments and unrelated sections untouched. It intentionally supports the
-simple scalar and string-list values used by Maison's [tools] and
-[bootstrap.packages] tables.
-"""
+"""Parser-backed deterministic editor for Maison TOML declarations."""
 
 from __future__ import annotations
 
 import argparse
-import json
-import re
+import hashlib
 import sys
 import tomllib
 from pathlib import Path
@@ -22,9 +15,43 @@ class ConfigError(RuntimeError):
     pass
 
 
-TOOL_LOCK_HEADER_RE = re.compile(
-    r'^\s*\[\[tools\.(?P<key>"(?:[^"\\]|\\.)*"|[A-Za-z0-9_-]+)\]\]\s*(?:#.*)?$'
+TOMLKIT_VERSION = "0.13.3"
+TOMLKIT_WHEEL = (
+    Path(__file__).resolve().parents[1]
+    / "vendor"
+    / f"tomlkit-{TOMLKIT_VERSION}-py3-none-any.whl"
 )
+TOMLKIT_WHEEL_SHA256 = "c89c649d79ee40629a9fda55f8ace8c6a1b42deb912b2a8fd8d942ddadb606b0"
+_TOMLKIT: Any | None = None
+
+
+def ensure_tomlkit() -> Any:
+    """Import the reviewed repository-controlled tomlkit wheel."""
+    global _TOMLKIT  # cached import keeps CLI startup deterministic
+    if _TOMLKIT is not None:
+        return _TOMLKIT
+    try:
+        digest = hashlib.sha256(TOMLKIT_WHEEL.read_bytes()).hexdigest()
+    except OSError as exc:
+        raise ConfigError(f"missing pinned tomlkit runtime at {TOMLKIT_WHEEL}") from exc
+    if digest != TOMLKIT_WHEEL_SHA256:
+        raise ConfigError(
+            f"{TOMLKIT_WHEEL}: sha256 mismatch; expected {TOMLKIT_WHEEL_SHA256}, got {digest}"
+        )
+    wheel = str(TOMLKIT_WHEEL)
+    if wheel not in sys.path:
+        sys.path.insert(0, wheel)
+    try:
+        import tomlkit
+    except ImportError as exc:
+        raise ConfigError(f"unable to import pinned tomlkit runtime from {TOMLKIT_WHEEL}") from exc
+    if getattr(tomlkit, "__version__", None) != TOMLKIT_VERSION:
+        raise ConfigError(
+            f"unexpected tomlkit version {getattr(tomlkit, '__version__', None)!r}; "
+            f"expected {TOMLKIT_VERSION}"
+        )
+    _TOMLKIT = tomlkit
+    return _TOMLKIT
 
 
 def load_toml(path: Path) -> dict[str, Any]:
@@ -35,52 +62,50 @@ def load_toml(path: Path) -> dict[str, Any]:
         raise ConfigError(f"{path}: {exc}") from exc
 
 
-def table_bounds(lines: list[str], section: str) -> tuple[int, int] | None:
-    header = f"[{section}]"
-    start = next((i for i, line in enumerate(lines) if line.strip() == header), None)
-    if start is None:
-        return None
-    end = len(lines)
-    for index in range(start + 1, len(lines)):
-        stripped = lines[index].strip()
-        if stripped.startswith("[") and stripped.endswith("]"):
-            end = index
-            break
-    return start, end
+def read_toml_text(path: Path) -> tuple[str, bool]:
+    try:
+        content = path.read_bytes()
+    except OSError as exc:
+        raise ConfigError(f"{path}: {exc}") from exc
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ConfigError(f"{path}: {exc}") from exc
+    uses_crlf = b"\r\n" in content and b"\n" not in content.replace(b"\r\n", b"")
+    return text, uses_crlf
 
 
-def toml_key(value: str) -> str:
-    return value if re.fullmatch(r"[A-Za-z0-9_-]+", value) else json.dumps(value)
+def parse_document(path: Path) -> tuple[Any, dict[str, Any], bool]:
+    text, uses_crlf = read_toml_text(path)
+    kit = ensure_tomlkit()
+    try:
+        document = kit.parse(text)
+    except kit.exceptions.ParseError as exc:
+        raise ConfigError(f"{path}: {exc}") from exc
+    try:
+        typed = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as exc:
+        raise ConfigError(f"{path}: {exc}") from exc
+    return document, typed, uses_crlf
 
 
-def format_value(value: Any) -> str:
-    if isinstance(value, str):
-        return json.dumps(value)
-    if isinstance(value, list) and value and all(isinstance(item, str) for item in value):
-        return "[" + ", ".join(json.dumps(item) for item in value) + "]"
-    raise ConfigError(f"unsupported table value {value!r}; edit the config manually")
+def dump_document(document: Any, uses_crlf: bool) -> str:
+    text = ensure_tomlkit().dumps(document)
+    if uses_crlf:
+        text = text.replace("\r\n", "\n").replace("\n", "\r\n")
+    return text
 
 
-def rewrite_table(path: Path, section: str, values: dict[str, Any]) -> None:
-    lines = path.read_text().splitlines(keepends=True)
-    bounds = table_bounds(lines, section)
-    replacement = [f"[{section}]\n"]
-    replacement.extend(
-        f"{toml_key(key)} = {format_value(values[key])}\n"
-        for key in sorted(values, key=lambda item: (item.casefold(), item))
-    )
-    replacement.append("\n")
-
-    if bounds is None:
-        if lines and lines[-1].strip():
-            lines.append("\n")
-        lines.extend(replacement)
-    else:
-        start, end = bounds
-        lines[start:end] = replacement
-
-    path.write_text("".join(lines))
-    load_toml(path)
+def replace_with_valid_toml(path: Path, document: Any, uses_crlf: bool) -> None:
+    text = dump_document(document, uses_crlf)
+    try:
+        tomllib.loads(text)
+    except tomllib.TOMLDecodeError as exc:
+        raise ConfigError(f"{path}: edited TOML would be invalid: {exc}") from exc
+    try:
+        path.write_text(text, newline="")
+    except OSError as exc:
+        raise ConfigError(f"{path}: {exc}") from exc
 
 
 def split_tool_version(tool: str) -> tuple[str, str | None]:
@@ -97,12 +122,29 @@ def split_tool_version(tool: str) -> tuple[str, str | None]:
     return tool, None
 
 
-def edit_tool(path: Path, tool: str, version: str, remove: bool) -> None:
-    data = load_toml(path)
-    tools = dict(data.get("tools", {}))
-    name, embedded_version = split_tool_version(tool)
-    selected = embedded_version or version
+def ensure_table(document: Any, name: str) -> Any:
+    value = document.get(name)
+    if value is None:
+        value = ensure_tomlkit().table()
+        document[name] = value
+    if not hasattr(value, "__setitem__"):
+        raise ConfigError(f"[{name}] must be a TOML table")
+    return value
 
+
+def ensure_child_table(parent: Any, parent_name: str, child_name: str) -> Any:
+    value = parent.get(child_name)
+    if value is None:
+        value = ensure_tomlkit().table()
+        parent[child_name] = value
+    if not hasattr(value, "__setitem__"):
+        raise ConfigError(f"[{parent_name}.{child_name}] must be a TOML table")
+    return value
+
+
+def validate_tool_table(path: Path, tools: Any) -> None:
+    if not isinstance(tools, dict):
+        raise ConfigError(f"{path}: [tools] must be a table")
     for configured_name, configured in tools.items():
         valid = isinstance(configured, str) or (
             isinstance(configured, list)
@@ -115,13 +157,22 @@ def edit_tool(path: Path, tool: str, version: str, remove: bool) -> None:
                 "edit it manually to preserve its options"
             )
 
+
+def edit_tool(path: Path, tool: str, version: str, remove: bool) -> None:
+    document, typed, uses_crlf = parse_document(path)
+    typed_tools = typed.get("tools", {})
+    validate_tool_table(path, typed_tools)
+    tools = ensure_table(document, "tools")
+    name, embedded_version = split_tool_version(tool)
+    selected = embedded_version or version
+
     if remove:
-        if name not in tools:
+        if name not in typed_tools:
             raise ConfigError(f"tool {name!r} is not present in {path}")
         if embedded_version is None:
             del tools[name]
         else:
-            configured = tools[name]
+            configured = typed_tools[name]
             versions = [configured] if isinstance(configured, str) else list(configured)
             if embedded_version not in versions:
                 raise ConfigError(
@@ -133,7 +184,7 @@ def edit_tool(path: Path, tool: str, version: str, remove: bool) -> None:
             else:
                 tools[name] = versions[0] if len(versions) == 1 else versions
     else:
-        configured = tools.get(name)
+        configured = typed_tools.get(name)
         if configured is None:
             tools[name] = selected
         else:
@@ -142,58 +193,50 @@ def edit_tool(path: Path, tool: str, version: str, remove: bool) -> None:
                 raise ConfigError(f"version {selected!r} is already configured for {name!r}")
             tools[name] = [*versions, selected]
 
-    rewrite_table(path, "tools", tools)
+    replace_with_valid_toml(path, document, uses_crlf)
 
 
 def edit_package(path: Path, package: str, version: str, remove: bool) -> None:
     if ":" not in package:
         raise ConfigError("package must use manager:package syntax")
-    data = load_toml(path)
-    packages = dict(data.get("bootstrap", {}).get("packages", {}))
-    if not all(isinstance(key, str) and isinstance(value, str) for key, value in packages.items()):
+    document, typed, uses_crlf = parse_document(path)
+    bootstrap = typed.get("bootstrap", {})
+    if not isinstance(bootstrap, dict):
+        raise ConfigError(f"{path}: [bootstrap] must be a table")
+    packages = bootstrap.get("packages", {})
+    if not isinstance(packages, dict) or not all(
+        isinstance(key, str) and isinstance(value, str) for key, value in packages.items()
+    ):
         raise ConfigError(f"{path}: [bootstrap.packages] must map names to version strings")
+
+    bootstrap_table = ensure_table(document, "bootstrap")
+    package_table = ensure_child_table(bootstrap_table, "bootstrap", "packages")
 
     if remove:
         if package not in packages:
             raise ConfigError(f"package {package!r} is not present in {path}")
-        del packages[package]
+        del package_table[package]
     else:
         if package in packages:
             raise ConfigError(f"package {package!r} is already present in {path}")
-        packages[package] = version
+        package_table[package] = version
 
-    rewrite_table(path, "bootstrap.packages", packages)
-
-
-def decode_toml_key(raw: str) -> str:
-    if raw.startswith('"'):
-        try:
-            return tomllib.loads(f"key = {raw}")["key"]
-        except tomllib.TOMLDecodeError as exc:
-            raise ConfigError(f"invalid lockfile tool key {raw!r}: {exc}") from exc
-    return raw
+    replace_with_valid_toml(path, document, uses_crlf)
 
 
-def lock_block_end(lines: list[str], start: int, raw_key: str) -> int:
-    nested_prefixes = (f"[tools.{raw_key}.", f"[[tools.{raw_key}.")
-    for index in range(start + 1, len(lines)):
-        stripped = lines[index].lstrip()
-        if TOOL_LOCK_HEADER_RE.match(lines[index]):
-            return index
-        if stripped.startswith("[") and not stripped.startswith(nested_prefixes):
-            return index
-    return len(lines)
+def lock_entries_for(tools: dict[str, Any], name: str) -> list[dict[str, Any]]:
+    entries = tools.get(name, [])
+    if isinstance(entries, dict):
+        entries = [entries]
+    if not isinstance(entries, list):
+        raise ConfigError(f"lockfile entry for {name!r} has an unexpected shape")
+    if not all(isinstance(entry, dict) for entry in entries):
+        raise ConfigError(f"lockfile entry for {name!r} has an unexpected shape")
+    return entries
 
 
-def lock_block_version(block: str, name: str) -> str:
-    try:
-        data = tomllib.loads(block)
-    except tomllib.TOMLDecodeError as exc:
-        raise ConfigError(f"unable to parse lockfile block for {name!r}: {exc}") from exc
-    entries = data.get("tools", {}).get(name)
-    if not isinstance(entries, list) or len(entries) != 1:
-        raise ConfigError(f"lockfile block for {name!r} has an unexpected shape")
-    version = entries[0].get("version")
+def lock_entry_version(entry: dict[str, Any], name: str) -> str:
+    version = entry.get("version")
     if not isinstance(version, str):
         raise ConfigError(f"lockfile block for {name!r} has no string version")
     return version
@@ -210,31 +253,66 @@ def remove_locked_tool(path: Path, tool: str, config: Path | None = None) -> Non
     # version-specific removal that leaves other selectors configured, remove
     # only an exactly matching resolved version; fuzzy selectors may share a
     # resolved lock entry and are intentionally left for mise to reconcile.
+    document, typed, uses_crlf = parse_document(path)
     name, selected_version = split_tool_version(tool)
     if config is not None and name not in load_toml(config).get("tools", {}):
         selected_version = None
-    lines = path.read_text().splitlines(keepends=True)
-    output: list[str] = []
-    index = 0
-    while index < len(lines):
-        match = TOOL_LOCK_HEADER_RE.match(lines[index])
-        if match is None:
-            output.append(lines[index])
-            index += 1
-            continue
-        raw_key = match.group("key")
-        block_end = lock_block_end(lines, index, raw_key)
-        block = "".join(lines[index:block_end])
-        block_name = decode_toml_key(raw_key)
-        should_remove = block_name == name
-        if should_remove and selected_version is not None:
-            should_remove = lock_block_version(block, block_name) == selected_version
-        if not should_remove:
-            output.extend(lines[index:block_end])
-        index = block_end
 
-    path.write_text("".join(output))
-    load_toml(path)
+    typed_tools = typed.get("tools", {})
+    if not isinstance(typed_tools, dict):
+        raise ConfigError(f"{path}: [tools] must be a table")
+    if name not in typed_tools:
+        return
+
+    tools = document.get("tools")
+    if tools is None:
+        return
+    entries = lock_entries_for(typed_tools, name)
+    if selected_version is None:
+        del tools[name]
+    else:
+        matching_indexes = [
+            index
+            for index, entry in enumerate(entries)
+            if lock_entry_version(entry, name) == selected_version
+        ]
+        if not matching_indexes:
+            return
+        document_entries = tools[name]
+        if isinstance(document_entries, dict):
+            if 0 in matching_indexes:
+                del tools[name]
+        else:
+            for index in reversed(matching_indexes):
+                del document_entries[index]
+            if len(document_entries) == 0:
+                del tools[name]
+
+    replace_with_valid_toml(path, document, uses_crlf)
+
+
+def add_host(path: Path, name: str, *, system: str, user: str, profiles: list[str]) -> None:
+    document, typed, uses_crlf = parse_document(path)
+    hosts = typed.get("hosts", {})
+    if not isinstance(hosts, dict):
+        raise ConfigError(f"{path}: [hosts] must be a table")
+    if name in hosts:
+        raise ConfigError(f"host {name!r} is already present in {path}")
+    if not profiles:
+        raise ConfigError("at least one profile is required")
+
+    hosts_table = ensure_table(document, "hosts")
+    host_table = ensure_tomlkit().table()
+    host_table.add("system", system)
+    host_table.add("user", user)
+    host_table.add("profiles", profiles)
+    hosts_table[name] = host_table
+    replace_with_valid_toml(path, document, uses_crlf)
+
+
+def parse_profiles(value: str) -> list[str]:
+    profiles = [profile.strip() for profile in value.split(",")]
+    return [profile for profile in profiles if profile]
 
 
 def parser() -> argparse.ArgumentParser:
@@ -253,6 +331,13 @@ def parser() -> argparse.ArgumentParser:
     package.add_argument("--version", default="latest")
     package.add_argument("--remove", action="store_true")
 
+    host = sub.add_parser("host")
+    host.add_argument("--file", required=True, type=Path)
+    host.add_argument("--name", required=True)
+    host.add_argument("--system", required=True)
+    host.add_argument("--user", required=True)
+    host.add_argument("--profiles", required=True)
+
     contains = sub.add_parser("has-tool")
     contains.add_argument("--file", required=True, type=Path)
     contains.add_argument("--name", required=True)
@@ -268,12 +353,20 @@ def parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
-    args = parser().parse_args()
     try:
+        args = parser().parse_args()
         if args.command == "tool":
             edit_tool(args.file, args.name, args.version, args.remove)
         elif args.command == "package":
             edit_package(args.file, args.name, args.version, args.remove)
+        elif args.command == "host":
+            add_host(
+                args.file,
+                args.name,
+                system=args.system,
+                user=args.user,
+                profiles=parse_profiles(args.profiles),
+            )
         elif args.command == "has-tool":
             return 0 if has_tool(args.file, args.name) else 1
         elif args.command == "lock-remove":

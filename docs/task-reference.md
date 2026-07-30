@@ -39,14 +39,18 @@
 
 | Task | Behavior |
 | --- | --- |
-| `host:add` / `host:list` / `host:validate` | Manage the active public or overlay inventory through the typed `tomllib` interface |
-| `tool:add` / `tool:remove` | Atomically edit global mise tool configuration and locks |
-| `package:add` / `package:remove` / `package:search` | Manage common or platform bootstrap packages transactionally |
-| `app:add` / `app:remove` | Manage Apple Silicon macOS casks transactionally |
+| `host:add` / `host:list` / `host:validate` | Manage the active public or overlay inventory through typed validation and parser-backed TOML edits |
+| `tool:add` / `tool:remove` | Atomically edit global mise tool configuration and locks with parser-backed TOML preservation |
+| `package:add` / `package:remove` / `package:search` | Manage common or platform bootstrap packages transactionally with parser-backed TOML preservation |
+| `app:add` / `app:remove` | Manage Apple Silicon macOS casks transactionally with parser-backed TOML preservation |
 | `iterm:export` | Refresh the checked-in iTerm plist |
 | `docs:build` / `docs:serve` | Load the contributor environment and build or serve this book |
 
 Hidden `nix:*` tasks are compatibility aliases to the corresponding `system:*` tasks and contain no separate activation logic.
+
+Configuration mutation commands parse the complete target TOML before writing, preserve supported comments, quoted keys,
+table boundaries, arrays of tables, and CRLF newlines, then validate the edited document before replacing the candidate
+file. Malformed or unsupported TOML fails without partially rewriting the repository file.
 
 ## Overlay-aware behavior
 

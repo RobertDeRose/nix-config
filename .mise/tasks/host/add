@@ -31,7 +31,7 @@ if [ -z "$profiles" ]; then
   esac
 fi
 
-quoted=""
+normalized_profiles=""
 IFS=',' read -r -a values <<<"$profiles"
 for profile in "${values[@]}"; do
   profile="$(printf '%s' "$profile" | xargs)"
@@ -39,10 +39,10 @@ for profile in "${values[@]}"; do
     base:* | dev:* | mac:*-darwin | linux:*-linux) ;;
     *) die "incompatible or unknown profile: $profile" ;;
   esac
-  [ -z "$quoted" ] || quoted+=", "
-  quoted+="\"$profile\""
+  [ -z "$normalized_profiles" ] || normalized_profiles+=","
+  normalized_profiles+="$profile"
 done
-[ -n "$quoted" ] || die "at least one profile is required"
+[ -n "$normalized_profiles" ] || die "at least one profile is required"
 
 inventory="$(inventory_path "$root")"
 inventory_root="$(dirname "$inventory")"
@@ -77,13 +77,12 @@ cleanup() {
 trap cleanup EXIT
 transaction_set_signal_traps
 
-cat >>"$candidate" <<HOST
-
-[hosts.$host]
-system = "$system"
-user = "$user"
-profiles = [$quoted]
-HOST
+python3 "$root/.mise/lib/config_edit.py" host \
+  --file "$candidate" \
+  --name "$host" \
+  --system "$system" \
+  --user "$user" \
+  --profiles "$normalized_profiles"
 
 if [ "${usage_overrides:-false}" = true ]; then
   mkdir -p "$staged_override"

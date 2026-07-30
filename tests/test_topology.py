@@ -1446,6 +1446,7 @@ class TransactionBehaviorTest(unittest.TestCase):
         copy_files(
             repo,
             ".mise/lib/config_edit.py",
+            ".mise/vendor/tomlkit-0.13.3-py3-none-any.whl",
             ".mise/lib/transaction.sh",
             "scripts/user-apply-packages.sh",
         )
@@ -1463,6 +1464,8 @@ class TransactionBehaviorTest(unittest.TestCase):
                 ".mise/lib/platform.sh",
                 ".mise/lib/inventory.sh",
                 ".mise/lib/inventory.py",
+                ".mise/lib/config_edit.py",
+                ".mise/vendor/tomlkit-0.13.3-py3-none-any.whl",
                 ".mise/lib/transaction.sh",
                 "inventory.toml",
             )

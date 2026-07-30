@@ -32,6 +32,10 @@ two output-sensitive edges: `gofumpt` follows `goimports`, then fix-only module 
 No recognized language profile is active; only the universal tooling baseline
 runs.
 
+Maison's TOML mutation helper uses a pinned `tomlkit` wheel checked in under `.mise/vendor/`. The helper verifies the
+wheel digest before importing it, so configuration repair commands still work when normal mise project tool resolution
+is skipped or broken and do not depend on ambient Python site-packages.
+
 ## GitHub validation
 
 `.github/workflows/validate.yml` runs on every push and pull request. It isolates user-global mise configuration,

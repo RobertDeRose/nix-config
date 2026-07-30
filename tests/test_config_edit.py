@@ -86,7 +86,10 @@ class ConfigEditTest(unittest.TestCase):
     def test_config_edit_cli_works_without_ambient_site_packages(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "config.toml"
-            path.write_text('[tools] # trailing comments used to break section matching\nnode = "24"\n')
+            path.write_text(
+                '[tools] # trailing comments used to break section matching\n'
+                'node = "24"\n'
+            )
             result = subprocess.run(
                 [
                     sys.executable,
