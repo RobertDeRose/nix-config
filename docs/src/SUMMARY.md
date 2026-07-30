@@ -42,6 +42,7 @@
   - [MAISON-002: Revision-bound commit and rollback](./features/maison-002-revision-bound-commit-rollback/index.md)
   - [MAISON-003: Restricted deployment privilege model](./features/maison-003-restricted-deployment-privilege/index.md)
   - [MAISON-004: Private overlay configuration split](./features/maison-004-private-overlay-configuration/index.md)
+  - [MAISON-005: Verified bootstrap artifacts](./features/maison-005-verified-bootstrap-artifacts/index.md)
   <!-- END IMPLEMENTED FEATURES -->
 [Refactor Report](./refactor-report.md)
 

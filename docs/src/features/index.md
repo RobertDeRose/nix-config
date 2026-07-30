@@ -10,4 +10,5 @@ Planned or partially implemented work remains in [Planned features](../planned-f
 - [MAISON-002: Revision-bound commit and rollback](maison-002-revision-bound-commit-rollback/index.md)
 - [MAISON-003: Restricted deployment privilege model](maison-003-restricted-deployment-privilege/index.md)
 - [MAISON-004: Private overlay configuration split](maison-004-private-overlay-configuration/index.md)
+- [MAISON-005: Verified bootstrap artifacts](maison-005-verified-bootstrap-artifacts/index.md)
 <!-- END IMPLEMENTED FEATURES -->

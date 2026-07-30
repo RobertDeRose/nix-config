@@ -7,7 +7,7 @@
 - Design path: `docs/src/features/maison-005-verified-bootstrap-artifacts/design.md`
 - Implemented record: `docs/src/features/maison-005-verified-bootstrap-artifacts/index.md`
 - Base branch: `dev`
-- Status: draft
+- Status: delivered
 - Review priority: `P0`
 
 ## Feature Summary

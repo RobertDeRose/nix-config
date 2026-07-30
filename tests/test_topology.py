@@ -765,6 +765,11 @@ class VerifiedBootstrapContractTest(unittest.TestCase):
                 offenders.append(name)
         self.assertEqual(offenders, [])
 
+    def test_remote_deploy_bootstrap_fallback_uses_bash_helpers(self) -> None:
+        deploy_task = read(".mise/tasks/deploy")
+        self.assertIn('"bash -s -- $quoted_repo$quoted_args"', deploy_task)
+        self.assertNotIn('"sh -s -- $quoted_repo$quoted_args"', deploy_task)
+
     def test_public_bootstrap_docs_do_not_recommend_pipe_to_shell(self) -> None:
         pattern = re.compile(r"curl[^\n]*\|\s*(?:bash|sh)\b")
         offenders = []

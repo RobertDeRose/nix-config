@@ -94,7 +94,7 @@ for arg in "${remote_args[@]}"; do
   quoted_args+=" $(printf '%q' "$arg")"
 done
 # shellcheck disable=SC2029 # repository path and optional arguments are shell-escaped
-if ssh "$user@$hostname" "sh -s -- $quoted_repo$quoted_args" <<'REMOTE_USER'
+if ssh "$user@$hostname" "bash -s -- $quoted_repo$quoted_args" <<'REMOTE_USER'
 set -eu
 repo_path="$1"
 shift
