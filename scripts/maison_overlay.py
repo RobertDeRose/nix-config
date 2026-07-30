@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import shutil
 import subprocess
 import sys
 import tomllib
@@ -56,9 +55,15 @@ def load_state(path: Path) -> dict[str, str]:
     return result
 
 
+def toml_string(value: str) -> str:
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
 def write_state(path: Path, source: str, clone_dir: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(f'source = "{source}"\npath = "{clone_dir}"\n')
+    path.write_text(
+        f"source = {toml_string(source)}\npath = {toml_string(os.fspath(clone_dir))}\n"
+    )
     path.chmod(0o600)
 
 
@@ -122,6 +127,17 @@ def clone_or_update(source: str, destination: Path) -> None:
     if destination.exists():
         if not is_git_repository(destination):
             die(f"overlay destination exists but is not a Git repository: {destination}")
+        origin = subprocess.run(
+            ["git", "-C", str(destination), "config", "--get", "remote.origin.url"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        if origin != source:
+            die(
+                "overlay destination already tracks a different source; "
+                f"move {destination} aside or use {origin}"
+            )
         subprocess.run(["git", "-C", str(destination), "pull", "--ff-only"], check=True)
         return
     destination.parent.mkdir(parents=True, exist_ok=True)

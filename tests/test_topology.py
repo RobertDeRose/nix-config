@@ -620,7 +620,7 @@ class OverlayContractTest(unittest.TestCase):
     def test_overlay_prepare_clones_and_records_private_overlay(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             temp = Path(directory)
-            source = temp / "source-overlay"
+            source = temp / 'source "overlay"'
             source.mkdir()
             (source / "inventory.toml").write_text("schema = 1\n")
             git_init(source)
@@ -645,9 +645,32 @@ class OverlayContractTest(unittest.TestCase):
             state = temp / "state/maison/overlay.toml"
             self.assertEqual(result.stdout.strip(), str(clone))
             self.assertTrue((clone / ".git").is_dir())
-            self.assertIn(f'source = "{source}"', state.read_text())
-            self.assertIn(f'path = "{clone}"', state.read_text())
+            with state.open("rb") as handle:
+                state_data = tomllib.load(handle)
+            self.assertEqual(state_data["source"], str(source))
+            self.assertEqual(state_data["path"], str(clone))
             self.assertEqual(stat.S_IMODE(state.stat().st_mode), 0o600)
+
+    def test_overlay_prepare_rejects_existing_clone_with_different_source(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            original = temp / "original"
+            replacement = temp / "replacement"
+            for source in (original, replacement):
+                source.mkdir()
+                (source / "inventory.toml").write_text("schema = 1\n")
+                git_init(source)
+                git_commit_all(source)
+            clone = temp / "clone"
+            subprocess.run(["git", "clone", str(original), str(clone)], check=True, capture_output=True)
+            helper = ROOT / "scripts/maison_overlay.py"
+            result = subprocess.run(
+                [str(helper), "--overlay", str(replacement), "--clone-dir", str(clone), "prepare"],
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("different source", result.stderr)
 
     def test_reader_docs_describe_overlay_contract(self) -> None:
         docs = "\n".join(

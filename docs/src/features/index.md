@@ -9,4 +9,5 @@ Planned or partially implemented work remains in [Planned features](../planned-f
 - [MAISON-001: Root-owned deployment transaction state](maison-001-root-owned-deployment-transactions/index.md)
 - [MAISON-002: Revision-bound commit and rollback](maison-002-revision-bound-commit-rollback/index.md)
 - [MAISON-003: Restricted deployment privilege model](maison-003-restricted-deployment-privilege/index.md)
+- [MAISON-004: Private overlay configuration split](maison-004-private-overlay-configuration/index.md)
 <!-- END IMPLEMENTED FEATURES -->
