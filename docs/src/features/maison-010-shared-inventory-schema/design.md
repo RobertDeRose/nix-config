@@ -7,7 +7,7 @@
 - Design path: `docs/src/features/maison-010-shared-inventory-schema/design.md`
 - Implemented record: `docs/src/features/maison-010-shared-inventory-schema/index.md`
 - Base branch: `dev`
-- Status: draft
+- Status: reviewed
 - Review priority: `P1`
 
 ## Feature Summary
@@ -20,7 +20,7 @@ The Python and Nix implementations disagree about duplicate profiles, unknown fe
 
 ## Goals
 
-- One schema contract drives both Python and Nix validation.
+- One checked-in public schema contract drives both Python and Nix validation.
 - Shared valid and invalid fixtures cover public examples and private overlay shapes.
 - Drift between Python and Nix validators fails CI.
 
@@ -39,10 +39,13 @@ is unsafe or unsupported, Maison fails with an actionable message instead of sil
 
 ### Functional Requirements
 
-- Define one schema source or generated schema artifacts with clear ownership.
-- Python and Nix validation consume the same fixture corpus.
-- Fixtures cover duplicate profiles, unknown features, type errors, accepted fields, overlay merge behavior, and deploy path constraints.
-- Docs describe inventory contract and overlay validation.
+- Define `schemas/inventory.toml` as the public inventory schema contract owned by Maison.
+- Python and Nix validation load schema data from that contract rather than duplicating allowed systems, profiles,
+  feature keys, deploy fields, and defaults in separate source code.
+- Python and Nix validation consume the same fixture corpus under `tests/fixtures/inventory/`.
+- Fixtures cover duplicate profiles, unknown features, unknown deploy fields, type errors, accepted fields, overlay
+  inventory and host-override layout, and deploy path constraints.
+- Docs describe inventory fields, defaults, constraints, overlay inventory validation, and host override layout.
 
 ### Quality Requirements
 
@@ -68,7 +71,15 @@ reader documentation under `docs/` describes the target operations and must be r
 
 ## Proposed Design
 
-Create a schema contract with canonical fixtures. Python remains the ergonomic typed reader; Nix imports generated or mirrored schema data from the same source and validates the same cases. CI runs both validators against every fixture so divergence fails before deployment or authoring changes land.
+Create `schemas/inventory.toml` as the canonical public schema contract. The file contains schema version, supported
+systems, profile names, feature keys and defaults, deploy keys and defaults, and the portable validation policy that both
+validators must enforce. Python remains the ergonomic typed reader, while Nix imports the same contract with
+`builtins.fromTOML` and uses it before constructing outputs.
+
+Add a canonical fixture corpus under `tests/fixtures/inventory/` with valid and invalid TOML inventories plus minimal
+expected-result metadata. CI runs Python and Nix validators against every fixture so divergence fails before deployment
+or authoring changes land. Overlay fixtures model an active overlay inventory and sibling `hosts/` override layout; they
+do not merge public and private inventories.
 
 ## Architecture Consistency
 
@@ -88,7 +99,8 @@ Create a schema contract with canonical fixtures. Python remains the ergonomic t
 
 ### New Decisions Introduced
 
-- This feature adopts the concrete behavior described in **Proposed Design** as the supported Maison contract.
+- `schemas/inventory.toml` becomes the single public schema contract for inventory validation data.
+- The shared fixture corpus is an executable compatibility contract for both Python and Nix validators.
 
 ### Architecture Documentation Changes
 
@@ -105,10 +117,11 @@ and external package-manager side effects when those concerns apply.
 
 | Exact page | Create or update | Planned change | Owning Beads task |
 |------------|------------------|----------------|-------------------|
-| docs/architecture.md | Update | Align reader-facing contract with MAISON-010: Shared inventory schema validation | Implementation tasks |
-| docs/add-a-host.md | Update | Align reader-facing contract with MAISON-010: Shared inventory schema validation | Implementation tasks |
-| docs/deployment.md | Update | Align reader-facing contract with MAISON-010: Shared inventory schema validation | Implementation tasks |
-| docs/reference/tooling.md | Update | Align reader-facing contract with MAISON-010: Shared inventory schema validation | Implementation tasks |
+| docs/architecture.md | Update | Document `schemas/inventory.toml` as the shared inventory schema contract | Implementation tasks |
+| docs/add-a-host.md | Update | Document inventory authoring constraints and overlay host override validation | Implementation tasks |
+| docs/deployment.md | Update | Document deploy inventory fields and shared validation constraints | Implementation tasks |
+| docs/src/reference/inventory.md | Create | Define inventory fields, defaults, constraints, and fixture contract | Implementation tasks |
+| docs/src/reference/tooling.md | Update | Mention shared inventory schema and fixture validation tooling | Implementation tasks |
 | `docs/src/features/maison-010-shared-inventory-schema/index.md` | Create during close-out | Preserve delivery and audit history | Close-out documentation |
 | `docs/src/planned-features.md` | Update | Track roadmap status and Beads root | Planning |
 | `docs/src/SUMMARY.md` | Update | Register this design and delivered record links | Planning / close-out |
@@ -116,19 +129,19 @@ and external package-manager side effects when those concerns apply.
 ## Validation Strategy
 
 - Shared fixture corpus executed by Python tests and Nix checks.
-- Coverage for overlay merge and public example inventory.
+- Coverage for active overlay inventory and host override layout, public example inventory, and deploy path constraints.
 - `mise -E dev run check` and `uv run scripts/check-docs.py`.
 
 ## Implementation Decomposition
 
-- `maison-010-shared-inventory-schema schema-fixtures` — Add shared inventory validation fixture corpus.
-- `maison-010-shared-inventory-schema schema-implementation` — Unify Python and Nix inventory validation.
+- `maison-010-shared-inventory-schema schema-fixtures` — Add shared inventory schema contract and validation fixture corpus.
+- `maison-010-shared-inventory-schema schema-implementation` — Load the shared schema contract from Python and Nix validators.
 
 ## Dependencies and Parallelism
 
-This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. Sibling
-implementation tasks may run in parallel only when they do not edit the same command path, test file, or documentation
-page.
+This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. The
+schema implementation depends on the schema-fixtures task because the fixture corpus is the executable contract; these
+tasks are sequential because they edit the same validation tests and documentation pages.
 
 ## Rollout and Migration
 
@@ -176,6 +189,13 @@ None.
 
 - The private inventory model changed from untracked local TOML to a tracked private overlay repository to preserve
   Maison's durability and replication goals.
+
+### Design Changes During Specification Review
+
+- Named `schemas/inventory.toml` as the canonical public schema contract for shared validation data.
+- Replaced ambiguous overlay merge wording with active overlay inventory and host override layout fixtures.
+- Added an inventory reference page to document exact fields, defaults, constraints, and fixture contracts.
+- Made schema implementation depend on fixture-contract work so tests define the compatibility boundary first.
 
 ### Source Material
 
