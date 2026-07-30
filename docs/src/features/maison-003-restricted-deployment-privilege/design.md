@@ -9,6 +9,7 @@
 - Base branch: `dev`
 - Status: draft
 - Review priority: `P0`
+- Review status: reconciled in /start-feature (documentation and design reviews complete)
 
 ## Feature Summary
 
