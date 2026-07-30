@@ -3,12 +3,13 @@
   lib,
   profileRegistry,
   host,
+  hostRoot,
 }:
 let
   user = host.user;
   selectedProfiles = map (name: profileRegistry.${name}) host.profiles;
   darwinModules = lib.concatMap (profile: profile.darwinModules) selectedProfiles;
-  hostDir = ../../hosts + "/${host.name}";
+  hostDir = hostRoot + "/${host.name}";
   systemOverride = hostDir + "/system.nix";
   specialArgs = {
     inherit

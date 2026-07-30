@@ -71,6 +71,24 @@ def overlay_source(explicit: str | None, state_file: Path) -> str | None:
     return load_state(state_file).get("source")
 
 
+def active_overlay_path(state_file: Path) -> Path | None:
+    env_path = os.environ.get("MAISON_OVERLAY_PATH")
+    if env_path:
+        return Path(env_path)
+    state_path = load_state(state_file).get("path")
+    if state_path:
+        return Path(state_path)
+    clone_dir = default_clone_dir()
+    return clone_dir if clone_dir.exists() else None
+
+
+def active_inventory_path(repo_root: Path, state_file: Path) -> Path:
+    overlay_path = active_overlay_path(state_file)
+    if overlay_path is not None and (overlay_path / "inventory.toml").is_file():
+        return overlay_path / "inventory.toml"
+    return repo_root / "inventory.toml"
+
+
 def overlay_required(args: argparse.Namespace) -> bool:
     return bool(args.required or os.environ.get("MAISON_REQUIRE_OVERLAY") == "true")
 
@@ -115,9 +133,12 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--overlay", help="Overlay Git URL or path")
     result.add_argument("--state-file", type=Path, default=default_state_file())
     result.add_argument("--clone-dir", type=Path, default=default_clone_dir())
+    result.add_argument("--repo-root", type=Path, default=Path.cwd())
     result.add_argument("--required", action="store_true")
     commands = result.add_subparsers(dest="command", required=True)
     commands.add_parser("resolve")
+    commands.add_parser("path")
+    commands.add_parser("inventory-path")
     commands.add_parser("prepare")
     return result
 
@@ -126,6 +147,14 @@ def main() -> int:
     args = parser().parse_args()
     try:
         source = resolve_source(args)
+        if args.command == "path":
+            path = active_overlay_path(args.state_file)
+            if path is not None and path.exists():
+                print(path)
+            return 0
+        if args.command == "inventory-path":
+            print(active_inventory_path(args.repo_root, args.state_file))
+            return 0
         if args.command == "resolve":
             if source:
                 print(source)

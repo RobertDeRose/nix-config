@@ -44,10 +44,11 @@ for profile in "${values[@]}"; do
 done
 [ -n "$quoted" ] || die "at least one profile is required"
 
-inventory="$root/inventory.toml"
-override="$root/hosts/$host"
+inventory="$(inventory_path "$root")"
+inventory_root="$(dirname "$inventory")"
+override="$inventory_root/hosts/$host"
 [ "${usage_overrides:-false}" != true ] || [ ! -e "$override" ] ||
-  die "host override path already exists: ${override#"$root"/}"
+  die "host override path already exists: $override"
 
 transaction_dir="$(transaction_directory)"
 original="$transaction_dir/inventory.original.toml"
@@ -96,7 +97,7 @@ fi
 
 python3 "$root/.mise/lib/inventory.py" \
   --file "$candidate" \
-  --repo-root "$root" \
+  --repo-root "$inventory_root" \
   validate >/dev/null
 
 trap '' HUP INT TERM
@@ -104,7 +105,7 @@ atomic_replace "$candidate" "$inventory"
 inventory_committed=true
 transaction_set_signal_traps
 if [ "${usage_overrides:-false}" = true ]; then
-  mkdir -p "$root/hosts"
+  mkdir -p "$inventory_root/hosts"
   # mkdir is the portable no-clobber operation for directories on both macOS
   # and Linux. Do not let a concurrent destination be treated as mv's parent.
   trap '' HUP INT TERM
@@ -116,4 +117,8 @@ fi
 
 success=true
 printf 'Added host %s after validating the complete candidate inventory.\n' "$host"
-git --no-pager diff -- inventory.toml "hosts/$host" 2>/dev/null || true
+if [ "$inventory_root" = "$root" ]; then
+  git --no-pager diff -- inventory.toml "hosts/$host" 2> /dev/null || true
+else
+  git -C "$inventory_root" --no-pager diff -- inventory.toml "hosts/$host" 2> /dev/null || true
+fi

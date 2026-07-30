@@ -1,20 +1,30 @@
 #!/usr/bin/env bash
 
+# shellcheck source=.mise/lib/overlay.sh
+source "$(dirname "${BASH_SOURCE[0]}")/overlay.sh"
+
 inventory_path() {
   local root="$1"
-  printf '%s/inventory.toml\n' "$root"
+  load_maison_overlay_environment "$root"
+  printf '%s\n' "${MAISON_INVENTORY:-$root/inventory.toml}"
+}
+
+inventory_repo_root() {
+  local inventory
+  inventory="$(inventory_path "$1")"
+  dirname "$inventory"
 }
 
 inventory_cli() {
   local root="$1"
   shift
   if command -v python3 > /dev/null 2>&1 && python3 -c 'import tomllib' > /dev/null 2>&1; then
-    python3 "$root/.mise/lib/inventory.py" --file "$(inventory_path "$root")" "$@"
+    python3 "$root/.mise/lib/inventory.py" --file "$(inventory_path "$root")" --repo-root "$(inventory_repo_root "$root")" "$@"
     return
   fi
   if command -v nix > /dev/null 2>&1; then
     nix run --accept-flake-config "$root#maison-inventory" -- \
-      --file "$(inventory_path "$root")" "$@"
+      --file "$(inventory_path "$root")" --repo-root "$(inventory_repo_root "$root")" "$@"
     return
   fi
   printf 'inventory validation requires Python 3.11+ or Nix/Lix\n' >&2

@@ -549,6 +549,74 @@ class OverlayContractTest(unittest.TestCase):
             )
             self.assertEqual(explicit.stdout.strip(), "explicit-overlay")
 
+    def write_private_overlay_fixture(self, overlay: Path) -> None:
+        overlay.mkdir()
+        (overlay / "inventory.toml").write_text(
+            "schema = 1\n"
+            "[defaults]\n"
+            "user = \"site\"\n"
+            "[users.site]\n"
+            "username = \"site-user\"\n"
+            "full_name = \"Site Operator\"\n"
+            "email = \"site@example.invalid\"\n"
+            "github = \"site-example\"\n"
+            "[hosts.private-linux]\n"
+            "system = \"aarch64-linux\"\n"
+            "profiles = [\"base\", \"linux\"]\n"
+            "[hosts.private-linux.deploy]\n"
+            "enable = true\n"
+            "hostname = \"private-linux.example.invalid\"\n"
+            "ssh_user = \"maison-deploy\"\n"
+            "user_ssh_user = \"site-user\"\n"
+            "repo_path = \"/home/site-user/.maison\"\n"
+        )
+        (overlay / "hosts/private-linux").mkdir(parents=True)
+        (overlay / "hosts/private-linux/system.nix").write_text("{ ... }: {}\n")
+        (overlay / "config/mise").mkdir(parents=True)
+        (overlay / "config/mise/config.toml").write_text('[tools]\n\"usage\" = \"latest\"\n')
+        (overlay / "dotfiles/git").mkdir(parents=True)
+        (overlay / "dotfiles/git/identity").write_text(
+            "[user]\n    name = Site Operator\n    email = site@example.invalid\n"
+        )
+        (overlay / "trusted").mkdir()
+        (overlay / "trusted/allowed_signers").write_text(
+            "site@example.invalid ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEexamplefixturekey\n"
+        )
+
+    def test_inventory_shell_loads_private_overlay_inventory_and_host_overrides(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            overlay = temp / "overlay"
+            self.write_private_overlay_fixture(overlay)
+            state_home = temp / "state"
+            state = state_home / "maison/overlay.toml"
+            state.parent.mkdir(parents=True)
+            state.write_text(f'source = "local"\npath = "{overlay}"\n')
+            env = os.environ.copy()
+            env.update({"XDG_STATE_HOME": str(state_home), "XDG_DATA_HOME": str(temp / "data")})
+            result = subprocess.run(
+                [
+                    "bash",
+                    "-c",
+                    'source "$1/.mise/lib/inventory.sh"; inventory_hosts "$1"; inventory_host_username "$1" private-linux',
+                    "_",
+                    str(ROOT),
+                ],
+                cwd=ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["private-linux", "site-user"])
+
+    def test_nix_loader_accepts_overlay_inventory_from_environment(self) -> None:
+        flake = read("flake.nix")
+        nix = read(".mise/lib/nix.sh")
+        self.assertIn('builtins.getEnv "MAISON_INVENTORY"', flake)
+        self.assertIn("--impure", nix)
+        self.assertIn("load_maison_overlay_environment", nix)
+
     def test_overlay_prepare_clones_and_records_private_overlay(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             temp = Path(directory)

@@ -37,9 +37,27 @@ nix_common_flags() {
 }
 
 nix_command() {
-  local flags=() flag
+  if [ -z "${MAISON_INVENTORY:-}" ]; then
+    local maison_root="${MISE_PROJECT_ROOT:-$PWD}"
+    if [ -f "$maison_root/.mise/lib/overlay.sh" ]; then
+      # shellcheck source=.mise/lib/overlay.sh
+      source "$maison_root/.mise/lib/overlay.sh"
+      load_maison_overlay_environment "$maison_root"
+    fi
+  fi
+  local flags=() flag impure=()
   while IFS= read -r flag; do flags+=("$flag"); done < <(nix_common_flags)
-  nix "${flags[@]}" "$@"
+  if [ -n "${MAISON_INVENTORY:-}" ] && [ "${MAISON_INVENTORY}" != "${MISE_PROJECT_ROOT:-$PWD}/inventory.toml" ]; then
+    impure=(--impure)
+  fi
+  case "${1:-}" in
+    build | eval | fmt | run)
+      local subcommand="$1"
+      shift
+      nix "${flags[@]}" "$subcommand" "${impure[@]}" "$@"
+      ;;
+    *) nix "${flags[@]}" "$@" ;;
+  esac
 }
 
 ensure_nh() {

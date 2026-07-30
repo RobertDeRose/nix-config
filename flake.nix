@@ -45,8 +45,12 @@
 
   outputs =
     inputs:
+    let
+      overlayInventory = builtins.getEnv "MAISON_INVENTORY";
+      inventoryFile = if overlayInventory == "" then ./inventory.toml else /. + overlayInventory;
+    in
     import ./nix/outputs.nix {
-      inherit inputs;
-      inventory = builtins.fromTOML (builtins.readFile ./inventory.toml);
+      inherit inputs inventoryFile;
+      inventory = builtins.fromTOML (builtins.readFile inventoryFile);
     };
 }

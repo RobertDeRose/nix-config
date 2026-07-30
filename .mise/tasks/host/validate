@@ -4,8 +4,6 @@
 set -euo pipefail
 root="${MISE_PROJECT_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)}"
 source "$root/.mise/lib/common.sh"
+source "$root/.mise/lib/inventory.sh"
 cd "$root"
-python3 "$root/.mise/lib/inventory.py" \
-  --file "$root/inventory.toml" \
-  --repo-root "$root" \
-  validate
+inventory_cli "$root" validate
