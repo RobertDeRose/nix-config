@@ -7,7 +7,7 @@
 - Design path: `docs/src/features/maison-009-authoring-checkout-guard/design.md`
 - Implemented record: `docs/src/features/maison-009-authoring-checkout-guard/index.md`
 - Base branch: `dev`
-- Status: draft
+- Status: reviewed
 - Review priority: `P1`
 
 ## Feature Summary
@@ -20,8 +20,8 @@ Remote archives intentionally contain no `.git`, but mutation commands remain ex
 
 ## Goals
 
-- Mutation commands require an authoring checkout.
-- Deployed snapshots reject or hide authoring commands with clear guidance.
+- Mutation commands require an authoring checkout for the target repository they write.
+- Deployed snapshots reject authoring commands with clear guidance.
 - Read-only operational commands remain available in deployed snapshots where safe.
 
 ## Non-Goals
@@ -39,10 +39,11 @@ is unsafe or unsupported, Maison fails with an actionable message instead of sil
 
 ### Functional Requirements
 
-- All mutating authoring commands verify an authoring checkout before writing.
+- All mutating authoring commands verify an authoring checkout before writing the target repository.
 - Deployed snapshots are detected by absence of `.git` plus Maison revision metadata.
+- A `.git` directory or worktree `.git` file counts as authoring checkout evidence.
 - Error messages point to the private overlay or authoring repo workflow.
-- Task reference distinguishes authoring commands from deployed runtime commands.
+- Task reference distinguishes authoring-only commands from deployed runtime commands.
 
 ### Quality Requirements
 
@@ -68,7 +69,9 @@ reader documentation under `docs/` describes the target operations and must be r
 
 ## Proposed Design
 
-Add a shared checkout-mode detector. Mutation tasks call it before acquiring the mutation lock. In deployed snapshots, mutators fail with a non-zero status and an explanation that source edits must happen in an authoring checkout or private overlay repository. Read-only status, plan, apply, and recovery operations keep their current deployed behavior.
+Add a shared stdlib Python checkout-mode detector beside the existing repository mutation helper. Mutation tasks call it for the target repository before acquiring the mutation lock and before writing. The detector inspects only checkout marker state (`.git` or `.maison-revision`) so it does not read mutable TOML, lockfiles, or journaled content before MAISON-008 startup recovery.
+
+In deployed snapshots, mutators fail with a non-zero status and an explanation that source edits must happen in an authoring checkout or private overlay repository. `host:add` guards the active inventory repository after resolving `inventory_root`, so a deployed public Maison snapshot may still add hosts to a private overlay clone when that overlay clone is a Git checkout. Read-only status, plan, apply, and recovery operations keep their current deployed behavior.
 
 ## Architecture Consistency
 
@@ -105,10 +108,11 @@ and external package-manager side effects when those concerns apply.
 
 | Exact page | Create or update | Planned change | Owning Beads task |
 |------------|------------------|----------------|-------------------|
+| docs/architecture.md | Update | Document the authoring checkout versus deployed snapshot boundary | Implementation tasks |
 | docs/operations.md | Update | Align reader-facing contract with MAISON-009: Authoring checkout guard | Implementation tasks |
-| docs/task-reference.md | Update | Align reader-facing contract with MAISON-009: Authoring checkout guard | Implementation tasks |
-| docs/deployment.md | Update | Align reader-facing contract with MAISON-009: Authoring checkout guard | Implementation tasks |
-| docs/recovery.md | Update | Align reader-facing contract with MAISON-009: Authoring checkout guard | Implementation tasks |
+| docs/task-reference.md | Update | Distinguish authoring-only commands from deployed runtime commands | Implementation tasks |
+| docs/deployment.md | Update | Explain deployed archives are runtime snapshots, not authoring checkouts | Implementation tasks |
+| docs/recovery.md | Update | Explain rejected deployed-snapshot authoring commands and overlay/source recovery path | Implementation tasks |
 | `docs/src/features/maison-009-authoring-checkout-guard/index.md` | Create during close-out | Preserve delivery and audit history | Close-out documentation |
 | `docs/src/planned-features.md` | Update | Track roadmap status and Beads root | Planning |
 | `docs/src/SUMMARY.md` | Update | Register this design and delivered record links | Planning / close-out |
@@ -122,13 +126,13 @@ and external package-manager side effects when those concerns apply.
 ## Implementation Decomposition
 
 - `maison-009-authoring-checkout-guard checkout-contract` — Add deployed-snapshot authoring guard tests.
-- `maison-009-authoring-checkout-guard checkout-implementation` — Implement authoring checkout guard.
+- `maison-009-authoring-checkout-guard checkout-implementation` — Implement authoring checkout guard after the contract tests are committed.
 
 ## Dependencies and Parallelism
 
-This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. Sibling
-implementation tasks may run in parallel only when they do not edit the same command path, test file, or documentation
-page.
+This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. The
+checkout implementation depends on the checkout contract task so tests land before behavior changes; these two tasks are
+sequential because they cover the same command surface, tests, and documentation pages.
 
 ## Rollout and Migration
 
@@ -176,6 +180,14 @@ None.
 
 - The private inventory model changed from untracked local TOML to a tracked private overlay repository to preserve
   Maison's durability and replication goals.
+
+### Design Changes During Specification Review
+
+- Narrowed deployed-snapshot behavior to fail-fast rejection instead of dynamic task hiding.
+- Clarified that checkout guards apply to the target repository being written, preserving private overlay host authoring.
+- Clarified that checkout detection uses only marker state and does not weaken MAISON-008 lock and journal recovery
+  ordering.
+- Added architecture documentation to the reader-facing documentation impact.
 
 ### Source Material
 
