@@ -73,6 +73,10 @@ reader documentation under `docs/` describes the target operations and must be r
 
 Introduce overlay discovery and loading across Python and Nix. Public Maison keeps schemas, validators, task machinery, templates, examples, and non-personal defaults. A private overlay repo supplies site configuration through typed TOML and optional dotfile trees. Bootstrap accepts `--overlay`, stores the selected source in local state, clones or updates the overlay, and passes overlay paths into validation, Nix evaluation, and mise convergence. Examples remain executable starter configurations with placeholder identities and safe sample hosts.
 
+Overlay state uses XDG paths by default: `${XDG_STATE_HOME:-$HOME/.local/state}/maison/overlay.toml` records the selected source, and `${XDG_DATA_HOME:-$HOME/.local/share}/maison/overlay` is the standard clone/update path. `--overlay` takes precedence for that run and refreshes the state record. When `--overlay` is omitted, setup reads the state record or a mise/environment-provided overlay source. Interactive setup may prompt before failing; non-interactive setup fails with an actionable message.
+
+The private overlay mirrors public Maison's configuration layout for supported owned data: `inventory.toml`, optional `hosts/`, optional `config/mise/*.toml`, optional `dotfiles/`, and optional trusted deployment key material. Public files provide starter defaults and schema examples only. Overlay files replace or layer over those starter files according to the same typed schema rather than introducing a second schema language.
+
 ## Architecture Consistency
 
 ### Existing Patterns Reused
@@ -126,20 +130,21 @@ and external package-manager side effects when those concerns apply.
 
 - Schema tests for public examples and private overlay fixtures.
 - Bootstrap tests for `--overlay`, interactive prompt gating, non-interactive failure, local state writes, clone/update behavior, and missing overlay recovery.
-- Privacy tests rejecting personal hostnames, usernames, emails, deploy targets, mutable GitHub key URLs, and trusted keys in public Maison defaults.
+- Privacy tests rejecting personal hostnames, usernames, emails, deploy targets, mutable GitHub key URLs, trusted keys, and site-specific dotfiles in public Maison defaults.
+- Tests proving current public starter files contain only neutral examples while fixture private overlays can carry real-shaped hosts, users, deploy targets, package declarations, dotfiles, and trusted key material.
 - `mise -E dev run check` and `uv run scripts/check-docs.py`.
 
 ## Implementation Decomposition
 
-- `maison-004-private-overlay-configuration overlay-contract` — Add overlay schema, privacy, and bootstrap contract tests.
-- `maison-004-private-overlay-configuration overlay-loader` — Implement private overlay discovery and loading.
-- `maison-004-private-overlay-configuration overlay-docs-examples` — Rework docs and examples around public Maison plus private overlay.
+- `maison-004-private-overlay-configuration overlay-contract` — Add overlay schema, privacy, and bootstrap contract tests, including public-default privacy checks and private overlay fixtures.
+- `maison-004-private-overlay-configuration overlay-loader` — Implement private overlay discovery, XDG state persistence, clone/update handling, and Python/Nix/task loading.
+- `maison-004-private-overlay-configuration overlay-docs-examples` — Rework docs and examples around public Maison plus private overlay, and move personal/site defaults out of public starter configuration.
 
 ## Dependencies and Parallelism
 
-This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. Sibling
-implementation tasks may run in parallel only when they do not edit the same command path, test file, or documentation
-page.
+This feature follows the Maison review order. Implementation starts only after specification reconciliation closes. The
+implementation order is contract tests first, loader implementation second, then docs/examples migration, because the
+loader must satisfy the reviewed contract and reader docs must match delivered behavior.
 
 ## Rollout and Migration
 
