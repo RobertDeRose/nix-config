@@ -9,6 +9,13 @@ transaction_helper() {
   printf '%s/.mise/lib/repository_mutation.py\n' "$root"
 }
 
+transaction_require_authoring_checkout() {
+  local repo="$1" operation="$2"
+  python3 "$(transaction_helper)" require-authoring \
+    --repo "$repo" \
+    --operation "$operation"
+}
+
 transaction_require_lock() {
   local repo="$1" script="$2"
   shift 2

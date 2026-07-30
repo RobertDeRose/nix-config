@@ -17,7 +17,7 @@ This invokes deploy-rs against `deploy.nodes.example-linux.profiles.system`. The
 maison deploy example-linux
 ```
 
-Before system deployment starts, Maison requires a clean working tree and builds a source archive from committed Git content only. The archive contains `.maison-revision` but never `.git`, dirty changes, untracked files, ignored files, or local credentials. If a private overlay inventory is active, deployment targeting and Nix evaluation use that overlay inventory while the public Maison archive remains the reusable vehicle code.
+Before system deployment starts, Maison requires a clean working tree and builds a source archive from committed Git content only. The archive contains `.maison-revision` but never `.git`, dirty changes, untracked files, ignored files, or local credentials. The resulting remote tree is a deployed runtime snapshot, not an authoring checkout; repository-writing commands must be run from the public source checkout or the private overlay repository instead. If a private overlay inventory is active, deployment targeting and Nix evaluation use that overlay inventory while the public Maison archive remains the reusable vehicle code.
 
 After successful system activation, Maison:
 

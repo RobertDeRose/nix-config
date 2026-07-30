@@ -9,6 +9,7 @@ version="${usage_version:-latest}"
 config="$root/config/mise/config.toml"
 lock="$root/config/mise/mise.lock"
 tool="${usage_tool:?mise did not provide the required tool argument}"
+transaction_require_authoring_checkout "$root" tool:add
 transaction_require_lock "$root" "${BASH_SOURCE[0]}" "$@"
 transaction_dir="$(transaction_directory)"
 original_config="$transaction_dir/config.original.toml"

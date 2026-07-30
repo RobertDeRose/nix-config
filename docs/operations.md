@@ -12,7 +12,9 @@ Bootstrap downloads Maison-owned mise and Lix artifacts to disk, verifies the pi
 
 Maison stores the selected source in `${XDG_STATE_HOME:-$HOME/.local/state}/maison/overlay.toml` and clones or updates it at `${XDG_DATA_HOME:-$HOME/.local/share}/maison/overlay`. Interactive bootstrap may prompt for the overlay source when it is required; non-interactive bootstrap fails instead of continuing with public starter data for a real machine.
 
-`maison host add` mutates the active inventory repository. With an overlay inventory, new hosts and optional `hosts/<name>/system.nix` stubs are written to the overlay clone, not to public Maison.
+`maison host add` mutates the active inventory repository and therefore requires that target to be a Git authoring
+checkout. With an overlay inventory, new hosts and optional `hosts/<name>/system.nix` stubs are written to the overlay
+clone, not to public Maison.
 
 ## Preview
 
@@ -54,6 +56,11 @@ mise exec -- hk check
 
 Repository development tools are owned by the checkout `mise.toml`; normal user convergence does not install them from the global user config.
 
+Run authoring commands from a Git checkout of the public Maison repository or the private overlay repository being
+edited. Deployed snapshots contain `.maison-revision` but not `.git`; they are for runtime apply, plan, status,
+deployment finalization, and recovery, not for source edits. If a mutating authoring command is run from a deployed
+snapshot, Maison exits non-zero and points back to the authoring checkout or overlay workflow.
+
 ## Update
 
 ```bash
@@ -67,9 +74,10 @@ maison app update            # upgrade casks and Mac App Store apps
 
 Each update surface has an independent failure boundary. `maison update` restores `flake.lock` when the Nix update or optional validation fails. Tool, formula, and application upgrades are explicit and do not activate the system.
 
-Repository-writing commands are serialized per target repository. `tool add`, `tool remove`, `package add`,
-`package remove`, `app add`, `app remove`, `host add`, and `update` acquire a fail-fast local mutation lock before
-reading mutable repository state. If another mutation is active, Maison exits non-zero and names the busy repository and
+Repository-writing commands are authoring-only and serialized per target repository. `tool add`, `tool remove`,
+`package add`, `package remove`, `app add`, `app remove`, `host add`, and `update` first require a Git authoring
+checkout for the repository they will write, then acquire a fail-fast local mutation lock before reading mutable
+repository state. If another mutation is active, Maison exits non-zero and names the busy repository and
 journal directory. Read-only plan, status, list, validate, and search commands do not take this lock.
 
 Scheduled cache refresh automation may update `flake.lock`, build the proposed dependency graph, warm Cachix, and open or refresh an `automation/refresh-flake-lock` pull request. It does not merge that PR or bypass branch protection; accepting dependency changes remains a normal reviewed PR merge.

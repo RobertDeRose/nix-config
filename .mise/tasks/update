@@ -9,6 +9,7 @@ cd "$root"
 source "$root/.mise/lib/common.sh"
 source "$root/.mise/lib/nix.sh"
 source "$root/.mise/lib/transaction.sh"
+transaction_require_authoring_checkout "$root" update
 transaction_require_lock "$root" "${BASH_SOURCE[0]}" "$@"
 load_nix_environment
 configure_github_access_token

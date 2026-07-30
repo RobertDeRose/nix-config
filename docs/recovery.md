@@ -36,6 +36,13 @@ maison user plan
 maison user apply
 ```
 
+## Rejected authoring command in a deployed snapshot
+
+A deployed snapshot contains `.maison-revision` without `.git`. It can run runtime commands such as plan, apply, status,
+deployment finalization, and recovery, but Maison rejects repository-writing authoring commands there because the next
+deployment will overwrite local source edits. Retry the command from the public Maison Git checkout, or from the private
+overlay Git checkout when the command writes overlay inventory or configuration.
+
 ## Failed local repository mutation
 
 Local authoring mutations store untracked lock and journal state under:

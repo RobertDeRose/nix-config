@@ -20,6 +20,7 @@ validate_hostname "$host" || die "invalid hostname: $host"
 is_supported_system "$system" || die "unsupported system: $system"
 inventory="$(inventory_path "$root")"
 inventory_root="$(dirname "$inventory")"
+transaction_require_authoring_checkout "$inventory_root" host:add
 transaction_require_lock "$inventory_root" "${BASH_SOURCE[0]}" "$@"
 inventory_has_host "$root" "$host" && die "host already exists: $host"
 inventory_has_user "$root" "$user" || die "inventory user does not exist: $user"

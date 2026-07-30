@@ -7,6 +7,7 @@ source "$root/.mise/lib/transaction.sh"
 config="$root/config/mise/config.toml"
 lock="$root/config/mise/mise.lock"
 tool="${usage_tool:?mise did not provide the required tool argument}"
+transaction_require_authoring_checkout "$root" tool:remove
 protected_tool="$tool"
 protected_suffix="${tool##*@}"
 if [[ "$tool" == *@* && "$protected_suffix" != */* ]]; then

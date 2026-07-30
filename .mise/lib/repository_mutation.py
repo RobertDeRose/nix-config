@@ -60,6 +60,29 @@ def repository_state(repo: Path, *, state_root: Path | None = None) -> Repositor
     return state
 
 
+def has_git_checkout_marker(repo: Path) -> bool:
+    marker = repo / ".git"
+    return marker.is_dir() or marker.is_file()
+
+
+def require_authoring_checkout(repo: Path, *, operation: str) -> None:
+    repo = repo.resolve()
+    if has_git_checkout_marker(repo):
+        return
+    if (repo / ".maison-revision").is_file():
+        raise MutationError(
+            f"{operation}: {repo} is a deployed Maison snapshot "
+            "(found .maison-revision without .git). "
+            "Edit source in a Git authoring checkout or private overlay "
+            "repository, then deploy or apply the result again."
+        )
+    raise MutationError(
+        f"{operation}: {repo} is not a Git authoring checkout. "
+        "Run this authoring command from a Git authoring checkout or "
+        "private overlay repository."
+    )
+
+
 def _relativize(path: Path, repo: Path) -> str:
     resolved = path.resolve(strict=False)
     try:
@@ -239,6 +262,10 @@ def parser() -> argparse.ArgumentParser:
     recover = sub.add_parser("recover")
     recover.add_argument("--repo", required=True, type=Path)
 
+    require = sub.add_parser("require-authoring")
+    require.add_argument("--repo", required=True, type=Path)
+    require.add_argument("--operation", required=True)
+
     begin = sub.add_parser("journal-begin")
     begin.add_argument("--repo", required=True, type=Path)
     begin.add_argument("--operation", required=True)
@@ -268,6 +295,8 @@ def main() -> int:
             return run_with_lock(args.repo, command)
         if args.command == "recover":
             recover_repository(args.repo)
+        elif args.command == "require-authoring":
+            require_authoring_checkout(args.repo, operation=args.operation)
         elif args.command == "journal-begin":
             print(begin_journal(args.repo, operation=args.operation, files=args.file).path)
         elif args.command == "journal-candidate":

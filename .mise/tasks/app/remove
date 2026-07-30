@@ -6,6 +6,7 @@ root="${MISE_PROJECT_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse -
 source "$root/.mise/lib/transaction.sh"
 path="$root/config/mise/config.macos-arm64.toml"
 package="brew-cask:${usage_cask:?mise did not provide the required cask argument}"
+transaction_require_authoring_checkout "$root" app:remove
 transaction_require_lock "$root" "${BASH_SOURCE[0]}" "$@"
 transaction_dir="$(transaction_directory)"
 cleanup() {

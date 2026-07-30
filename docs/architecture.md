@@ -104,6 +104,12 @@ Shell tasks do not parse TOML with awk. `.mise/lib/inventory.py` uses Python's `
 
 ## Transaction boundaries
 
+Local repository mutation commands require a Git authoring checkout for the target repository they write. A deployed
+snapshot has `.maison-revision` but no `.git` and is runtime source only; authoring commands fail there with guidance to
+edit the public source checkout or private overlay repository instead. `host:add` checks the active inventory repository,
+so a deployed public Maison snapshot may still author hosts in a private overlay clone when that overlay is a Git
+checkout.
+
 Local repository mutation commands serialize checked-in or overlay repository writes through one target-repository lock.
 `tool:add`, `tool:remove`, `package:add`, `package:remove`, `app:add`, `app:remove`, `host:add`, and `update` acquire a
 fail-fast local `fcntl` lock before reading mutable repository state. Their untracked journals live under

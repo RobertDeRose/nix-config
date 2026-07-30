@@ -1443,6 +1443,7 @@ class TransactionBehaviorTest(unittest.TestCase):
     def make_config_repo(self, temp: Path) -> Path:
         repo = temp / "repo"
         (repo / "config/mise").mkdir(parents=True)
+        (repo / ".git").mkdir()
         copy_files(
             repo,
             ".mise/lib/config_edit.py",
@@ -1458,6 +1459,7 @@ class TransactionBehaviorTest(unittest.TestCase):
             temp = Path(directory)
             repo = temp / "repo"
             repo.mkdir()
+            (repo / ".git").mkdir()
             copy_files(
                 repo,
                 ".mise/tasks/host/add",
