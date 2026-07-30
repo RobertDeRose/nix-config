@@ -181,7 +181,7 @@ def deploy_defaults(host_name: str, user: User) -> dict[str, Any]:
     return {
         "enable": False,
         "hostname": host_name,
-        "ssh_user": "root",
+        "ssh_user": "maison-deploy",
         "user_ssh_user": user.username,
         "repo_path": f"/home/{user.username}/.maison",
         "remote_build": False,
@@ -270,6 +270,11 @@ def parse_hosts(data: dict[str, Any], users: dict[str, User]) -> dict[str, Host]
         if deploy["user_ssh_user"] != user.username:
             fail(
                 f"host '{name}' deploy.user_ssh_user must match managed username "
+                f"'{user.username}'"
+            )
+        if deploy["ssh_user"] == user.username:
+            fail(
+                f"host '{name}' deploy.ssh_user must not use managed username "
                 f"'{user.username}'"
             )
         if deploy["enable"] and not system.endswith("-linux"):

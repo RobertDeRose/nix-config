@@ -60,7 +60,7 @@ let
       deploy = {
         enable = rawDeploy.enable or false;
         hostname = rawDeploy.hostname or name;
-        sshUser = rawDeploy.ssh_user or "root";
+        sshUser = rawDeploy.ssh_user or "maison-deploy";
         userSshUser = rawDeploy.user_ssh_user or managedUsername;
         repoPath = rawDeploy.repo_path or "/home/${managedUsername}/.maison";
         remoteBuild = rawDeploy.remote_build or false;
@@ -80,6 +80,8 @@ let
       fail "host '${name}' has invalid deploy.hostname '${toString deploy.hostname}'"
     else if !validation.validSshUsername deploy.sshUser then
       fail "host '${name}' has invalid deploy.ssh_user '${toString deploy.sshUser}'"
+    else if deploy.sshUser == selectedUser.username then
+      fail "host '${name}' deploy.ssh_user must not match managed username '${selectedUser.username}'"
     else if deploy.userSshUser != selectedUser.username then
       fail "host '${name}' deploy.user_ssh_user must match managed username '${selectedUser.username}'"
     else if deploy.enable && !(lib.hasSuffix "-linux" system) then

@@ -438,6 +438,57 @@ class InventoryBehaviorTest(unittest.TestCase):
                     result = self.run_inventory(path, "validate")
                     self.assertNotEqual(result.returncode, 0)
 
+    def test_inventory_defaults_deployment_ssh_user_to_maison_deploy(self) -> None:
+        original = read("inventory.toml")
+        cases = {
+            "implicit-default": original.replace('ssh_user = "root"\n', '', 1),
+            "explicit-maison-deploy": original.replace(
+                'ssh_user = "root"\n', 'ssh_user = "maison-deploy"\n', 1
+            ),
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            for label, content in cases.items():
+                with self.subTest(case=label):
+                    path = Path(directory) / f"{label}.toml"
+                    path.write_text(content)
+                    result = self.run_inventory(path, "validate")
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    default_user = self.run_inventory(
+                        path,
+                        "host-field",
+                        "dev-som",
+                        "deploy.ssh_user",
+                    )
+                    self.assertEqual(default_user.stdout.strip(), "maison-deploy")
+
+    def test_inventory_rejects_deploy_ssh_user_matching_managed_user(self) -> None:
+        original = read("inventory.toml")
+        cases = {
+            "managed-user": original.replace(
+                'ssh_user = "root"', 'ssh_user = "rderose"', 1
+            ),
+            "managed-user-explicit": original.replace(
+                'ssh_user = "root"\nuser_ssh_user = "rderose"\n',
+                'ssh_user = "rderose"\nuser_ssh_user = "rderose"\n',
+                1,
+            ),
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            for label, content in cases.items():
+                with self.subTest(case=label):
+                    path = Path(directory) / f"{label}.toml"
+                    path.write_text(content)
+                    result = self.run_inventory(path, "validate")
+                    self.assertNotEqual(result.returncode, 0, result.stderr)
+
+    def test_inventory_contracts_are_shared_by_python_and_nix_defaults(self) -> None:
+        python_inventory = read(".mise/lib/inventory.py")
+        nix_inventory = read("nix/lib/inventory.nix")
+
+        self.assertIn('"ssh_user": "maison-deploy"', python_inventory)
+        self.assertIn("sshUser = rawDeploy.ssh_user or \"maison-deploy\"", nix_inventory)
+        self.assertIn("deploy.sshUser == selectedUser.username", nix_inventory)
+
 
 class DeploymentContractTest(unittest.TestCase):
     def deployment_environment(self, temp: Path, home: Path) -> tuple[str, dict[str, str]]:
