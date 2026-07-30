@@ -7,7 +7,7 @@
 - Design path: `docs/src/features/maison-011-deterministic-test-suite/design.md`
 - Implemented record: `docs/src/features/maison-011-deterministic-test-suite/index.md`
 - Base branch: `dev`
-- Status: draft
+- Status: reviewed
 - Review priority: `P1`
 
 ## Feature Summary
@@ -40,9 +40,13 @@ is unsafe or unsupported, Maison fails with an actionable message instead of sil
 
 ### Functional Requirements
 
-- Introduce a subprocess helper with timeout, process-group termination, stdout/stderr capture, and temporary-directory isolation.
+- Introduce a stdlib-only test subprocess helper with timeout, process-group termination, stdout/stderr capture,
+  concise failure diagnostics, and temporary-directory isolation.
 - Refactor tests into subsystem files without changing covered behavior.
-- Bound full-suite runtime and document expected validation partitions.
+- Bound every external test process through the helper. The default subprocess timeout is 30 seconds; longer per-call
+  timeouts must be explicit, documented at the call site, and no longer than 300 seconds.
+- Keep `check:tests` deterministic and expected to complete within five minutes on a warm supported development
+  checkout; document focused validation partitions for subsystem work.
 - Replace fragile source-text assertions with behavioral checks when an executable contract exists.
 
 ### Quality Requirements
@@ -69,7 +73,14 @@ reader documentation under `docs/` describes the target operations and must be r
 
 ## Proposed Design
 
-Add a shared test subprocess helper and migrate external process calls to it. Split the monolithic topology suite into inventory, deployment, ownership, transaction, repository, and migration test files. Keep fixtures isolated per test and capture concise diagnostics for failures. Update development docs with focused and full-suite commands.
+Add a shared stdlib test subprocess helper and migrate external process calls to it. The helper starts commands in an
+isolated process group where the platform supports it, terminates the whole group on timeout, captures stdout and stderr,
+truncates diagnostics to a documented size, and accepts an explicit timeout override for known long-running Nix or Git
+fixtures.
+
+Split the monolithic topology suite into inventory, deployment, ownership, transaction, repository, and migration test
+files. Keep fixtures isolated per test and capture concise diagnostics for failures. Update development docs with
+focused subsystem commands, the helper timeout policy, and the expected full-suite bound.
 
 ## Architecture Consistency
 
@@ -89,7 +100,8 @@ Add a shared test subprocess helper and migrate external process calls to it. Sp
 
 ### New Decisions Introduced
 
-- This feature adopts the concrete behavior described in **Proposed Design** as the supported Maison contract.
+- Tests that execute external commands use a shared stdlib subprocess helper rather than ad hoc `subprocess` calls.
+- Test modules are organized by Maison subsystem so focused validation commands map to the area being changed.
 
 ### Architecture Documentation Changes
 
@@ -106,9 +118,9 @@ and external package-manager side effects when those concerns apply.
 
 | Exact page | Create or update | Planned change | Owning Beads task |
 |------------|------------------|----------------|-------------------|
-| docs/development/tooling.md | Update | Align reader-facing contract with MAISON-011: Bounded deterministic test suite | Implementation tasks |
-| docs/reference/tooling.md | Update | Align reader-facing contract with MAISON-011: Bounded deterministic test suite | Implementation tasks |
-| docs/operations.md | Update | Align reader-facing contract with MAISON-011: Bounded deterministic test suite | Implementation tasks |
+| docs/src/development/tooling.md | Update | Document bounded test helper behavior, focused subsystem test commands, and full-suite expectations | Implementation tasks |
+| docs/src/reference/tooling.md | Update | Define validation partitions, subprocess timeout policy, and the shared test helper contract | Implementation tasks |
+| docs/operations.md | Update | Summarize operator/contributor validation commands and bounded check expectations | Implementation tasks |
 | `docs/src/features/maison-011-deterministic-test-suite/index.md` | Create during close-out | Preserve delivery and audit history | Close-out documentation |
 | `docs/src/planned-features.md` | Update | Track roadmap status and Beads root | Planning |
 | `docs/src/SUMMARY.md` | Update | Register this design and delivered record links | Planning / close-out |
@@ -121,14 +133,15 @@ and external package-manager side effects when those concerns apply.
 
 ## Implementation Decomposition
 
-- `maison-011-deterministic-test-suite test-helper` — Add bounded subprocess test helper.
-- `maison-011-deterministic-test-suite test-suite-split` — Split and bound subsystem tests.
+- `maison-011-deterministic-test-suite test-helper` — Add the bounded subprocess helper and focused helper tests.
+- `maison-011-deterministic-test-suite test-suite-split` — Split subsystem tests, migrate existing external process
+  calls to the helper, and update validation documentation.
 
 ## Dependencies and Parallelism
 
-This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. Sibling
-implementation tasks may run in parallel only when they do not edit the same command path, test file, or documentation
-page.
+This feature follows the Maison review order. Both implementation tasks depend on specification reconciliation. The
+suite-split task depends on the helper task because existing external process calls must migrate to that shared helper
+and both tasks touch tests and validation documentation. The implementation tasks are sequential.
 
 ## Rollout and Migration
 
@@ -176,6 +189,16 @@ None.
 
 - The private inventory model changed from untracked local TOML to a tracked private overlay repository to preserve
   Maison's durability and replication goals.
+
+### Design Changes During Specification Review
+
+- Corrected documentation impact paths to the mdBook source pages under `docs/src/development/` and
+  `docs/src/reference/`.
+- Made the test subprocess contract explicit: default 30 second timeout, documented explicit overrides up to 300 seconds,
+  process-group cleanup, bounded diagnostics, and `check:tests` expected to finish within five minutes on a warm
+  supported development checkout.
+- Clarified that the subprocess helper is stdlib-only and test-local, and that implementation tasks are sequential:
+  helper first, suite split and migration second.
 
 ### Source Material
 
