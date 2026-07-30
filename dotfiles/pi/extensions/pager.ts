@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { copyToClipboard, getMarkdownTheme } from "@earendil-works/pi-coding-agent";
-import { Markdown } from "@earendil-works/pi-tui";
+import { Markdown, truncateToWidth as tuiTruncateToWidth, visibleWidth as tuiVisibleWidth } from "@earendil-works/pi-tui";
 
 type MarkdownCtor = new (markdown: string, x: number, y: number, theme: any) => { render(width: number): string[] };
 type KeyName = "escape" | "tab" | "enter" | "right" | "left" | "down" | "up" | "pageDown" | "pageUp" | "home" | "end" | "space";
@@ -23,128 +23,46 @@ const Key: Record<KeyName, KeyName> = {
 
 const ANSI_PATTERN = /\u001b\][^\u0007]*(?:\u0007|\u001b\\)|\u001b\[[0-?]*[ -\/]*[@-~]/g;
 const ANSI_PREFIX_PATTERN = /^(?:\u001b\][^\u0007]*(?:\u0007|\u001b\\)|\u001b\[[0-?]*[ -\/]*[@-~])/;
-const ANSI_RESET = "\u001b[0m";
 
 function normalizeMarkdownInput(s: string): string {
   return s.replace(/\r\n?/g, "\n");
 }
 
 function sanitizeFrameLine(s: string): string {
-  return s
-    .replace(/\u001b\][^\u0007]*(?:\u0007|\u001b\\)/g, "")
-    .replace(/\r\n?/g, " ")
-    .replace(/[\r\n]/g, " ")
-    .replace(/\t/g, "  ")
-    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001a\u001c-\u001f\u007f]/g, "");
-}
-
-function stripAnsi(s: string): string {
-  return s.replace(ANSI_PATTERN, "");
-}
-
-function isCombiningCodePoint(codePoint: number): boolean {
-  return (
-    (codePoint >= 0x0300 && codePoint <= 0x036f) ||
-    (codePoint >= 0x0483 && codePoint <= 0x0489) ||
-    (codePoint >= 0x0591 && codePoint <= 0x05bd) ||
-    codePoint === 0x05bf ||
-    (codePoint >= 0x05c1 && codePoint <= 0x05c2) ||
-    (codePoint >= 0x05c4 && codePoint <= 0x05c5) ||
-    codePoint === 0x05c7 ||
-    (codePoint >= 0x0610 && codePoint <= 0x061a) ||
-    (codePoint >= 0x064b && codePoint <= 0x065f) ||
-    codePoint === 0x0670 ||
-    (codePoint >= 0x06d6 && codePoint <= 0x06dc) ||
-    (codePoint >= 0x06df && codePoint <= 0x06e4) ||
-    (codePoint >= 0x06e7 && codePoint <= 0x06e8) ||
-    (codePoint >= 0x06ea && codePoint <= 0x06ed) ||
-    codePoint === 0x0711 ||
-    (codePoint >= 0x0730 && codePoint <= 0x074a) ||
-    (codePoint >= 0x07a6 && codePoint <= 0x07b0) ||
-    (codePoint >= 0x07eb && codePoint <= 0x07f3) ||
-    (codePoint >= 0x0816 && codePoint <= 0x0819) ||
-    (codePoint >= 0x081b && codePoint <= 0x0823) ||
-    (codePoint >= 0x0825 && codePoint <= 0x0827) ||
-    (codePoint >= 0x0829 && codePoint <= 0x082d) ||
-    (codePoint >= 0x0859 && codePoint <= 0x085b) ||
-    (codePoint >= 0x08d3 && codePoint <= 0x08e1) ||
-    (codePoint >= 0x08e3 && codePoint <= 0x0903) ||
-    (codePoint >= 0xfe00 && codePoint <= 0xfe0f) ||
-    (codePoint >= 0xe0100 && codePoint <= 0xe01ef) ||
-    codePoint === 0x200d ||
-    (codePoint >= 0x1f3fb && codePoint <= 0x1f3ff)
-  );
-}
-
-function isWideCodePoint(codePoint: number): boolean {
-  return (
-    codePoint >= 0x1100 &&
-    (codePoint <= 0x115f ||
-      codePoint === 0x2329 ||
-      codePoint === 0x232a ||
-      (codePoint >= 0x2e80 && codePoint <= 0xa4cf && codePoint !== 0x303f) ||
-      (codePoint >= 0xac00 && codePoint <= 0xd7a3) ||
-      (codePoint >= 0xf900 && codePoint <= 0xfaff) ||
-      (codePoint >= 0xfe10 && codePoint <= 0xfe19) ||
-      (codePoint >= 0xfe30 && codePoint <= 0xfe6f) ||
-      (codePoint >= 0xff00 && codePoint <= 0xff60) ||
-      (codePoint >= 0xffe0 && codePoint <= 0xffe6) ||
-      (codePoint >= 0x1f000 && codePoint <= 0x1faff) ||
-      (codePoint >= 0x20000 && codePoint <= 0x3fffd))
-  );
-}
-
-function graphemes(s: string): string[] {
-  const Segmenter = Intl.Segmenter;
-  if (Segmenter) return Array.from(new Segmenter(undefined, { granularity: "grapheme" }).segment(s), (part) => part.segment);
-  return Array.from(s);
-}
-
-function graphemeWidth(grapheme: string): number {
-  let width = 0;
-  for (const char of grapheme) {
-    const codePoint = char.codePointAt(0);
-    if (codePoint === undefined || isCombiningCodePoint(codePoint)) continue;
-    width = Math.max(width, isWideCodePoint(codePoint) ? 2 : 1);
-  }
-  return width;
-}
-
-function stringWidth(s: string): number {
-  let width = 0;
-  for (const grapheme of graphemes(s)) width += graphemeWidth(grapheme);
-  return width;
-}
-
-function visibleWidth(s: string): number {
-  return stringWidth(sanitizeFrameLine(stripAnsi(s)));
-}
-
-function truncateToWidth(s: string, width: number, ellipsis = ""): string {
-  const text = sanitizeFrameLine(s);
-  if (visibleWidth(text) <= width) return text;
-
-  const max = Math.max(0, width - visibleWidth(ellipsis));
   let out = "";
-  let used = 0;
 
-  for (let i = 0; i < text.length;) {
-    const ansi = ANSI_PREFIX_PATTERN.exec(text.slice(i));
+  for (let i = 0; i < s.length;) {
+    const ansi = ANSI_PREFIX_PATTERN.exec(s.slice(i));
     if (ansi) {
       out += ansi[0];
       i += ansi[0].length;
       continue;
     }
 
-    const char = graphemes(text.slice(i))[0];
-    const charWidth = char ? graphemeWidth(char) : 0;
-    if (!char || used + charWidth > max) break;
-    out += char;
-    used += charWidth;
+    const codePoint = s.codePointAt(i);
+    if (codePoint === undefined) break;
+    const char = String.fromCodePoint(codePoint);
     i += char.length;
+
+    if (char === "\r" || char === "\n") out += " ";
+    else if (char === "\t") out += "  ";
+    else if ((codePoint >= 0x00 && codePoint <= 0x1f) || codePoint === 0x7f) continue;
+    else out += char;
   }
 
-  return out.includes("\u001b[") ? `${out}${ANSI_RESET}${ellipsis}` : `${out}${ellipsis}`;
+  return out;
+}
+
+function stripAnsi(s: string): string {
+  return s.replace(ANSI_PATTERN, "");
+}
+
+function visibleWidth(s: string): number {
+  return tuiVisibleWidth(sanitizeFrameLine(s));
+}
+
+function truncateToWidth(s: string, width: number, ellipsis = ""): string {
+  return tuiTruncateToWidth(sanitizeFrameLine(s), width, ellipsis);
 }
 
 const KEY_SEQUENCES: Record<KeyName, readonly string[]> = {
