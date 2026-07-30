@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -160,6 +162,58 @@ class RepositoryMutationLockTest(unittest.TestCase):
             self.assertTrue(config.is_dir())
 
 
+class AuthoringCheckoutGuardTest(unittest.TestCase):
+    def helper(self, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, str(HELPER), *args],
+            capture_output=True,
+            text=True,
+        )
+
+    def test_authoring_checkout_accepts_git_directory_and_worktree_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            git_dir_repo = temp / "git-dir"
+            git_file_repo = temp / "git-file"
+            git_dir_repo.mkdir()
+            git_file_repo.mkdir()
+            (git_dir_repo / ".git").mkdir()
+            (git_file_repo / ".git").write_text("gitdir: ../actual.git\n")
+
+            for repo in (git_dir_repo, git_file_repo):
+                with self.subTest(repo=repo.name):
+                    result = self.helper(
+                        "require-authoring",
+                        "--repo",
+                        str(repo),
+                        "--operation",
+                        "test:add",
+                    )
+
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_deployed_snapshot_rejects_authoring_mutation_with_guidance(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            (repo / "mise.toml").write_text("[tasks]\n")
+            (repo / "flake.nix").write_text("{}\n")
+            (repo / ".maison-revision").write_text("0123456789abcdef\n")
+
+            result = self.helper(
+                "require-authoring",
+                "--repo",
+                str(repo),
+                "--operation",
+                "tool:add",
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("deployed Maison snapshot", result.stderr)
+            self.assertIn("Git authoring checkout", result.stderr)
+            self.assertIn("private overlay repository", result.stderr)
+            self.assertIn("tool:add", result.stderr)
+
+
 class RepositoryMutationTaskSurfaceTest(unittest.TestCase):
     mutating_tasks = [
         ".mise/tasks/tool/add",
@@ -171,6 +225,15 @@ class RepositoryMutationTaskSurfaceTest(unittest.TestCase):
         ".mise/tasks/host/add",
         ".mise/tasks/update",
     ]
+    runtime_tasks = [
+        ".mise/tasks/apply",
+        ".mise/tasks/plan",
+        ".mise/tasks/system/apply",
+        ".mise/tasks/system/plan",
+        ".mise/tasks/user/apply",
+        ".mise/tasks/user/plan",
+        ".mise/tasks/user/status",
+    ]
     read_only_tasks = [
         ".mise/tasks/host/list",
         ".mise/tasks/host/validate",
@@ -178,6 +241,17 @@ class RepositoryMutationTaskSurfaceTest(unittest.TestCase):
         ".mise/tasks/user/status",
         ".mise/tasks/plan",
     ]
+
+    def test_repository_mutators_require_authoring_checkout_before_lock(self) -> None:
+        for task in self.mutating_tasks:
+            with self.subTest(task=task):
+                text = (ROOT / task).read_text()
+                self.assertIn("transaction_require_authoring_checkout", text)
+                self.assertIn("transaction_require_lock", text)
+                self.assertLess(
+                    text.index("transaction_require_authoring_checkout"),
+                    text.index("transaction_require_lock"),
+                )
 
     def test_repository_mutators_enter_shared_lock_before_reads(self) -> None:
         for task in self.mutating_tasks:
@@ -189,10 +263,58 @@ class RepositoryMutationTaskSurfaceTest(unittest.TestCase):
                     text.index("transaction_directory"),
                 )
 
-    def test_read_only_tasks_do_not_take_repository_mutation_lock(self) -> None:
-        for task in self.read_only_tasks:
+    def test_runtime_and_read_only_tasks_do_not_take_authoring_guard_or_lock(self) -> None:
+        for task in sorted(set(self.runtime_tasks + self.read_only_tasks)):
             with self.subTest(task=task):
-                self.assertNotIn("transaction_require_lock", (ROOT / task).read_text())
+                text = (ROOT / task).read_text()
+                self.assertNotIn("transaction_require_authoring_checkout", text)
+                self.assertNotIn("transaction_require_lock", text)
+
+
+class MaisonCommandDeployedSnapshotTest(unittest.TestCase):
+    def test_runtime_command_dispatch_still_works_without_git(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            install = temp / "maison"
+            bin_dir = install / "bin"
+            task_dir = install / ".mise" / "tasks" / "user"
+            fake_bin = temp / "bin"
+            bin_dir.mkdir(parents=True)
+            task_dir.mkdir(parents=True)
+            fake_bin.mkdir()
+            shutil.copy2(ROOT / "bin/maison", bin_dir / "maison")
+            os.chmod(
+                bin_dir / "maison",
+                os.stat(bin_dir / "maison").st_mode | stat.S_IXUSR,
+            )
+            (install / "mise.toml").write_text("[tasks]\n")
+            (install / "flake.nix").write_text("{}\n")
+            (install / ".maison-revision").write_text("0123456789abcdef\n")
+            (task_dir / "status").write_text("#!/usr/bin/env bash\nexit 0\n")
+            os.chmod(task_dir / "status", 0o755)
+            fake_mise = fake_bin / "mise"
+            fake_mise.write_text(
+                "#!/usr/bin/env bash\n"
+                "printf '%s\\n' \"$*\" > \"$MAISON_FAKE_MISE_LOG\"\n"
+                "exit 0\n"
+            )
+            os.chmod(fake_mise, 0o755)
+            log = temp / "mise.log"
+
+            result = subprocess.run(
+                [str(bin_dir / "maison"), "user", "status"],
+                capture_output=True,
+                text=True,
+                env={
+                    **os.environ,
+                    "MAISON_HOME": str(install),
+                    "MAISON_FAKE_MISE_LOG": str(log),
+                    "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+                },
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(log.read_text().strip(), "run user:status --")
 
 
 if __name__ == "__main__":
