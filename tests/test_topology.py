@@ -749,6 +749,30 @@ class OverlayContractTest(unittest.TestCase):
             )
 
 
+class ReviewGatedDependencyUpdateTest(unittest.TestCase):
+    WORKFLOW = ".github/workflows/cache-refresh.yml"
+
+    def test_dependency_refresh_workflow_cannot_merge_or_bypass_review(self) -> None:
+        workflow = read(self.WORKFLOW)
+        forbidden_patterns = {
+            "gh pr merge": r"\bgh\s+pr\s+merge\b",
+            "admin merge flag": r"\s--admin(?:\s|$)",
+            "auto-merge enablement": r"\bgh\s+pr\s+merge\b[^\n]*\s--auto(?:\s|$)|\bgh\s+pr\s+edit\b[^\n]*\s--enable-auto-merge(?:\s|$)",
+        }
+        offenders = [
+            name for name, pattern in forbidden_patterns.items() if re.search(pattern, workflow)
+        ]
+        self.assertEqual(offenders, [])
+
+    def test_cache_warming_and_update_pr_are_separate_from_approval(self) -> None:
+        workflow = read(self.WORKFLOW)
+        self.assertIn("  build-platforms:", workflow)
+        self.assertIn("  commit-lock:", workflow)
+        self.assertRegex(workflow, r"commit-lock:\n(?:.|\n)*?needs:\n(?:.|\n)*?- build-platforms")
+        self.assertNotIn("  merge-lock-pr:", workflow)
+        self.assertNotRegex(workflow, r"needs\.commit-lock\.outputs\.pr_number[^\n]*gh pr merge")
+
+
 class VerifiedBootstrapContractTest(unittest.TestCase):
     BOOTSTRAP_SOURCES = (
         "bootstrap.sh",
