@@ -7,7 +7,7 @@ Real hosts belong in the private overlay inventory. Bootstrap or select the over
 maison host add <hostname> --system aarch64-linux --user operator --profiles base,dev,linux --overrides
 ```
 
-When an overlay inventory is active, `host:add` writes both `inventory.toml` and optional `hosts/<hostname>/system.nix` to the overlay clone.
+When an overlay inventory is active, `host:add` writes both `inventory.toml` and optional `hosts/<hostname>/system.nix` to the overlay clone. The active inventory must satisfy the shared schema contract in `schemas/inventory.toml`: supported systems are `aarch64-darwin`, `aarch64-linux`, and `x86_64-linux`; profiles are `base`, `dev`, `mac`, and `linux`; duplicate profiles, unknown feature keys, unknown deploy fields, and wrong value types are rejected.
 
 For a deployable Linux host, add an explicit deployment table to the active `inventory.toml`:
 
@@ -33,4 +33,4 @@ maison system plan --host example
 maison system deploy example --dry-activate
 ```
 
-Host override files may contain OS-level exceptions only. User differences belong in Tera dotfiles or platform mise configuration.
+Host override directories must match an inventory host and may contain only `system.nix`. Host override files may contain OS-level exceptions only. User differences belong in Tera dotfiles or platform mise configuration.

@@ -84,6 +84,7 @@ inputs.flake-parts.lib.mkFlake { inherit inputs; } {
         name = "maison-inventory";
         runtimeInputs = [ pkgs.python3 ];
         text = ''
+          export MAISON_INVENTORY_SCHEMA=${../schemas/inventory.toml}
           exec python3 ${../.mise/lib/inventory.py} "$@"
         '';
       };

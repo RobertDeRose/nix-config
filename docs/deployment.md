@@ -57,7 +57,7 @@ auto_rollback = true
 magic_rollback = true
 ```
 
-`ssh_user` activates the system with deployment privileges. `user_ssh_user` must equal the managed inventory username. `repo_path` must be below `/home/<user>`; `/`, `/home`, the user's home itself, non-normalized paths, and traversal are rejected by both Python and Nix validation.
+`ssh_user` activates the system with deployment privileges. `user_ssh_user` must equal the managed inventory username. `repo_path` must be below `/home/<user>`; `/`, `/home`, the user's home itself, non-normalized paths, and traversal are rejected by both Python and Nix validation. Deployment keys, defaults, and value types are defined in the shared public schema contract at `schemas/inventory.toml`, and shared fixtures keep Python and Nix validation behavior aligned.
 
 ## Safety boundary
 

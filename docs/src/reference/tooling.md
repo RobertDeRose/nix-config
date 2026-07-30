@@ -14,6 +14,7 @@
 | `cog.toml`                          | Configures Conventional Commits and concise changelogs.                     |
 | `.config/cog-changelog.tera`        | Renders plain Markdown changelogs without author noise.                     |
 | `scripts/setup-tooling.py`          | Resolves the lock, installs tools, installs hooks, and returns JSON status. |
+| `schemas/inventory.toml`            | Shared public inventory schema contract for Python and Nix validators.     |
 | `scripts/enable-docs-deployment.py` | Configures workflow-built Pages through external `gh`.                      |
 | `.github/workflows/validate.yml`      | Runs locked `mise run check` on pushes and pull requests.                   |
 | `.github/workflows/docs.yml`          | Builds gated docs from the default branch or manual dispatch.               |
@@ -70,6 +71,10 @@ configured.
 
 The committed lock targets `linux-x64`, `linux-arm64`, and `macos-arm64`. Intel macOS and Windows are not part of this
 POSIX-shell task contract.
+
+Inventory validation fixtures live under `tests/fixtures/inventory/` and are consumed by both Python tests and Nix
+evaluation checks. Add fixture cases when changing inventory fields, defaults, profile compatibility, deploy path rules,
+or overlay host override layout.
 
 The mise environment routes hooks through mise with `HK_MISE=1` and sets `GIT_CONFIG_PARAMETERS="'merge.ff=only'"`, so
 Git rejects merges that require a merge commit.

@@ -1,16 +1,8 @@
 { lib }:
 let
-  supportedSystems = [
-    "aarch64-darwin"
-    "aarch64-linux"
-    "x86_64-linux"
-  ];
-  profileNames = [
-    "base"
-    "dev"
-    "mac"
-    "linux"
-  ];
+  schema = builtins.fromTOML (builtins.readFile ../../schemas/inventory.toml);
+  supportedSystems = schema.supported_systems;
+  profileNames = schema.profiles;
   validHostname =
     value:
     builtins.isString value

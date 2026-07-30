@@ -17,6 +17,7 @@
 [Feature Lifecycle](./development/feature-lifecycle.md)
 [GitHub Pages](./operations/github-pages.md)
 [Tooling Reference](./reference/tooling.md)
+[Inventory Reference](./reference/inventory.md)
 [Planned Features](./planned-features.md)
   <!-- BEGIN FEATURE DESIGNS -->
   - [MAISON-001: Root-owned deployment transaction state](./features/maison-001-root-owned-deployment-transactions/design.md)
@@ -69,3 +70,4 @@
 # Reference
 
 - [Reference Overview](reference/tooling.md)
+- [Inventory Reference](reference/inventory.md)

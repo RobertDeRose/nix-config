@@ -482,9 +482,14 @@ class InventoryBehaviorTest(unittest.TestCase):
     def test_inventory_contracts_are_shared_by_python_and_nix_defaults(self) -> None:
         python_inventory = read(".mise/lib/inventory.py")
         nix_inventory = read("nix/lib/inventory.nix")
+        schema = read("schemas/inventory.toml")
 
-        self.assertIn('"ssh_user": "maison-deploy"', python_inventory)
-        self.assertIn("sshUser = rawDeploy.ssh_user or \"maison-deploy\"", nix_inventory)
+        self.assertIn("[deploy.ssh_user]", schema)
+        self.assertIn('default = "maison-deploy"', schema)
+        self.assertIn('SCHEMA = load_schema()', python_inventory)
+        self.assertIn('DEPLOY_SCHEMA = SCHEMA["deploy"]', python_inventory)
+        self.assertIn("builtins.fromTOML", nix_inventory)
+        self.assertIn("deployDefault \"ssh_user\"", nix_inventory)
         self.assertIn("deploy.sshUser == selectedUser.username", nix_inventory)
 
 
@@ -1467,6 +1472,7 @@ class TransactionBehaviorTest(unittest.TestCase):
                 ".mise/lib/platform.sh",
                 ".mise/lib/inventory.sh",
                 ".mise/lib/inventory.py",
+                "schemas/inventory.toml",
                 ".mise/lib/config_edit.py",
                 ".mise/vendor/tomlkit-0.13.3-py3-none-any.whl",
                 ".mise/lib/repository_mutation.py",
@@ -2428,6 +2434,7 @@ class RepositoryContractTest(unittest.TestCase):
         build = read(".github/scripts/build-platform-targets.sh")
         self.assertIn('name = "maison-inventory"', outputs)
         self.assertIn("runtimeInputs = [ pkgs.python3 ]", outputs)
+        self.assertIn("MAISON_INVENTORY_SCHEMA", outputs)
         self.assertIn("maison-inventory = inventoryPackage", outputs)
         self.assertIn(r'build_target ".#packages.\"$SYSTEM\".\"$package\""', build)
 

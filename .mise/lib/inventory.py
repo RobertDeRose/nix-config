@@ -19,12 +19,29 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, NoReturn
 
-SUPPORTED_SYSTEMS = ("aarch64-darwin", "aarch64-linux", "x86_64-linux")
-PROFILE_NAMES = ("base", "dev", "mac", "linux")
-HOST_LABEL_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?")
-USERNAME_RE = re.compile(r"[a-z_][a-z0-9_-]*")
-GITHUB_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?")
-PATH_COMPONENT_RE = re.compile(r"[A-Za-z0-9._-]+")
+def load_schema() -> dict[str, Any]:
+    schema_path = Path(
+        os.environ.get(
+            "MAISON_INVENTORY_SCHEMA",
+            Path(__file__).resolve().parents[2] / "schemas/inventory.toml",
+        )
+    )
+    try:
+        with schema_path.open("rb") as handle:
+            return tomllib.load(handle)
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        raise RuntimeError(f"unable to load inventory schema {schema_path}: {exc}") from exc
+
+
+SCHEMA = load_schema()
+SUPPORTED_SYSTEMS = tuple(SCHEMA["supported_systems"])
+PROFILE_NAMES = tuple(SCHEMA["profiles"])
+HOST_LABEL_RE = re.compile(SCHEMA["patterns"]["host_label"])
+USERNAME_RE = re.compile(SCHEMA["patterns"]["username"])
+GITHUB_RE = re.compile(SCHEMA["patterns"]["github"])
+PATH_COMPONENT_RE = re.compile(SCHEMA["patterns"]["path_component"])
+FEATURE_SCHEMA = SCHEMA["features"]
+DEPLOY_SCHEMA = SCHEMA["deploy"]
 
 
 class InventoryError(RuntimeError):
@@ -177,17 +194,19 @@ def parse_users(data: dict[str, Any]) -> dict[str, User]:
     return users
 
 
+def deploy_default(field: str, host_name: str, user: User) -> Any:
+    default = DEPLOY_SCHEMA[field]["default"]
+    if default == "host-name":
+        return host_name
+    if default == "managed-user":
+        return user.username
+    if isinstance(default, str):
+        return default.replace("<managed-user>", user.username)
+    return default
+
+
 def deploy_defaults(host_name: str, user: User) -> dict[str, Any]:
-    return {
-        "enable": False,
-        "hostname": host_name,
-        "ssh_user": "maison-deploy",
-        "user_ssh_user": user.username,
-        "repo_path": f"/home/{user.username}/.maison",
-        "remote_build": False,
-        "auto_rollback": True,
-        "magic_rollback": True,
-    }
+    return {field: deploy_default(field, host_name, user) for field in DEPLOY_SCHEMA}
 
 
 def parse_hosts(data: dict[str, Any], users: dict[str, User]) -> dict[str, Host]:
@@ -238,11 +257,15 @@ def parse_hosts(data: dict[str, Any], users: dict[str, User]) -> dict[str, Host]
                 fail(f"host '{name}' cannot use profile '{profile}' on '{system}'")
 
         raw_features = require_mapping(raw.get("features", {}), f"hosts.{name}.features")
-        features = {"personal_cache": raw_features.get("personal_cache", False)}
-        features["personal_cache"] = require_bool(
-            features["personal_cache"], f"hosts.{name}.features.personal_cache"
-        )
-        unknown_features = set(raw_features) - {"personal_cache"}
+        features = {
+            field: raw_features.get(field, definition["default"])
+            for field, definition in FEATURE_SCHEMA.items()
+        }
+        for field in FEATURE_SCHEMA:
+            features[field] = require_bool(
+                features[field], f"hosts.{name}.features.{field}"
+            )
+        unknown_features = set(raw_features) - set(FEATURE_SCHEMA)
         if unknown_features:
             fail(
                 f"host '{name}' has unknown features: "
@@ -251,7 +274,7 @@ def parse_hosts(data: dict[str, Any], users: dict[str, User]) -> dict[str, Host]
 
         raw_deploy = require_mapping(raw.get("deploy", {}), f"hosts.{name}.deploy")
         deploy = deploy_defaults(name, user)
-        unknown_deploy = set(raw_deploy) - set(deploy)
+        unknown_deploy = set(raw_deploy) - set(DEPLOY_SCHEMA)
         if unknown_deploy:
             fail(
                 f"host '{name}' has unknown deploy fields: "
