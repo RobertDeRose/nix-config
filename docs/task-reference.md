@@ -52,6 +52,11 @@ Configuration mutation commands parse the complete target TOML before writing, p
 table boundaries, arrays of tables, and CRLF newlines, then validate the edited document before replacing the candidate
 file. Malformed or unsupported TOML fails without partially rewriting the repository file.
 
+Repository mutation commands that write checked-in or overlay repository files (`tool:add`, `tool:remove`, `package:add`,
+`package:remove`, `app:add`, `app:remove`, `host:add`, and `update`) acquire one fail-fast local lock for the target
+repository, recover incomplete local journals, and then read mutable state. Read-only commands such as plan, status,
+list, validate, and search do not take the repository mutation lock.
+
 ## Overlay-aware behavior
 
 `--overlay` is a bootstrap flag. After bootstrap, tasks read the saved overlay state from `${XDG_STATE_HOME:-$HOME/.local/state}/maison/overlay.toml`. If the clone contains `inventory.toml`, inventory lookups, `host:add`, system planning, Nix evaluation, and deployment target selection use that overlay file and its sibling `hosts/` tree. Public starter files remain the fallback when no overlay inventory is present.

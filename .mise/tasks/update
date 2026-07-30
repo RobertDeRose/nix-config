@@ -8,10 +8,12 @@ root="${MISE_PROJECT_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse -
 cd "$root"
 source "$root/.mise/lib/common.sh"
 source "$root/.mise/lib/nix.sh"
+source "$root/.mise/lib/transaction.sh"
+transaction_require_lock "$root" "${BASH_SOURCE[0]}" "$@"
 load_nix_environment
 configure_github_access_token
 
-backup_dir="$(mktemp -d)"
+backup_dir="$(transaction_directory)"
 cp flake.lock "$backup_dir/flake.lock"
 
 # Invoked indirectly by the EXIT trap below.
@@ -19,7 +21,17 @@ cp flake.lock "$backup_dir/flake.lock"
 restore_lock_on_failure() {
   local exit_status="$1"
   if [ "$exit_status" -ne 0 ]; then
-    cp "$backup_dir/flake.lock" flake.lock
+    rollback_status=0
+    cp "$backup_dir/flake.lock" flake.lock || rollback_status=$?
+    if [ "${MAISON_REPOSITORY_MUTATION_JOURNAL:-}" ]; then
+      if [ "$rollback_status" -eq 0 ]; then
+        transaction_journal_complete || rollback_status=$?
+      else
+        printf 'update: rollback failed; preserved mutation journal at %s\n' \
+          "$MAISON_REPOSITORY_MUTATION_JOURNAL" >&2
+      fi
+    fi
+    [ "$rollback_status" -eq 0 ] || exit_status="$rollback_status"
   fi
   rm -rf "$backup_dir"
   trap - EXIT
@@ -56,7 +68,10 @@ for ((attempt = 1; attempt <= max_attempts; attempt++)); do
     --option download-attempts 1 \
     flake update --output-lock-file "$candidate_lock" "${update_args[@]}"; then
     [ -s "$candidate_lock" ] || die "Nix update succeeded without producing a candidate lockfile"
-    mv "$candidate_lock" flake.lock
+    transaction_journal_begin "$root" update flake.lock
+    transaction_journal_mark validated
+    atomic_replace "$candidate_lock" flake.lock
+    transaction_journal_complete
     update_succeeded=true
     break
   fi

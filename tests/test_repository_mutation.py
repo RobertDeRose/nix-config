@@ -67,8 +67,8 @@ class RepositoryMutationLockTest(unittest.TestCase):
                     "import time; time.sleep(5)",
                 ],
                 env={**os.environ, "MAISON_REPOSITORY_MUTATION_STATE_DIR": str(state_root)},
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
                 text=True,
             )
             try:
@@ -82,7 +82,16 @@ class RepositoryMutationLockTest(unittest.TestCase):
                     time.sleep(0.05)
                 self.assertIsNotNone(lock_file)
 
-                blocked = self.helper(state_root, "run", "--repo", str(repo), "--", sys.executable, "-c", "")
+                blocked = self.helper(
+                    state_root,
+                    "run",
+                    "--repo",
+                    str(repo),
+                    "--",
+                    sys.executable,
+                    "-c",
+                    "",
+                )
 
                 self.assertNotEqual(blocked.returncode, 0)
                 self.assertIn("repository mutation lock is busy", blocked.stderr)
@@ -132,7 +141,12 @@ class RepositoryMutationLockTest(unittest.TestCase):
             candidate = temp / "candidate.toml"
             config.write_text("original\n")
             candidate.write_text("candidate\n")
-            journal = helper.begin_journal(repo, operation="test", files=[config], state_root=state_root)
+            journal = helper.begin_journal(
+                repo,
+                operation="test",
+                files=[config],
+                state_root=state_root,
+            )
             helper.record_candidate(journal, config, candidate)
             helper.mark_journal_state(journal, "replacing")
             config.unlink()
@@ -170,7 +184,10 @@ class RepositoryMutationTaskSurfaceTest(unittest.TestCase):
             with self.subTest(task=task):
                 text = (ROOT / task).read_text()
                 self.assertIn("transaction_require_lock", text)
-                self.assertLess(text.index("transaction_require_lock"), text.index("transaction_directory"))
+                self.assertLess(
+                    text.index("transaction_require_lock"),
+                    text.index("transaction_directory"),
+                )
 
     def test_read_only_tasks_do_not_take_repository_mutation_lock(self) -> None:
         for task in self.read_only_tasks:

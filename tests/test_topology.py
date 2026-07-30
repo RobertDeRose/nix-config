@@ -1447,6 +1447,7 @@ class TransactionBehaviorTest(unittest.TestCase):
             repo,
             ".mise/lib/config_edit.py",
             ".mise/vendor/tomlkit-0.13.3-py3-none-any.whl",
+            ".mise/lib/repository_mutation.py",
             ".mise/lib/transaction.sh",
             "scripts/user-apply-packages.sh",
         )
@@ -1466,6 +1467,7 @@ class TransactionBehaviorTest(unittest.TestCase):
                 ".mise/lib/inventory.py",
                 ".mise/lib/config_edit.py",
                 ".mise/vendor/tomlkit-0.13.3-py3-none-any.whl",
+                ".mise/lib/repository_mutation.py",
                 ".mise/lib/transaction.sh",
                 "inventory.toml",
             )
@@ -2396,7 +2398,7 @@ class MigrationBehaviorTest(unittest.TestCase):
         self.assertIn('MAISON_NIX_UPDATE_ATTEMPTS:-1', script)
         self.assertIn('MAISON_NIX_UPDATE_STALLED_TIMEOUT:-60', script)
         self.assertIn('--output-lock-file "$candidate_lock"', script)
-        self.assertIn('mv "$candidate_lock" flake.lock', script)
+        self.assertIn('atomic_replace "$candidate_lock" flake.lock', script)
         self.assertIn("--option download-attempts 1", script)
         self.assertIn('git+https://github.com/NixOS/nixpkgs?ref=nixpkgs-unstable&shallow=1', flake)
 

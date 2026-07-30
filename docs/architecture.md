@@ -104,6 +104,13 @@ Shell tasks do not parse TOML with awk. `.mise/lib/inventory.py` uses Python's `
 
 ## Transaction boundaries
 
+Local repository mutation commands serialize checked-in or overlay repository writes through one target-repository lock.
+`tool:add`, `tool:remove`, `package:add`, `package:remove`, `app:add`, `app:remove`, `host:add`, and `update` acquire a
+fail-fast local `fcntl` lock before reading mutable repository state. Their untracked journals live under
+`${XDG_STATE_HOME:-$HOME/.local/state}/maison/repository-mutations/`, or under `MAISON_REPOSITORY_MUTATION_STATE_DIR`
+for tests, keyed by the canonical target repository path with owner-only permissions. The journal copies original and
+candidate files so startup recovery can restore incomplete local mutations before a new mutation reads state.
+
 ```text
 maison apply
   1. system:apply  (Nix generation semantics)
@@ -113,3 +120,7 @@ maison apply
 A failed system activation stops before user convergence. A failed user convergence leaves the active system generation in place.
 
 Remote deployment has an additional repository transaction around the user phase. Transaction journals, locks, staging trees, and rollback trees are privileged state and live in a root-owned same-filesystem transaction root outside the managed user's writable home. The managed user may read and apply the staged repository, but must not be able to unlink, replace, or edit transaction control state. Deploy-rs independently protects the Linux system profile while only the `maison-deploy` account can launch privileged activation actions.
+
+The local repository mutation journal is separate from that privileged remote deployment namespace. Local authoring locks
+must not weaken the root-owned transaction root, same-filesystem constraints, or revision-bound remote rollback
+contracts.

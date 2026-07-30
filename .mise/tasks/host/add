@@ -18,6 +18,9 @@ system="${usage_system:-$(current_system)}"
 user="${usage_user:-$(current_user)}"
 validate_hostname "$host" || die "invalid hostname: $host"
 is_supported_system "$system" || die "unsupported system: $system"
+inventory="$(inventory_path "$root")"
+inventory_root="$(dirname "$inventory")"
+transaction_require_lock "$inventory_root" "${BASH_SOURCE[0]}" "$@"
 inventory_has_host "$root" "$host" && die "host already exists: $host"
 inventory_has_user "$root" "$user" || die "inventory user does not exist: $user"
 inventory_user_allowed_for_system "$root" "$user" "$system" ||
@@ -44,8 +47,6 @@ for profile in "${values[@]}"; do
 done
 [ -n "$normalized_profiles" ] || die "at least one profile is required"
 
-inventory="$(inventory_path "$root")"
-inventory_root="$(dirname "$inventory")"
 override="$inventory_root/hosts/$host"
 [ "${usage_overrides:-false}" != true ] || [ ! -e "$override" ] ||
   die "host override path already exists: $override"
@@ -64,12 +65,22 @@ cleanup() {
   local status=$?
   trap - EXIT HUP INT TERM
   if [ "$success" != true ]; then
+    rollback_status=0
     if [ "$override_committed" = true ]; then
-      rm -rf "$override"
+      rm -rf "$override" || rollback_status=$?
     fi
     if [ "$inventory_committed" = true ]; then
-      atomic_replace "$original" "$inventory"
+      transaction_restore_file "$original" "$inventory" || rollback_status=$?
     fi
+    if [ "${MAISON_REPOSITORY_MUTATION_JOURNAL:-}" ]; then
+      if [ "$rollback_status" -eq 0 ]; then
+        transaction_journal_complete || rollback_status=$?
+      else
+        printf 'host:add: rollback failed; preserved mutation journal at %s\n' \
+          "$MAISON_REPOSITORY_MUTATION_JOURNAL" >&2
+      fi
+    fi
+    [ "$rollback_status" -eq 0 ] || status="$rollback_status"
   fi
   rm -rf "$transaction_dir"
   exit "$status"
@@ -99,6 +110,8 @@ python3 "$root/.mise/lib/inventory.py" \
   --repo-root "$inventory_root" \
   validate >/dev/null
 
+transaction_journal_begin "$inventory_root" host:add "$inventory" "$override"
+transaction_journal_mark validated
 trap '' HUP INT TERM
 atomic_replace "$candidate" "$inventory"
 inventory_committed=true
@@ -115,6 +128,7 @@ if [ "${usage_overrides:-false}" = true ]; then
 fi
 
 success=true
+transaction_journal_complete
 printf 'Added host %s after validating the complete candidate inventory.\n' "$host"
 if [ "$inventory_root" = "$root" ]; then
   git --no-pager diff -- inventory.toml "hosts/$host" 2> /dev/null || true

@@ -36,6 +36,24 @@ maison user plan
 maison user apply
 ```
 
+## Failed local repository mutation
+
+Local authoring mutations store untracked lock and journal state under:
+
+```text
+${XDG_STATE_HOME:-$HOME/.local/state}/maison/repository-mutations/
+```
+
+Each state directory is keyed by the canonical repository path and uses owner-only permissions because journals can copy
+private overlay data. If a mutation is interrupted, the next mutation for the same target repository acquires the lock,
+recovers incomplete journals, and only then reads repository state. If recovery fails, Maison returns non-zero and
+preserves the journal, original copies, candidate copies, and diagnostics. Do not delete the journal directory until the
+active repository files and preserved copies are understood.
+
+A busy-lock error means another mutation is still running for that repository, or an interrupted process must finish or
+release its lock. Wait for the active command before retrying; if no process remains, rerun the original mutation so the
+startup recovery pass can inspect preserved journals.
+
 ## Failed user apply
 
 The dry run previews whole-file ownership changes with force enabled but does not modify files. After review, rerun with `--force-dotfiles`; Maison backs up the exact targets mise refused before replacement.

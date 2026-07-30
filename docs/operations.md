@@ -67,6 +67,11 @@ maison app update            # upgrade casks and Mac App Store apps
 
 Each update surface has an independent failure boundary. `maison update` restores `flake.lock` when the Nix update or optional validation fails. Tool, formula, and application upgrades are explicit and do not activate the system.
 
+Repository-writing commands are serialized per target repository. `tool add`, `tool remove`, `package add`,
+`package remove`, `app add`, `app remove`, `host add`, and `update` acquire a fail-fast local mutation lock before
+reading mutable repository state. If another mutation is active, Maison exits non-zero and names the busy repository and
+journal directory. Read-only plan, status, list, validate, and search commands do not take this lock.
+
 Scheduled cache refresh automation may update `flake.lock`, build the proposed dependency graph, warm Cachix, and open or refresh an `automation/refresh-flake-lock` pull request. It does not merge that PR or bypass branch protection; accepting dependency changes remains a normal reviewed PR merge.
 
 ## Clean
