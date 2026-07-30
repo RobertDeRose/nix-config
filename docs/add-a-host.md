@@ -18,7 +18,7 @@ auto_rollback = true
 magic_rollback = true
 ```
 
-`ssh_user` is the deployment account used for system activation and repository-transaction helper access. It defaults to `maison-deploy` and is separate from the managed user (`user_ssh_user`), which owns the remote repository.
+`ssh_user` is the deployment account used for system activation and repository-transaction helper access. It defaults to `maison-deploy` and is separate from the managed user (`user_ssh_user`), which owns the remote repository. For a first deployment to an existing host that does not yet have a reachable `maison-deploy` account, temporarily set `ssh_user` to an existing privileged account for the system deployment, then switch back to `maison-deploy` after the account and sudoers policy exist.
 
 Then run:
 

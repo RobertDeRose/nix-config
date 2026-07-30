@@ -69,7 +69,7 @@ in
       fallback = ${if cache.fallback then "true" else "false"}
       extra-substituters = ${builtins.concatStringsSep " " cache.substituters}
       extra-trusted-public-keys = ${builtins.concatStringsSep " " cache.trustedPublicKeys}
-      extra-trusted-users = root ${user.username}
+      extra-trusted-users = root ${user.username} ${deployUser}
     '';
     replaceExisting = true;
   };
@@ -112,7 +112,7 @@ in
       Cmnd_Alias MAISON_DEPLOY_HELPER = /usr/bin/python3 /tmp/maison-deploy-helper.*.py stage *,
                                           /usr/bin/python3 /tmp/maison-deploy-helper.*.py recover *,
                                           /usr/bin/python3 /tmp/maison-deploy-helper.*.py finalize *
-      Cmnd_Alias MAISON_DEPLOY_ACTIVATE = /nix/var/nix/profiles/system-manager-profiles/system-manager/bin/activate *
+      Cmnd_Alias MAISON_DEPLOY_ACTIVATE = /nix/store/*/activate-rs *
 
       ${deployUser} ALL=(root) NOPASSWD: MAISON_DEPLOY_PREPARE, MAISON_DEPLOY_HELPER, MAISON_DEPLOY_ACTIVATE
     '';

@@ -35,6 +35,8 @@ For the default `/home/<user>/.maison` repository path, the default transaction 
 
 Remote system and repository actions now run through a separate deployment SSH account (default `maison-deploy`). Sudo access for that account is command-scoped and argument-bounded for `deploy`-related activation and Maison transaction helpers.
 
+Existing hosts that do not yet have a reachable `maison-deploy` account need one bootstrap deployment through an explicitly configured privileged account, such as `ssh_user = "root"`. After that system deployment creates the deployment account and sudoers policy, switch the inventory back to the `maison-deploy` default.
+
 Use `--system-only` to skip repository transfer and user convergence.
 
 ## Inventory fields

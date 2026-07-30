@@ -24,6 +24,7 @@ sudo_prefix=""
 if [ "$ssh_user" != root ]; then
   sudo_prefix="sudo "
 fi
+# shellcheck disable=SC2029 # sudo prefix intentionally expands locally from validated inventory user
 ssh "$ssh_user@$hostname" "${sudo_prefix}/usr/bin/install -d -m 0755 /nix/var/nix/profiles/system-manager-profiles"
 
 args=("$root#$host.system")

@@ -611,7 +611,8 @@ class DeploymentContractTest(unittest.TestCase):
 
         self.assertIn('Cmnd_Alias MAISON_DEPLOY_HELPER = /usr/bin/python3 /tmp/maison-deploy-helper.*.py stage *', linux_module)
         self.assertIn('Cmnd_Alias MAISON_DEPLOY_PREPARE = /usr/bin/install -d -m 0755 /nix/var/nix/profiles/system-manager-profiles', linux_module)
-        self.assertIn('Cmnd_Alias MAISON_DEPLOY_ACTIVATE = /nix/var/nix/profiles/system-manager-profiles/system-manager/bin/activate *', linux_module)
+        self.assertIn('Cmnd_Alias MAISON_DEPLOY_ACTIVATE = /nix/store/*/activate-rs *', linux_module)
+        self.assertIn('extra-trusted-users = root ${user.username} ${deployUser}', linux_module)
         self.assertIn('${deployUser} ALL=(root) NOPASSWD:', linux_module)
         self.assertNotIn('NOPASSWD: ALL', linux_module)
 
