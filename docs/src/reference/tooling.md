@@ -15,8 +15,9 @@
 | `.config/cog-changelog.tera`        | Renders plain Markdown changelogs without author noise.                     |
 | `scripts/setup-tooling.py`          | Resolves the lock, installs tools, installs hooks, and returns JSON status. |
 | `scripts/enable-docs-deployment.py` | Configures workflow-built Pages through external `gh`.                      |
-| `.github/workflows/validate.yml`    | Runs locked `mise run check` on pushes and pull requests.                   |
-| `.github/workflows/docs.yml`        | Builds gated docs from the default branch or manual dispatch.               |
+| `.github/workflows/validate.yml`      | Runs locked `mise run check` on pushes and pull requests.                   |
+| `.github/workflows/docs.yml`          | Builds gated docs from the default branch or manual dispatch.               |
+| `.github/workflows/cache-refresh.yml` | Warms cache targets and opens or updates flake refresh PRs without merging. |
 
 ## Tools
 
@@ -72,6 +73,10 @@ POSIX-shell task contract.
 
 The mise environment routes hooks through mise with `HK_MISE=1` and sets `GIT_CONFIG_PARAMETERS="'merge.ff=only'"`, so
 Git rejects merges that require a merge commit.
+
+The cache-refresh workflow may create or update `automation/refresh-flake-lock` after cache warming, but dependency
+approval is not automated. That workflow must not invoke `gh pr merge`, pass `--admin`, enable auto-merge, or otherwise
+bypass branch protection.
 
 The universal tool count remains ten; `gh` is an external administrative prerequisite, not a mise tool. Pages requires
 `build_type=workflow` plus `DOCS_DEPLOYMENT_ENABLED=true`. The build job has `contents: read`; only the deploy job has

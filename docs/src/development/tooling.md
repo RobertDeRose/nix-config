@@ -38,6 +38,11 @@ runs.
 installs only the committed lock with `mise install --locked`, and runs `mise run check`. CI does not regenerate the
 lock or maintain a separate validation policy.
 
+`.github/workflows/cache-refresh.yml` is dependency-update automation, not an approval path. It may refresh `flake.lock`,
+build cache targets, push or update the `automation/refresh-flake-lock` branch, open or edit the matching pull request,
+and run the reusable hk and CI workflows against that branch. It must leave the pull request open for ordinary review
+and branch protection; it must not run `gh pr merge`, use `--admin`, or enable auto-merge.
+
 ## Hooks and recovery
 
 Setup installs repository-local hk hooks when the destination is a Git repository. To restore tooling after an offline
