@@ -69,7 +69,13 @@ reader documentation under `docs/` describes the target operations and must be r
 
 ## Proposed Design
 
-Refactor bootstrap into explicit fetch, verify, and execute stages. The bootstrap task contains pinned metadata for supported platforms and verifies each mise and Lix artifact before execution. Plugin inputs use immutable commit or tag revisions with verification data where supported. The public command examples stop recommending unverified pipe-to-shell execution.
+Refactor every Maison-owned bootstrap executor into explicit fetch, verify, and execute stages. The covered surfaces are the top-level `bootstrap.sh`, the shared `.mise/lib/bootstrap.sh` Nix/Lix installer path, and the remote deployment fallback that installs mise before user convergence. Each path downloads artifacts to a temporary file, verifies checked-in public metadata, and executes only the verified local file.
+
+Store Maison-owned artifact metadata in a checked-in manifest that names the reviewed version, source URL, expected checksum or upstream signature material, supported systems, and recovery hint. Use one verification mechanism per artifact unless upstream release practices require otherwise; prefer checksums for static release binaries and signature verification only when the upstream artifact is designed for it. Private overlay metadata is allowed only for site-specific artifact mirrors or overrides, not as the default public trust root.
+
+Pin runtime/plugin inputs that are needed during bootstrap or Maison command execution to immutable versions or revisions. Source-text guard tests cover bootstrap scripts, deployment bootstrap fallback scripts, public bootstrap documentation examples, and Maison runtime plugin/tool declarations. This does not change the broader workstation package policy that permits `latest` for ordinary user tools when lockfiles capture resolved artifacts.
+
+The public command examples stop recommending unverified pipe-to-shell execution. Fresh-install documentation either uses a reviewed local checkout path or a download-then-verify bootstrap path.
 
 ## Architecture Consistency
 
@@ -108,6 +114,7 @@ and external package-manager side effects when those concerns apply.
 |------------|------------------|----------------|-------------------|
 | README.md | Update | Align reader-facing contract with MAISON-005: Verified bootstrap artifacts | Implementation tasks |
 | docs/operations.md | Update | Align reader-facing contract with MAISON-005: Verified bootstrap artifacts | Implementation tasks |
+| docs/deployment.md | Update | Document remote deployment bootstrap fallback verification | Implementation tasks |
 | docs/recovery.md | Update | Align reader-facing contract with MAISON-005: Verified bootstrap artifacts | Implementation tasks |
 | docs/task-reference.md | Update | Align reader-facing contract with MAISON-005: Verified bootstrap artifacts | Implementation tasks |
 | `docs/src/features/maison-005-verified-bootstrap-artifacts/index.md` | Create during close-out | Preserve delivery and audit history | Close-out documentation |
@@ -116,20 +123,23 @@ and external package-manager side effects when those concerns apply.
 
 ## Validation Strategy
 
-- Source-text guard tests banning `curl ... | sh` and mutable plugin refs in bootstrap paths.
-- Behavioral tests for checksum/signature success and failure.
+- Source-text guard tests banning `curl ... | sh` and mutable runtime/plugin refs in local bootstrap, remote deployment bootstrap fallback, and public bootstrap documentation examples.
+- Manifest schema tests for required version, URL, verification material, supported-system metadata, and recovery hints.
+- Behavioral tests for successful verification, checksum/signature mismatch, missing metadata, and mismatched supported-system selection.
+- Tests proving ordinary user-tool `latest` policy remains scoped to non-bootstrap workstation convergence when lockfiles capture resolved artifacts.
 - `mise -E dev run check` and `uv run scripts/check-docs.py`.
 
 ## Implementation Decomposition
 
-- `maison-005-verified-bootstrap-artifacts bootstrap-contract` — Add verified-bootstrap and immutable-plugin tests.
-- `maison-005-verified-bootstrap-artifacts bootstrap-implementation` — Implement verified artifact bootstrap.
+- `maison-005-verified-bootstrap-artifacts bootstrap-contract` — Add verified-bootstrap manifest, local/remote bootstrap, documentation-example, and immutable-runtime-plugin tests.
+- `maison-005-verified-bootstrap-artifacts bootstrap-implementation` — Implement verified artifact bootstrap across local bootstrap, shared Lix setup, remote deployment fallback, runtime/plugin pinning, and reader docs.
 
 ## Dependencies and Parallelism
 
-This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. Sibling
-implementation tasks may run in parallel only when they do not edit the same command path, test file, or documentation
-page.
+This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. The
+contract task blocks implementation so tests and guardrails land first. Implementation tasks may run in parallel only
+when they do not edit the same command path, test file, or documentation page; the planned implementation task touches
+the same bootstrap surfaces as the contract and therefore must run after it.
 
 ## Rollout and Migration
 
@@ -177,6 +187,15 @@ None.
 
 - The private inventory model changed from untracked local TOML to a tracked private overlay repository to preserve
   Maison's durability and replication goals.
+
+### Design Changes During Specification Review
+
+- Expanded scope from local bootstrap only to every Maison-owned bootstrap executor, including remote deployment's mise
+  fallback.
+- Clarified that public checked-in metadata is the default trust root for Maison-owned bootstrap artifacts; private
+  overlay metadata is limited to site-specific mirrors or overrides.
+- Clarified that immutable plugin/runtime checks target bootstrap and Maison runtime inputs, not ordinary non-bootstrap
+  workstation tools that intentionally use `latest` with generated lockfiles.
 
 ### Source Material
 
