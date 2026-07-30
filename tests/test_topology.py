@@ -749,6 +749,108 @@ class OverlayContractTest(unittest.TestCase):
             )
 
 
+class VerifiedBootstrapContractTest(unittest.TestCase):
+    BOOTSTRAP_SOURCES = (
+        "bootstrap.sh",
+        ".mise/lib/bootstrap.sh",
+        ".mise/tasks/deploy",
+    )
+
+    def test_bootstrap_sources_do_not_pipe_downloads_to_shells(self) -> None:
+        pattern = re.compile(r"(?:curl|wget)[^\n|;]*(?:\||>\s*\([^)]*)(?:[^\n]*(?:sh|bash))")
+        offenders = []
+        for name in self.BOOTSTRAP_SOURCES:
+            text = read(name)
+            if pattern.search(text):
+                offenders.append(name)
+        self.assertEqual(offenders, [])
+
+    def test_public_bootstrap_docs_do_not_recommend_pipe_to_shell(self) -> None:
+        pattern = re.compile(r"curl[^\n]*\|\s*(?:bash|sh)\b")
+        offenders = []
+        for name in ("README.md", "docs/operations.md", "docs/task-reference.md"):
+            text = read(name)
+            if pattern.search(text):
+                offenders.append(name)
+        self.assertEqual(offenders, [])
+
+    def test_bootstrap_artifact_manifest_has_required_verification_metadata(self) -> None:
+        manifest_path = ROOT / "bootstrap/artifacts.toml"
+        self.assertTrue(manifest_path.exists(), "missing bootstrap/artifacts.toml")
+        with manifest_path.open("rb") as handle:
+            manifest = tomllib.load(handle)
+        artifacts = manifest.get("artifacts")
+        self.assertIsInstance(artifacts, dict)
+        for name in ("mise", "lix"):
+            with self.subTest(artifact=name):
+                artifact = artifacts.get(name) if isinstance(artifacts, dict) else None
+                self.assertIsInstance(artifact, dict)
+                for field in ("version", "url", "systems", "recovery_hint"):
+                    self.assertIsInstance(artifact.get(field), str if field != "systems" else list)
+                    self.assertTrue(artifact.get(field))
+                verification = artifact.get("sha256") or artifact.get("signature")
+                self.assertIsInstance(verification, str)
+                self.assertTrue(verification)
+
+    def test_bootstrap_verifier_accepts_match_and_rejects_mismatch(self) -> None:
+        helper = ROOT / "scripts/verify_bootstrap_artifact.py"
+        self.assertTrue(helper.exists(), "missing scripts/verify_bootstrap_artifact.py")
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            artifact = temp / "artifact.sh"
+            artifact.write_text("#!/bin/sh\necho verified\n")
+            digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+            manifest = temp / "artifacts.toml"
+            manifest.write_text(
+                "[artifacts.fixture]\n"
+                "version = \"1.0.0\"\n"
+                f"url = \"file://{artifact}\"\n"
+                f"sha256 = \"sha256:{digest}\"\n"
+                "systems = [\"aarch64-darwin\", \"aarch64-linux\", \"x86_64-linux\"]\n"
+                "recovery_hint = \"retry with a reviewed artifact\"\n"
+            )
+            ok = subprocess.run(
+                [str(helper), "--manifest", str(manifest), "fixture", str(artifact)],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(ok.returncode, 0, ok.stderr)
+
+            artifact.write_text("tampered\n")
+            refused = subprocess.run(
+                [str(helper), "--manifest", str(manifest), "fixture", str(artifact)],
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(refused.returncode, 0)
+            self.assertIn("checksum", refused.stderr.lower())
+
+    def test_bootstrap_runtime_plugins_and_tools_are_immutable(self) -> None:
+        user_config = tomllib.loads(read("config/mise/config.toml"))
+        runtime_tools = {"usage": user_config["tools"]["usage"]}
+        for name, value in runtime_tools.items():
+            with self.subTest(tool=name):
+                self.assertNotEqual(value, "latest")
+                self.assertNotRegex(str(value), r"^(main|master|dev|HEAD)$")
+
+        mutable_plugins = []
+        for config_name in ("config/mise/config.toml", "mise.toml"):
+            plugins = tomllib.loads(read(config_name)).get("plugins", {})
+            for name, source in plugins.items():
+                if re.fullmatch(r"[0-9a-f]{40}", str(source).rsplit("#", 1)[-1]) is None:
+                    mutable_plugins.append(f"{config_name}:{name}")
+        self.assertEqual(mutable_plugins, [])
+
+    def test_non_bootstrap_latest_tools_remain_allowed_when_locked(self) -> None:
+        config = tomllib.loads(read("config/mise/config.toml"))["tools"]
+        lock = tomllib.loads(read("config/mise/mise.lock"))["tools"]
+        ordinary_latest_tools = {
+            name for name, version in config.items() if version == "latest" and name != "usage"
+        }
+        self.assertTrue(ordinary_latest_tools)
+        self.assertLessEqual(ordinary_latest_tools, set(lock))
+
+
 class DeploymentContractTest(unittest.TestCase):
     def deployment_environment(self, temp: Path, home: Path) -> tuple[str, dict[str, str]]:
         """Provide a deterministic portable Linux deployment user."""
