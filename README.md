@@ -77,10 +77,10 @@ There are no `homeConfigurations` outputs.
 
 ```text
 flake.nix                     system inputs
-inventory.toml                users, hosts, profiles, deploy endpoints
+inventory.toml                neutral starter users, hosts, profiles, deploy endpoints
 nix/                          OS-level modules and deployment definitions
-config/mise/                  global user tools, packages, preferences, locks
-dotfiles/                     native user configuration files
+config/mise/                  starter user tools, packages, preferences, locks
+dotfiles/                     starter native user configuration files
 .mise/tasks/system/           Nix/nh/deploy-rs workflows
 .mise/tasks/user/             mise bootstrap workflows
 scripts/                      migration, package, and deployment transactions
@@ -97,12 +97,24 @@ Platform-specific mise files are selected through `.miserc.toml` and `auto_env =
 
 Repository validation tools are owned by the checkout `mise.toml`, not the global user config. Normal machine convergence does not install them unless it is run from this repository. The flake formatter reads the `nixfmt-rs` artifact from `mise.lock`, so hooks and `nix fmt` cannot drift to different formatter versions.
 
+## Private overlay
+
+The public repository is the reusable Maison vehicle. Real hosts, usernames, emails, deploy targets, site packages, dotfile overrides, and trusted key material belong in a tracked private overlay repository.
+
+Overlay discovery uses this precedence:
+
+1. `--overlay <git-url-or-path>` for the current bootstrap run.
+2. `MAISON_OVERLAY_SOURCE`, including a value supplied by mise secrets.
+3. `${XDG_STATE_HOME:-$HOME/.local/state}/maison/overlay.toml`.
+
+The overlay is cloned or updated at `${XDG_DATA_HOME:-$HOME/.local/share}/maison/overlay`. If the overlay contains `inventory.toml`, Maison uses that typed inventory for Python validation, task lookups, host overrides, Nix outputs, and deployment targeting. Without an overlay, the neutral public starter inventory remains valid for examples and checks.
+
 ## Bootstrap
 
 From an existing checkout:
 
 ```bash
-./bootstrap.sh --host "$(hostname -s)"
+./bootstrap.sh --host "$(hostname -s)" --overlay GIT-URL-OR-PATH
 ```
 
 Or from the public repository:
@@ -112,7 +124,7 @@ curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/dev/bootstr
   | bash -s -- --host "$(hostname -s)" --overlay GIT-URL-OR-PATH
 ```
 
-Bootstrap installs mise and Nix/Lix when missing, applies the Nix system layer, then applies user state. The default clone target remains `RobertDeRose/nix-config`; Maison is the command and architecture name, not a required repository rename.
+Bootstrap installs mise and Nix/Lix when missing, stores or refreshes the overlay source, applies the Nix system layer, then applies user state. The default clone target remains `RobertDeRose/nix-config`; Maison is the command and architecture name, not a required repository rename. Non-interactive setup fails with an actionable message when an overlay is required but no source is available.
 
 Before the first real switch on an existing machine:
 

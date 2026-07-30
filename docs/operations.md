@@ -1,5 +1,17 @@
 # Operations
 
+## Fresh setup with a private overlay
+
+Use `--overlay` during bootstrap, or set `MAISON_OVERLAY_SOURCE` from the environment or a mise secret:
+
+```bash
+./bootstrap.sh --host "$(hostname -s)" --overlay GIT-URL-OR-PATH
+```
+
+Maison stores the selected source in `${XDG_STATE_HOME:-$HOME/.local/state}/maison/overlay.toml` and clones or updates it at `${XDG_DATA_HOME:-$HOME/.local/share}/maison/overlay`. Interactive bootstrap may prompt for the overlay source when it is required; non-interactive bootstrap fails instead of continuing with public starter data for a real machine.
+
+`maison host add` mutates the active inventory repository. With an overlay inventory, new hosts and optional `hosts/<name>/system.nix` stubs are written to the overlay clone, not to public Maison.
+
 ## Preview
 
 ```bash
@@ -35,7 +47,7 @@ maison system history
 ```bash
 maison check
 mise install
-mise exec -- hk check -a
+mise exec -- hk check
 ```
 
 Repository development tools are owned by the checkout `mise.toml`; normal user convergence does not install them from the global user config.

@@ -649,6 +649,24 @@ class OverlayContractTest(unittest.TestCase):
             self.assertIn(f'path = "{clone}"', state.read_text())
             self.assertEqual(stat.S_IMODE(state.stat().st_mode), 0o600)
 
+    def test_reader_docs_describe_overlay_contract(self) -> None:
+        docs = "\n".join(
+            read(path)
+            for path in (
+                "README.md",
+                "docs/architecture.md",
+                "docs/operations.md",
+                "docs/task-reference.md",
+                "docs/recovery.md",
+            )
+        )
+        self.assertIn("${XDG_STATE_HOME:-$HOME/.local/state}/maison/overlay.toml", docs)
+        self.assertIn("${XDG_DATA_HOME:-$HOME/.local/share}/maison/overlay", docs)
+        self.assertIn("--overlay", docs)
+        self.assertIn("MAISON_OVERLAY_SOURCE", docs)
+        self.assertIn("host:add", docs)
+        self.assertIn("overlay inventory", docs)
+
     def test_bootstrap_passes_overlay_to_bootstrap_task(self) -> None:
         direct = subprocess.run([str(ROOT / "bootstrap.sh"), "--help"], capture_output=True, text=True, check=True)
         self.assertIn("--overlay SOURCE", direct.stdout)

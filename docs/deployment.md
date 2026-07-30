@@ -17,7 +17,7 @@ This invokes deploy-rs against `deploy.nodes.example-linux.profiles.system`. The
 maison deploy example-linux
 ```
 
-Before system deployment starts, Maison requires a clean working tree and builds a source archive from committed Git content only. The archive contains `.maison-revision` but never `.git`, dirty changes, untracked files, ignored files, or local credentials.
+Before system deployment starts, Maison requires a clean working tree and builds a source archive from committed Git content only. The archive contains `.maison-revision` but never `.git`, dirty changes, untracked files, ignored files, or local credentials. If a private overlay inventory is active, deployment targeting and Nix evaluation use that overlay inventory while the public Maison archive remains the reusable vehicle code.
 
 After successful system activation, Maison:
 
@@ -38,6 +38,10 @@ Remote system and repository actions now run through a separate deployment SSH a
 Existing hosts that do not yet have a reachable `maison-deploy` account need one bootstrap deployment through an explicitly configured privileged account, such as `ssh_user = "root"`. After that system deployment creates the deployment account and sudoers policy, switch the inventory back to the `maison-deploy` default.
 
 Use `--system-only` to skip repository transfer and user convergence.
+
+## Overlay inventory
+
+Put real deployment endpoints in the private overlay's `inventory.toml`. Public Maison keeps only neutral examples. The overlay source is discovered from `--overlay`, `MAISON_OVERLAY_SOURCE`, or the saved XDG state record, and the clone lives under `${XDG_DATA_HOME:-$HOME/.local/share}/maison/overlay`.
 
 ## Inventory fields
 

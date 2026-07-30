@@ -1,6 +1,6 @@
 # Add a macOS application
 
-Apple Silicon applications are declared in `config/mise/config.macos-arm64.toml`.
+Apple Silicon applications are declared in `config/mise/config.macos-arm64.toml`. Real personal or organization application lists belong in the private overlay's matching file.
 
 ```bash
 maison app add ghostty

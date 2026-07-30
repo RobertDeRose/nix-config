@@ -21,6 +21,19 @@ mise user layer
 
 The supported systems are `aarch64-darwin`, `aarch64-linux`, and `x86_64-linux`. Intel macOS is rejected by bootstrap, inventory validation, mise lock platforms, Nix outputs, and CI.
 
+## Public Maison and private overlay
+
+Maison's public repository owns reusable code, validators, task machinery, Nix modules, and neutral starter examples. A tracked private overlay repository owns real site state: inventory, host override modules, personal or organization package declarations, dotfile overrides, preferences, and trusted key material.
+
+Overlay state is local and untracked:
+
+```text
+${XDG_STATE_HOME:-$HOME/.local/state}/maison/overlay.toml
+${XDG_DATA_HOME:-$HOME/.local/share}/maison/overlay
+```
+
+`--overlay` has run-local precedence over `MAISON_OVERLAY_SOURCE`, and both precede the saved state record. The cloned overlay mirrors Maison's layout for owned data: `inventory.toml`, `hosts/`, `config/mise/*.toml`, `dotfiles/`, and trusted key files.
+
 ## Nix system layer
 
 The flake exports `darwinConfigurations`, `systemConfigs`, and `deploy`.
@@ -87,7 +100,7 @@ Package declarations merge across mise's configuration hierarchy, so common pack
 
 ## Inventory interface
 
-Shell tasks do not parse TOML with awk. `.mise/lib/inventory.py` uses Python's `tomllib` for validation and typed lookups, and Nix mirrors the core host and platform constraints before constructing outputs. In particular, remote repository paths must be normalized descendants of `/home/<managed-user>` and cannot be `/`, a home directory, or a path containing traversal segments.
+Shell tasks do not parse TOML with awk. `.mise/lib/inventory.py` uses Python's `tomllib` for validation and typed lookups, and Nix mirrors the core host and platform constraints before constructing outputs. When an overlay inventory is present, Python tasks use that file and validate its sibling `hosts/` overrides; Nix receives the same `MAISON_INVENTORY` path and evaluates the corresponding host override tree. In particular, remote repository paths must be normalized descendants of `/home/<managed-user>` and cannot be `/`, a home directory, or a path containing traversal segments.
 
 ## Transaction boundaries
 

@@ -15,6 +15,8 @@ Darwin's system closure contains `nh`, `deploy-rs`, `nixd`, system-wide fonts, a
 
 ## User package files
 
+Public Maison keeps neutral starter package files. Personal, organization, or site package policy belongs in the private overlay's matching `config/mise/*.toml` files.
+
 - `config/mise/config.toml`: cross-platform versioned tools and ordinary Homebrew formulae.
 - `config/mise/config.macos.toml`: macOS-only tools, including AI coding tools, and current-user preferences.
 - `config/mise/config.macos-arm64.toml`: Apple Silicon casks, MAS applications, and macOS-only formulae.
@@ -51,4 +53,4 @@ maison app add <cask>
 maison app remove <cask>
 ```
 
-Add operations install or resolve against candidate configuration first and atomically replace the checked-in declaration only after success. Remove operations atomically edit the declaration and deliberately leave installed data in place. Removing one version of a multi-version tool runs a targeted `mise lock --global <tool>` against candidate files so retained versions and their lock entries transition together. Full tool removal deletes that tool's generated lock block directly. Package-cache pruning remains a separate, explicit operation.
+Add operations install or resolve against candidate configuration first and atomically replace the checked-in declaration only after success. Remove operations atomically edit the declaration and deliberately leave installed data in place. Use an active private overlay when the declaration is personal or site-specific; public Maison should receive only reusable starter defaults. Removing one version of a multi-version tool runs a targeted `mise lock --global <tool>` against candidate files so retained versions and their lock entries transition together. Full tool removal deletes that tool's generated lock block directly. Package-cache pruning remains a separate, explicit operation.

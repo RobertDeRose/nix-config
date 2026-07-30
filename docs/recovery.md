@@ -1,5 +1,16 @@
 # Recovery
 
+## Overlay recovery
+
+Maison's overlay selection is local state:
+
+```text
+${XDG_STATE_HOME:-$HOME/.local/state}/maison/overlay.toml
+${XDG_DATA_HOME:-$HOME/.local/share}/maison/overlay
+```
+
+If setup cannot find the private overlay, rerun bootstrap with `--overlay GIT-URL-OR-PATH` or restore the state file. If the clone is corrupt, move it aside and rerun bootstrap so Maison can clone it again. Do not put private inventory, trusted keys, or real deploy endpoints into public Maison as a recovery shortcut.
+
 ## System rollback
 
 ```bash

@@ -10,7 +10,7 @@
 | `update [input] [--check]` | Update flake inputs atomically; optionally run full validation |
 | `deploy <host>` | Deploy Linux system state using the configured deployment account (`maison-deploy` by default), then stage source through a root-owned repository transaction and converge remote user state with revision-bound commit/rollback checks |
 | `rollback` | Roll back only the Nix system generation |
-| `bootstrap` | Install or repair Nix, then converge both layers system-first |
+| `bootstrap [--overlay SOURCE]` | Store or refresh the private overlay source, install or repair Nix, then converge both layers system-first |
 | `check` | Install repository `mise.toml` tools, validate data and scripts, run behavioral tests, and build Nix checks |
 
 ## System commands
@@ -39,7 +39,7 @@
 
 | Task | Behavior |
 | --- | --- |
-| `host:add` / `host:list` / `host:validate` | Manage inventory through the typed `tomllib` interface |
+| `host:add` / `host:list` / `host:validate` | Manage the active public or overlay inventory through the typed `tomllib` interface |
 | `tool:add` / `tool:remove` | Atomically edit global mise tool configuration and locks |
 | `package:add` / `package:remove` / `package:search` | Manage common or platform bootstrap packages transactionally |
 | `app:add` / `app:remove` | Manage Apple Silicon macOS casks transactionally |
@@ -47,3 +47,7 @@
 | `docs:build` / `docs:serve` | Load the contributor environment and build or serve this book |
 
 Hidden `nix:*` tasks are compatibility aliases to the corresponding `system:*` tasks and contain no separate activation logic.
+
+## Overlay-aware behavior
+
+`--overlay` is a bootstrap flag. After bootstrap, tasks read the saved overlay state from `${XDG_STATE_HOME:-$HOME/.local/state}/maison/overlay.toml`. If the clone contains `inventory.toml`, inventory lookups, `host:add`, system planning, Nix evaluation, and deployment target selection use that overlay file and its sibling `hosts/` tree. Public starter files remain the fallback when no overlay inventory is present.

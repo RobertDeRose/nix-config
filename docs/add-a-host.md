@@ -1,10 +1,15 @@
 # Add a host
 
+Real hosts belong in the private overlay inventory. Bootstrap or select the overlay first:
+
 ```bash
+./bootstrap.sh --host "$(hostname -s)" --overlay GIT-URL-OR-PATH
 maison host add <hostname> --system aarch64-linux --user operator --profiles base,dev,linux --overrides
 ```
 
-For a deployable Linux host, add an explicit deployment table to `inventory.toml`:
+When an overlay inventory is active, `host:add` writes both `inventory.toml` and optional `hosts/<hostname>/system.nix` to the overlay clone.
+
+For a deployable Linux host, add an explicit deployment table to the active `inventory.toml`:
 
 ```toml
 [hosts.example.deploy]

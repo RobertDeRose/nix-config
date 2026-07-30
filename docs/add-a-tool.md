@@ -6,7 +6,7 @@ Search first:
 maison package search <name>
 ```
 
-Prefer a mise backend for versioned standalone tools:
+Prefer a mise backend for versioned standalone tools. Add personal or site-specific tools in the private overlay's `config/mise/config.toml`; keep public Maison limited to reusable starter defaults.
 
 ```bash
 maison tool add github:owner/repository latest
