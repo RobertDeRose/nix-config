@@ -7,10 +7,8 @@ alias less='bat'
 alias cat='bat'
 alias oc='opencode'
 
-# Workstation directory shortcuts retained from the former host Home Manager module.
-alias work='cd ~/workspace/checkpoint'
+# Site-specific directory shortcuts belong in a private overlay.
 alias personal='cd ~/workspace/personal'
-alias apollo='cd ~/workspace/checkpoint/apollo'
 
 alias gst='git status'
 alias gd='git diff'

@@ -48,7 +48,7 @@ maison user apply
 maison user status
 maison user update
 
-maison deploy dev-som
+maison deploy example-linux
 ```
 
 The same operations are available as mise tasks, for example `mise run system:plan`.
@@ -109,7 +109,7 @@ Or from the public repository:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/dev/bootstrap.sh \
-  | bash -s -- --host "$(hostname -s)"
+  | bash -s -- --host "$(hostname -s)" --overlay GIT-URL-OR-PATH
 ```
 
 Bootstrap installs mise and Nix/Lix when missing, applies the Nix system layer, then applies user state. The default clone target remains `RobertDeRose/nix-config`; Maison is the command and architecture name, not a required repository rename.

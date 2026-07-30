@@ -368,7 +368,7 @@ class InventoryBehaviorTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         rows = self.run_inventory(ROOT / "inventory.toml", "host-rows", "--system", "aarch64-linux")
         self.assertEqual(rows.returncode, 0, rows.stderr)
-        self.assertIn("dev-som\trderose\tRobert DeRose", rows.stdout)
+        self.assertIn("example-linux\toperator\tMaison Operator", rows.stdout)
 
     def test_shell_inventory_falls_back_to_flake_app_without_tomllib(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -407,26 +407,26 @@ class InventoryBehaviorTest(unittest.TestCase):
                 text=True,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn("USMBDEROSER", result.stdout)
+            self.assertIn("example-darwin", result.stdout)
             self.assertIn("#maison-inventory -- --file", log.read_text())
 
     def test_inventory_rejects_intel_and_unsafe_deploy_paths(self) -> None:
         original = read("inventory.toml")
         cases = {
             "intel": original.replace('system = "aarch64-darwin"', 'system = "x86_64-darwin"', 1),
-            "home": original.replace('repo_path = "/home/rderose/.maison"', 'repo_path = "/home/rderose"'),
-            "escape": original.replace('repo_path = "/home/rderose/.maison"', 'repo_path = "/home/rderose/../root"'),
-            "root": original.replace('repo_path = "/home/rderose/.maison"', 'repo_path = "/"'),
+            "home": original.replace('repo_path = "/home/operator/.maison"', 'repo_path = "/home/operator"'),
+            "escape": original.replace('repo_path = "/home/operator/.maison"', 'repo_path = "/home/operator/../root"'),
+            "root": original.replace('repo_path = "/home/operator/.maison"', 'repo_path = "/"'),
             "unsafe-character": original.replace(
-                'repo_path = "/home/rderose/.maison"',
-                'repo_path = "/home/rderose/Maison Config"',
+                'repo_path = "/home/operator/.maison"',
+                'repo_path = "/home/operator/Maison Config"',
             ),
             "trailing-host-dot": original.replace(
-                'hostname = "dev-som.checkpoint-device.com"',
-                'hostname = "dev-som.checkpoint-device.com."',
+                'hostname = "example-linux.example.invalid"',
+                'hostname = "example-linux.example.invalid."',
             ),
             "wrong-user": original.replace(
-                'user_ssh_user = "rderose"',
+                'user_ssh_user = "operator"',
                 'user_ssh_user = "somebody-else"',
             ),
         }
@@ -454,7 +454,7 @@ class InventoryBehaviorTest(unittest.TestCase):
                     default_user = self.run_inventory(
                         path,
                         "host-field",
-                        "dev-som",
+                        "example-linux",
                         "deploy.ssh_user",
                     )
                     self.assertEqual(default_user.stdout.strip(), "maison-deploy")
@@ -463,11 +463,11 @@ class InventoryBehaviorTest(unittest.TestCase):
         original = read("inventory.toml")
         cases = {
             "managed-user": original.replace(
-                'ssh_user = "maison-deploy"', 'ssh_user = "rderose"', 1
+                'ssh_user = "maison-deploy"', 'ssh_user = "operator"', 1
             ),
             "managed-user-explicit": original.replace(
-                'ssh_user = "maison-deploy"\nuser_ssh_user = "rderose"\n',
-                'ssh_user = "rderose"\nuser_ssh_user = "rderose"\n',
+                'ssh_user = "maison-deploy"\nuser_ssh_user = "operator"\n',
+                'ssh_user = "operator"\nuser_ssh_user = "operator"\n',
                 1,
             ),
         }
@@ -486,6 +486,158 @@ class InventoryBehaviorTest(unittest.TestCase):
         self.assertIn('"ssh_user": "maison-deploy"', python_inventory)
         self.assertIn("sshUser = rawDeploy.ssh_user or \"maison-deploy\"", nix_inventory)
         self.assertIn("deploy.sshUser == selectedUser.username", nix_inventory)
+
+
+class OverlayContractTest(unittest.TestCase):
+    def test_public_starter_files_do_not_contain_private_identity(self) -> None:
+        banned = (
+            "rderose",
+            "DeRoseR",
+            "USMBDEROSER",
+            "dev-som",
+            "checkpoint-device.com",
+            "checkpt.com",
+        )
+        paths = [ROOT / "inventory.toml", ROOT / "README.md"]
+        paths += [ROOT / name for name in ("docs/add-a-host.md", "docs/deployment.md")]
+        paths += sorted((ROOT / "dotfiles").rglob("*"))
+        for path in paths:
+            if not path.is_file():
+                continue
+            text = path.read_text(errors="ignore")
+            with self.subTest(path=path.relative_to(ROOT)):
+                for token in banned:
+                    self.assertNotIn(token, text)
+
+    def test_overlay_helper_uses_xdg_state_and_source_precedence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            env = os.environ.copy()
+            env.update(
+                {
+                    "HOME": str(temp / "home"),
+                    "XDG_STATE_HOME": str(temp / "state"),
+                    "XDG_DATA_HOME": str(temp / "data"),
+                }
+            )
+            helper = ROOT / "scripts/maison_overlay.py"
+            missing = subprocess.run(
+                [str(helper), "--required", "resolve"],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(missing.returncode, 0)
+            self.assertIn("overlay source is required", missing.stderr)
+
+            env["MAISON_OVERLAY_SOURCE"] = "env-overlay"
+            resolved = subprocess.run(
+                [str(helper), "resolve"],
+                env=env,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(resolved.stdout.strip(), "env-overlay")
+
+            explicit = subprocess.run(
+                [str(helper), "--overlay", "explicit-overlay", "resolve"],
+                env=env,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(explicit.stdout.strip(), "explicit-overlay")
+
+    def test_overlay_prepare_clones_and_records_private_overlay(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            source = temp / "source-overlay"
+            source.mkdir()
+            (source / "inventory.toml").write_text("schema = 1\n")
+            git_init(source)
+            git_commit_all(source)
+            env = os.environ.copy()
+            env.update(
+                {
+                    "HOME": str(temp / "home"),
+                    "XDG_STATE_HOME": str(temp / "state"),
+                    "XDG_DATA_HOME": str(temp / "data"),
+                }
+            )
+            helper = ROOT / "scripts/maison_overlay.py"
+            result = subprocess.run(
+                [str(helper), "--overlay", str(source), "prepare"],
+                env=env,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            clone = temp / "data/maison/overlay"
+            state = temp / "state/maison/overlay.toml"
+            self.assertEqual(result.stdout.strip(), str(clone))
+            self.assertTrue((clone / ".git").is_dir())
+            self.assertIn(f'source = "{source}"', state.read_text())
+            self.assertIn(f'path = "{clone}"', state.read_text())
+            self.assertEqual(stat.S_IMODE(state.stat().st_mode), 0o600)
+
+    def test_bootstrap_passes_overlay_to_bootstrap_task(self) -> None:
+        direct = subprocess.run([str(ROOT / "bootstrap.sh"), "--help"], capture_output=True, text=True, check=True)
+        self.assertIn("--overlay SOURCE", direct.stdout)
+
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            source = temp / "source"
+            source.mkdir()
+            copy_files(
+                source,
+                "mise.toml",
+                "flake.nix",
+                "bin/maison",
+                ".mise/lib/common.sh",
+                ".mise/lib/platform.sh",
+                ".mise/lib/bootstrap.sh",
+            )
+            git_init(source)
+            git_commit_all(source)
+            home = temp / "home"
+            home.mkdir()
+            fake_bin = temp / "bin"
+            fake_bin.mkdir()
+            log = temp / "mise-log"
+            executable(fake_bin / "nix", "#!/bin/sh\n[ \"$1\" = --version ] && echo 'nix 2.0'\n")
+            executable(fake_bin / "mise", "#!/bin/sh\nprintf '%s\\n' \"$*\" >>\"$MISE_LOG\"\n")
+            env = os.environ.copy()
+            env.update(
+                {
+                    "HOME": str(home),
+                    "MAISON_HOME": str(home / ".maison"),
+                    "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
+                    "MISE_LOG": str(log),
+                }
+            )
+            result = subprocess.run(
+                [
+                    str(ROOT / "bootstrap.sh"),
+                    "--repo",
+                    str(source),
+                    "--ref",
+                    "main",
+                    "--host",
+                    "fixture-host",
+                    "--overlay",
+                    "git@example.invalid:site/overlay.git",
+                ],
+                cwd=temp,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn(
+                "run --skip-tools bootstrap -- --host fixture-host --overlay git@example.invalid:site/overlay.git",
+                log.read_text(),
+            )
 
 
 class DeploymentContractTest(unittest.TestCase):
@@ -1076,7 +1228,7 @@ class TransactionBehaviorTest(unittest.TestCase):
                     "MISE_PROJECT_ROOT": str(repo),
                     "usage_hostname": "rollback-host",
                     "usage_system": "aarch64-linux",
-                    "usage_user": "rderose",
+                    "usage_user": "operator",
                     "usage_profiles": "base,linux",
                     "usage_overrides": "true",
                 }

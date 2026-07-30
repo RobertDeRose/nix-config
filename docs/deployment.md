@@ -5,16 +5,16 @@ Linux deployment is intentionally split into a deploy-rs system transaction and 
 ## System only
 
 ```bash
-maison system deploy dev-som
-maison system deploy dev-som --dry-activate
+maison system deploy example-linux
+maison system deploy example-linux --dry-activate
 ```
 
-This invokes deploy-rs against `deploy.nodes.dev-som.profiles.system`. The closure is placed in `/nix/var/nix/profiles/system-manager-profiles/system-manager` and activated as root. Schema, activation-path, and dry-activation checks are built in CI.
+This invokes deploy-rs against `deploy.nodes.example-linux.profiles.system`. The closure is placed in `/nix/var/nix/profiles/system-manager-profiles/system-manager` and activated as root. Schema, activation-path, and dry-activation checks are built in CI.
 
 ## System and user
 
 ```bash
-maison deploy dev-som
+maison deploy example-linux
 ```
 
 Before system deployment starts, Maison requires a clean working tree and builds a source archive from committed Git content only. The archive contains `.maison-revision` but never `.git`, dirty changes, untracked files, ignored files, or local credentials.
@@ -42,12 +42,12 @@ Use `--system-only` to skip repository transfer and user convergence.
 ## Inventory fields
 
 ```toml
-[hosts.dev-som.deploy]
+[hosts.example-linux.deploy]
 enable = true
-hostname = "dev-som.example.com"
+hostname = "example-linux.example.invalid"
 ssh_user = "maison-deploy"
-user_ssh_user = "rderose"
-repo_path = "/home/rderose/.maison"
+user_ssh_user = "operator"
+repo_path = "/home/operator/.maison"
 remote_build = false
 auto_rollback = true
 magic_rollback = true

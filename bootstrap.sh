@@ -2,9 +2,9 @@
 # Install Maison and hand machine setup to its mise-backed bootstrap task.
 #
 # Usage:
-#   ./bootstrap.sh [--host HOST] [--repo OWNER/REPO|URL|PATH] [--ref REF]
+#   ./bootstrap.sh [--host HOST] [--overlay GIT-URL-OR-PATH] [--repo OWNER/REPO|URL|PATH] [--ref REF]
 #   curl -fsSL https://raw.githubusercontent.com/RobertDeRose/nix-config/dev/bootstrap.sh \
-#     | bash -s -- --host HOST --repo RobertDeRose/nix-config --ref dev
+#     | bash -s -- --host HOST --overlay GIT-URL-OR-PATH --repo RobertDeRose/nix-config --ref dev
 
 set -euo pipefail
 
@@ -13,14 +13,15 @@ show_help() {
 Install Maison and hand machine setup to its mise-backed bootstrap task.
 
 Usage:
-  bootstrap.sh [--host HOST] [--repo OWNER/REPO|URL|PATH] [--ref REF]
+  bootstrap.sh [--host HOST] [--overlay GIT-URL-OR-PATH] [--repo OWNER/REPO|URL|PATH] [--ref REF]
   bootstrap.sh [HOST]
 
 Options:
-  --host HOST   Inventory host; defaults to the short local hostname.
-  --repo REPO   GitHub owner/repository, Git URL, or local repository path.
-  --ref REF     Branch or tag to clone; defaults to dev.
-  -h, --help    Show this help text.
+  --host HOST       Inventory host; defaults to the short local hostname.
+  --overlay SOURCE  Private overlay Git URL or path.
+  --repo REPO       GitHub owner/repository, Git URL, or local repository path.
+  --ref REF         Branch or tag to clone; defaults to dev.
+  -h, --help        Show this help text.
 HELP
 }
 
@@ -34,12 +35,18 @@ host="$(hostname -s)"
 repo="${REPO:-RobertDeRose/nix-config}"
 ref="${REF:-${BRANCH:-dev}}"
 profiles="${PROFILES:-}"
+overlay="${MAISON_OVERLAY_SOURCE:-}"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --host)
       [ "$#" -ge 2 ] || bootstrap_die "--host requires a value"
       host="$2"
+      shift 2
+      ;;
+    --overlay)
+      [ "$#" -ge 2 ] || bootstrap_die "--overlay requires a value"
+      overlay="$2"
       shift 2
       ;;
     --repo)
@@ -194,6 +201,9 @@ mise trust "$repo_root/mise.toml" > /dev/null
 
 log "Handing off to Maison for host $host"
 bootstrap_args=(--host "$host")
+if [ -n "$overlay" ]; then
+  bootstrap_args+=(--overlay "$overlay")
+fi
 if [ -n "$profiles" ]; then
   log "Ignoring legacy --profiles=$profiles; profiles now select only Nix system modules in inventory.toml"
 fi

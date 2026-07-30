@@ -1,7 +1,7 @@
 # Add a host
 
 ```bash
-maison host add <hostname> --system aarch64-linux --user rderose --profiles base,dev,linux --overrides
+maison host add <hostname> --system aarch64-linux --user operator --profiles base,dev,linux --overrides
 ```
 
 For a deployable Linux host, add an explicit deployment table to `inventory.toml`:
@@ -11,8 +11,8 @@ For a deployable Linux host, add an explicit deployment table to `inventory.toml
 enable = true
 hostname = "example.example.com"
 ssh_user = "maison-deploy"
-user_ssh_user = "rderose"
-repo_path = "/home/rderose/.maison"
+user_ssh_user = "operator"
+repo_path = "/home/operator/.maison"
 remote_build = false
 auto_rollback = true
 magic_rollback = true

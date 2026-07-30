@@ -1,16 +1,5 @@
-Host *
-{% if os() == "macos" %}
-  IdentityAgent "{{ env.HOME }}/Library/Containers/com.bitwarden.desktop/Data/.bitwarden-ssh-agent.sock"
-{% endif %}
+Host example-linux
+  HostName example-linux.example.invalid
+  User operator
 
-Host dev-som
-  HostName dev-som.checkpoint-device.com
-  User root
-
-Host dev-ab
-  HostName dev-ab.checkpoint-device.com
-  User root
-
-{% if env.USER == "DeRoseR" %}
-Include "{{ env.HOME }}/Library/Application Support/NVIDIA/Sync/config/ssh_config"
-{% endif %}
+# Add private host aliases and trusted access material in the private overlay.
