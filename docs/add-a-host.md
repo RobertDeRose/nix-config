@@ -10,13 +10,15 @@ For a deployable Linux host, add an explicit deployment table to `inventory.toml
 [hosts.example.deploy]
 enable = true
 hostname = "example.example.com"
-ssh_user = "root"
+ssh_user = "maison-deploy"
 user_ssh_user = "rderose"
 repo_path = "/home/rderose/.maison"
 remote_build = false
 auto_rollback = true
 magic_rollback = true
 ```
+
+`ssh_user` is the deployment account used for system activation and repository-transaction helper access. It defaults to `maison-deploy` and is separate from the managed user (`user_ssh_user`), which owns the remote repository.
 
 Then run:
 

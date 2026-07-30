@@ -33,6 +33,8 @@ After successful system activation, Maison:
 
 For the default `/home/<user>/.maison` repository path, the default transaction namespace is a root-owned sibling under `/home`, such as `/home/.maison-deploy/transactions/<user>/<repo-hash>/`. Maison fails closed when no same-filesystem root-owned transaction root exists outside the managed user's control.
 
+Remote system and repository actions now run through a separate deployment SSH account (default `maison-deploy`). Sudo access for that account is command-scoped and argument-bounded for `deploy`-related activation and Maison transaction helpers.
+
 Use `--system-only` to skip repository transfer and user convergence.
 
 ## Inventory fields
@@ -41,7 +43,7 @@ Use `--system-only` to skip repository transfer and user convergence.
 [hosts.dev-som.deploy]
 enable = true
 hostname = "dev-som.example.com"
-ssh_user = "root"
+ssh_user = "maison-deploy"
 user_ssh_user = "rderose"
 repo_path = "/home/rderose/.maison"
 remote_build = false
@@ -49,7 +51,7 @@ auto_rollback = true
 magic_rollback = true
 ```
 
-`ssh_user` activates the system. `user_ssh_user` must equal the managed inventory username. `repo_path` must be below `/home/<user>`; `/`, `/home`, the user's home itself, non-normalized paths, and traversal are rejected by both Python and Nix validation.
+`ssh_user` activates the system with deployment privileges. `user_ssh_user` must equal the managed inventory username. `repo_path` must be below `/home/<user>`; `/`, `/home`, the user's home itself, non-normalized paths, and traversal are rejected by both Python and Nix validation.
 
 ## Safety boundary
 

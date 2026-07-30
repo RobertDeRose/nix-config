@@ -33,7 +33,7 @@ Ordinary applications and interactive CLI packages do not belong in `environment
 
 ### Linux
 
-system-manager owns hostname, locale, time zone, managed users, sudoers, SSH daemon includes, root-owned Nix configuration, authorized-key refresh, and system services. The system closure also retains the minimal curl, Git, and tar prerequisites required before the mise user layer exists.
+system-manager owns hostname, locale, time zone, managed users, sudoers, SSH daemon includes, root-owned Nix configuration, authorized-key refresh, and system services. A dedicated `maison-deploy` account owns privileged deployment and repository-transaction entrypoints, and its sudoers policy is command-scoped rather than `NOPASSWD: ALL`. The system closure also retains the minimal curl, Git, and tar prerequisites required before the mise user layer exists.
 
 `/nix/var/nix/profiles/system-manager-profiles/system-manager` is the canonical Linux system profile.
 
@@ -55,7 +55,7 @@ Tasks fall back to `nix run .#nh` before the system profile has installed `nh`. 
 Each deploy-enabled Linux inventory host becomes `deploy.nodes.<host>`. Its system profile:
 
 - Uses the canonical system-manager profile path.
-- Runs as root.
+- Runs through the deployment account with command-scoped privilege elevation.
 - Activates the exact closure selected by deploy-rs through `$PROFILE/bin/activate` for normal and boot activation.
 - Supports a side-effect-free dry activation check.
 - Enables `autoRollback` and `magicRollback` from inventory.
@@ -99,4 +99,5 @@ maison apply
 
 A failed system activation stops before user convergence. A failed user convergence leaves the active system generation in place.
 
-Remote deployment has an additional repository transaction around the user phase. Transaction journals, locks, staging trees, and rollback trees are privileged state and live in a root-owned same-filesystem transaction root outside the managed user's writable home. The managed user may read and apply the staged repository, but must not be able to unlink, replace, or edit transaction control state. Deploy-rs independently protects the Linux system profile.
+Remote deployment has an additional repository transaction around the user phase. Transaction journals, locks, staging trees, and rollback trees are privileged state and live in a root-owned same-filesystem transaction root outside the managed user's writable home. The managed user may read and apply the staged repository, but must not be able to unlink, replace, or edit transaction control state. Deploy-rs independently protects the Linux system profile while only the `maison-deploy` account can launch privileged activation actions.
+

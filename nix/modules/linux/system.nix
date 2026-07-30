@@ -15,6 +15,7 @@ let
   validUsername = builtins.match "[a-z_][a-z0-9_-]*" user.username != null && user.username != "root";
   validGithubUsername =
     builtins.match "[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?" user.github != null;
+  deployUser = host.deploy.sshUser;
   githubUsernameFile = pkgs.writeText "github-username" user.github;
   githubAuthorizedKeysScript = pkgs.writeShellScript "github-authorized-keys" ''
     set -euo pipefail
@@ -107,7 +108,13 @@ in
 
   environment.etc."sudoers.d/90-system-manager-wheel" = {
     text = ''
-      ${user.username} ALL=(ALL:ALL) NOPASSWD: ALL
+      Cmnd_Alias MAISON_DEPLOY_PREPARE = /usr/bin/install -d -m 0755 /nix/var/nix/profiles/system-manager-profiles
+      Cmnd_Alias MAISON_DEPLOY_HELPER = /usr/bin/python3 /tmp/maison-deploy-helper.*.py stage *,
+                                          /usr/bin/python3 /tmp/maison-deploy-helper.*.py recover *,
+                                          /usr/bin/python3 /tmp/maison-deploy-helper.*.py finalize *
+      Cmnd_Alias MAISON_DEPLOY_ACTIVATE = /nix/var/nix/profiles/system-manager-profiles/system-manager/bin/activate *
+
+      ${deployUser} ALL=(root) NOPASSWD: MAISON_DEPLOY_PREPARE, MAISON_DEPLOY_HELPER, MAISON_DEPLOY_ACTIVATE
     '';
     mode = "0440";
     replaceExisting = true;
@@ -182,8 +189,16 @@ in
     home = "/home/${user.username}";
     shell = pkgs.zsh;
     ignoreShellProgramCheck = true;
-    extraGroups = [
-      "wheel"
-    ];
   };
+
+  users.users."${deployUser}" = {
+    isSystemUser = true;
+    group = deployUser;
+    home = "/var/lib/${deployUser}";
+    createHome = true;
+    shell = pkgs.bash;
+    hashedPassword = "!";
+  };
+
+  users.groups."${deployUser}" = { };
 }

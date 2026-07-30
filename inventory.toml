@@ -35,7 +35,7 @@ personal_cache = true
 [hosts.dev-som.deploy]
 enable = true
 hostname = "dev-som.checkpoint-device.com"
-ssh_user = "root"
+ssh_user = "maison-deploy"
 user_ssh_user = "rderose"
 repo_path = "/home/rderose/.maison"
 remote_build = false

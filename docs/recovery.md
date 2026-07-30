@@ -50,6 +50,7 @@ A Docker Desktop completion ownership error is repaired only when the conflictin
 ## Failed remote user deployment
 
 Maison records repository transaction state in a root-owned same-filesystem transaction root outside the managed user's writable home. For the default `/home/<user>/.maison` repository path, inspect the root-owned namespace under `/home/.maison-deploy/transactions/<user>/`.
+Deployment helpers execute through the `maison-deploy` account with command-scoped sudo elevation for `python3` helper commands and profile activation.
 
 When `user:apply` fails, the deployment command finalizes a safe rollback by verifying the staged repository revision and then restoring from rollback state. If transaction cleanup itself fails, inspect the journal, staging tree, rollback tree, and lock under the root-owned transaction root before making changes. Do not delete transaction journals or rollback trees until the active repository state is understood.
 

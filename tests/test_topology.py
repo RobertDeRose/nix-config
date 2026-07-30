@@ -441,10 +441,8 @@ class InventoryBehaviorTest(unittest.TestCase):
     def test_inventory_defaults_deployment_ssh_user_to_maison_deploy(self) -> None:
         original = read("inventory.toml")
         cases = {
-            "implicit-default": original.replace('ssh_user = "root"\n', '', 1),
-            "explicit-maison-deploy": original.replace(
-                'ssh_user = "root"\n', 'ssh_user = "maison-deploy"\n', 1
-            ),
+            "implicit-default": original.replace('ssh_user = "maison-deploy"\n', '', 1),
+            "explicit-maison-deploy": original,
         }
         with tempfile.TemporaryDirectory() as directory:
             for label, content in cases.items():
@@ -465,10 +463,10 @@ class InventoryBehaviorTest(unittest.TestCase):
         original = read("inventory.toml")
         cases = {
             "managed-user": original.replace(
-                'ssh_user = "root"', 'ssh_user = "rderose"', 1
+                'ssh_user = "maison-deploy"', 'ssh_user = "rderose"', 1
             ),
             "managed-user-explicit": original.replace(
-                'ssh_user = "root"\nuser_ssh_user = "rderose"\n',
+                'ssh_user = "maison-deploy"\nuser_ssh_user = "rderose"\n',
                 'ssh_user = "rderose"\nuser_ssh_user = "rderose"\n',
                 1,
             ),
@@ -598,6 +596,24 @@ class DeploymentContractTest(unittest.TestCase):
             darwin_block.index("nix-env --rollback"),
         )
         self.assertEqual(darwin_block.count("nix-env --rollback"), 1)
+
+    def test_deploy_adapter_uses_command_scoped_privilege_boundaries(self) -> None:
+        deploy_task = read(".mise/tasks/deploy")
+        system_task = read(".mise/tasks/system/deploy")
+        linux_module = read("nix/modules/linux/system.nix")
+
+        self.assertIn("sudo_prefix=\"\"", deploy_task)
+        self.assertIn("${sudo_prefix}/usr/bin/python3 $quoted_helper recover", deploy_task)
+        self.assertIn("${sudo_prefix}/usr/bin/python3 $quoted_helper stage", deploy_task)
+        self.assertIn("${sudo_prefix}/usr/bin/python3 $quoted_helper finalize", deploy_task)
+        self.assertIn('if [ "$ssh_user" != root ]; then', system_task)
+        self.assertIn('/usr/bin/install -d -m 0755 /nix/var/nix/profiles/system-manager-profiles', system_task)
+
+        self.assertIn('Cmnd_Alias MAISON_DEPLOY_HELPER = /usr/bin/python3 /tmp/maison-deploy-helper.*.py stage *', linux_module)
+        self.assertIn('Cmnd_Alias MAISON_DEPLOY_PREPARE = /usr/bin/install -d -m 0755 /nix/var/nix/profiles/system-manager-profiles', linux_module)
+        self.assertIn('Cmnd_Alias MAISON_DEPLOY_ACTIVATE = /nix/var/nix/profiles/system-manager-profiles/system-manager/bin/activate *', linux_module)
+        self.assertIn('${deployUser} ALL=(root) NOPASSWD:', linux_module)
+        self.assertNotIn('NOPASSWD: ALL', linux_module)
 
     def test_deploy_is_two_explicit_transactions(self) -> None:
         script = read(".mise/tasks/deploy")

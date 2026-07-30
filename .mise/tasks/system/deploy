@@ -20,11 +20,11 @@ configure_github_access_token
 # path identical to system-manager's own PROFILE_DIR/PROFILE_NAME contract.
 hostname="$(inventory_deploy_hostname "$root" "$host")"
 ssh_user="$(inventory_deploy_ssh_user "$root" "$host")"
-if [ "$ssh_user" = root ]; then
-  ssh "$ssh_user@$hostname" 'install -d -m 0755 /nix/var/nix/profiles/system-manager-profiles'
-else
-  ssh "$ssh_user@$hostname" 'sudo install -d -m 0755 /nix/var/nix/profiles/system-manager-profiles'
+sudo_prefix=""
+if [ "$ssh_user" != root ]; then
+  sudo_prefix="sudo "
 fi
+ssh "$ssh_user@$hostname" "${sudo_prefix}/usr/bin/install -d -m 0755 /nix/var/nix/profiles/system-manager-profiles"
 
 args=("$root#$host.system")
 [ "${usage_dry_activate:-false}" != true ] || args+=(--dry-activate)
