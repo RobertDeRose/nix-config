@@ -7,7 +7,7 @@
 - Design path: `docs/src/features/maison-006-review-gated-dependency-updates/design.md`
 - Implemented record: `docs/src/features/maison-006-review-gated-dependency-updates/index.md`
 - Base branch: `dev`
-- Status: draft
+- Status: delivered
 - Review priority: `P0`
 
 ## Feature Summary
