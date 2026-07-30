@@ -12,4 +12,5 @@ Planned or partially implemented work remains in [Planned features](../planned-f
 - [MAISON-004: Private overlay configuration split](maison-004-private-overlay-configuration/index.md)
 - [MAISON-005: Verified bootstrap artifacts](maison-005-verified-bootstrap-artifacts/index.md)
 - [MAISON-006: Review-gated dependency updates](maison-006-review-gated-dependency-updates/index.md)
+- [MAISON-007: Parser-backed TOML mutations](maison-007-parser-backed-toml-mutations/index.md)
 <!-- END IMPLEMENTED FEATURES -->
