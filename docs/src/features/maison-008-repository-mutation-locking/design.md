@@ -39,10 +39,12 @@ is unsafe or unsupported, Maison fails with an actionable message instead of sil
 
 ### Functional Requirements
 
-- All repository mutation entrypoints acquire the same lock before reading mutable state.
-- Journals record original files, candidate files, validation state, commit state, and recovery action.
-- Concurrent attempts fail or wait with clear messaging according to task semantics.
-- Rollback failures return non-zero and preserve diagnostics.
+- Repository mutation entrypoints for `tool:add`, `tool:remove`, `package:add`, `package:remove`, `app:add`, `app:remove`, `host:add`, and `update` acquire the target repository lock before reading mutable repository state.
+- The lock and journals are local untracked state keyed by the canonical target repository path. They must not dirty the public repository or private overlay and must not use the root-owned remote deployment transaction namespace.
+- Journals record original file copies, candidate file copies, validation state, commit state, and recovery action for each multi-file repository mutation.
+- Mutation startup acquires the lock, recovers any incomplete local mutation journal for that target repository, then reads mutable state.
+- Concurrent mutation attempts fail fast with clear diagnostics naming the busy repository and recovery state.
+- Rollback failures return non-zero, leave the journal and copied state for recovery, and preserve diagnostics.
 
 ### Quality Requirements
 
@@ -68,7 +70,13 @@ reader documentation under `docs/` describes the target operations and must be r
 
 ## Proposed Design
 
-Add a Python repository mutation context that takes an `fcntl` lock, writes a journal for multi-file operations, stages candidates in a temporary directory, validates, then atomically replaces files. Existing mutation tasks call this context. A startup or pre-mutation recovery pass resolves incomplete journals before new writes begin.
+Add a small Python repository mutation context that uses stdlib `fcntl` locking, writes a durable local journal for repository file mutations, stages candidates in a temporary directory, validates, then atomically replaces files. Existing shell task command surfaces remain; mutating tasks call the shared context instead of open-coded temporary backup and cleanup paths.
+
+The target repository is the repository whose checked-in or overlay-owned file is being mutated. The context stores its lock and journals in untracked local Maison state keyed by the target repository's canonical path, for example under `${XDG_STATE_HOME:-$HOME/.local/state}/maison/repository-mutations/`. Tests may override this root with a dedicated environment variable. The state directory uses owner-only permissions because journals may copy private overlay data.
+
+Mutation commands attempt a non-blocking lock. If another mutation is active, the command exits non-zero with a message that identifies the busy repository and points to recovery guidance. After acquiring the lock and before reading mutable repository state, the context recovers any incomplete journal for that target repository. Read-only commands such as plan, status, list, validate, and search do not take this lock.
+
+The local repository mutation journal is separate from the privileged remote deployment transaction namespace introduced by earlier features. MAISON-008 must not weaken the root-owned deployment transaction root, same-filesystem constraints, or revision-bound deployment rollback behavior.
 
 ## Architecture Consistency
 
@@ -105,19 +113,20 @@ and external package-manager side effects when those concerns apply.
 
 | Exact page | Create or update | Planned change | Owning Beads task |
 |------------|------------------|----------------|-------------------|
-| docs/architecture.md | Update | Align reader-facing contract with MAISON-008: Repository mutation locking and journals | Implementation tasks |
-| docs/operations.md | Update | Align reader-facing contract with MAISON-008: Repository mutation locking and journals | Implementation tasks |
-| docs/recovery.md | Update | Align reader-facing contract with MAISON-008: Repository mutation locking and journals | Implementation tasks |
-| docs/task-reference.md | Update | Align reader-facing contract with MAISON-008: Repository mutation locking and journals | Implementation tasks |
+| docs/architecture.md | Update | Document the local repository mutation lock/journal boundary and its separation from remote deployment transactions | Implementation tasks |
+| docs/operations.md | Update | Describe serialized mutation behavior, busy-lock failures, and affected commands | Implementation tasks |
+| docs/recovery.md | Update | Describe local mutation journal recovery state, diagnostics to preserve, and safe operator response | Implementation tasks |
+| docs/task-reference.md | Update | Document which mutation commands take the repository lock and which read-only commands do not | Implementation tasks |
 | `docs/src/features/maison-008-repository-mutation-locking/index.md` | Create during close-out | Preserve delivery and audit history | Close-out documentation |
 | `docs/src/planned-features.md` | Update | Track roadmap status and Beads root | Planning |
 | `docs/src/SUMMARY.md` | Update | Register this design and delivered record links | Planning / close-out |
 
 ## Validation Strategy
 
-- Concurrent mutation tests for tool/package/app/host/update commands.
-- Crash-recovery tests for journal states before and after replacement.
-- Tests proving rollback failures are not suppressed.
+- Concurrent mutation tests proving fail-fast locking for `tool:add`, `tool:remove`, `package:add`, `package:remove`, `app:add`, `app:remove`, `host:add`, and `update` repository mutations.
+- Crash-recovery tests for journal states before validation, after validation, before replacement, and after partial replacement.
+- Tests proving rollback failures are not suppressed and preserve journal diagnostics.
+- Tests proving read-only plan/status/list/validate/search commands do not require the repository mutation lock.
 - `mise -E dev run check` and `uv run scripts/check-docs.py`.
 
 ## Implementation Decomposition
@@ -127,9 +136,10 @@ and external package-manager side effects when those concerns apply.
 
 ## Dependencies and Parallelism
 
-This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. Sibling
-implementation tasks may run in parallel only when they do not edit the same command path, test file, or documentation
-page.
+This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. The
+contract task blocks the implementation task so concurrency, journal, and rollback expectations land first. The two
+planned implementation tasks are not parallel-safe because both touch transaction helpers, mutation task behavior,
+related tests, and documentation.
 
 ## Rollout and Migration
 
