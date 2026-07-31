@@ -24,7 +24,18 @@ maison user plan
 maison plan
 ```
 
-`maison plan` previews the system layer first and then the user layer, matching `maison apply`. `user:plan` uses forced dotfile handling only with mise dry-run so ownership conflicts are visible without changing files.
+`maison plan` previews the system layer first and then the user layer, matching `maison apply`. For the same user flags,
+user plan and apply use the same convergence steps; dry-run execution and the documented package/trust/finalize
+substitutions are the only differences. Both default to non-forced dotfile handling. Preview a forced replacement before
+performing it:
+
+```bash
+maison user plan --force-dotfiles
+maison user apply --force-dotfiles
+```
+
+`maison plan --force-dotfiles` forwards the same user-layer flag after the system preview. Forced plan reports ownership
+conflicts without changing files; forced apply backs up the exact refused targets before replacement.
 
 ## Apply
 

@@ -63,7 +63,16 @@ startup recovery pass can inspect preserved journals.
 
 ## Failed user apply
 
-The dry run previews whole-file ownership changes with force enabled but does not modify files. After review, rerun with `--force-dotfiles`; Maison backs up the exact targets mise refused before replacement.
+Default `maison user plan` and `maison user apply` do not force replacement of whole-file conflicts. To preview and then
+perform the same forced handoff, run:
+
+```bash
+maison user plan --force-dotfiles
+maison user apply --force-dotfiles
+```
+
+The forced dry run reports ownership changes without modifying files. The forced apply backs up the exact targets mise
+refused before replacement.
 
 Targeted migration backups are stored under:
 

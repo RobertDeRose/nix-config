@@ -5,8 +5,8 @@
 | Task | Behavior |
 | --- | --- |
 | `doctor` | Diagnose both ownership layers without mutation |
-| `plan` | Preview the Nix system layer, then the mise user layer |
-| `apply` | Apply Nix system state, then mise user state; system failure stops the sequence |
+| `plan [--host host] [--force-dotfiles]` | Preview the Nix system layer, then user convergence; `--force-dotfiles` forwards to user preview after the system preview |
+| `apply [--host host] [--force-dotfiles]` | Apply Nix system state, then user convergence; the same force flag forwards to user apply and system failure stops the sequence |
 | `update [input] [--check]` | Update flake inputs atomically; optionally run full validation |
 | `deploy <host>` | Deploy Linux system state using the configured deployment account (`maison-deploy` by default), then stage source through a root-owned repository transaction and converge remote user state with revision-bound commit/rollback checks |
 | `rollback` | Roll back only the Nix system generation |
@@ -28,8 +28,8 @@
 
 | Task | Behavior |
 | --- | --- |
-| `user:plan` | Preview dotfile handoff, packages, tools, preferences, and lock links without mutation |
-| `user:apply` | Sanitize live app backups, then apply dotfiles, packages, tools, apps, and preferences; back up explicitly forced conflicts |
+| `user:plan [--force-dotfiles]` | Preview dotfile handoff, package dry-run support, tools, preferences, and lock links without mutation; force is opt-in and matches user apply |
+| `user:apply [--force-dotfiles]` | Sanitize live app backups, then apply dotfiles, packages, tools, apps, and preferences; explicitly forced conflicts are backed up before replacement |
 | `user:status` | Report user-environment drift |
 | `user:update` | Show outdated mise tools, then upgrade those tools |
 | `package:update` | Upgrade configured Homebrew formulae |
@@ -47,6 +47,11 @@
 | `app:add` / `app:remove` | Authoring-only: manage Apple Silicon macOS cask declarations transactionally with parser-backed TOML preservation |
 | `iterm:export` | Refresh the checked-in iTerm plist |
 | `docs:build` / `docs:serve` | Load the contributor environment and build or serve this book |
+
+`user:plan` and `user:apply` share one user-convergence command plan for the same flags. Plan uses dry-run variants for
+preparation, dotfiles, lock links, packages, and remaining mise user state. Apply trusts the repository mise config,
+uses the package convergence helper, and runs user finalization; these execution-only substitutions do not change
+force-dotfile semantics.
 
 Hidden `nix:*` tasks are compatibility aliases to the corresponding `system:*` tasks and contain no separate activation logic.
 

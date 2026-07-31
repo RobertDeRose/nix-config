@@ -1,18 +1,8 @@
 #!/usr/bin/env bash
 # [MISE] description="Preview user tools, applications, preferences, and dotfiles"
+#USAGE flag "--force-dotfiles" help="Preview replacement of conflicting whole-file targets"
 set -euo pipefail
 root="${MISE_PROJECT_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)}"
-cd "$root"
-args=(--dry-run --force-dotfiles)
-"$root/scripts/user-prepare.sh" --dry-run
-mise bootstrap --only dotfiles "${args[@]}"
-"$root/scripts/user-link-mise-lock.sh" --dry-run
-config="$HOME/.config/mise/config.toml"
-[ -f "$config" ] || config="$root/config/mise/config.toml"
-(
-  cd "$HOME"
-  export MISE_AUTO_ENV=true
-  export MISE_GLOBAL_CONFIG_FILE="$config"
-  mise bootstrap packages apply --dry-run
-  mise bootstrap --skip task --skip packages --skip dotfiles "${args[@]}"
-)
+args=()
+[ "${usage_force_dotfiles:-false}" != true ] || args+=(--force-dotfiles)
+exec python3 "$root/.mise/lib/user_convergence.py" plan --root "$root" "${args[@]}"

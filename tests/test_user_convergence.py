@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import importlib.util
+import os
+import sys
+import tempfile
 import unittest
 from pathlib import Path
+
+from tests.support.processes import run
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULE = ROOT / ".mise/lib/user_convergence.py"
@@ -12,8 +17,14 @@ def load_user_convergence():
     spec = importlib.util.spec_from_file_location("user_convergence", MODULE)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def executable(path: Path, content: str) -> None:
+    path.write_text(content)
+    path.chmod(0o755)
 
 
 class UserConvergencePlanTest(unittest.TestCase):
@@ -88,6 +99,55 @@ class UserConvergencePlanTest(unittest.TestCase):
             ("--force-dotfiles",),
             self.convergence.aggregate_user_arguments(force_dotfiles=True),
         )
+
+    def test_user_tasks_forward_force_dotfiles_only_when_requested(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            fake_bin = temp / "bin"
+            fake_bin.mkdir()
+            captured = temp / "python-arguments"
+            executable(
+                fake_bin / "python3",
+                "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$MAISON_CAPTURE\"\n",
+            )
+            base_environment = {
+                **os.environ,
+                "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+                "MISE_PROJECT_ROOT": str(ROOT),
+                "MAISON_CAPTURE": str(captured),
+            }
+            for mode in ("plan", "apply"):
+                for force_dotfiles in (False, True):
+                    with self.subTest(mode=mode, force_dotfiles=force_dotfiles):
+                        environment = base_environment | {
+                            "usage_force_dotfiles": str(force_dotfiles).lower()
+                        }
+                        run([str(ROOT / f".mise/tasks/user/{mode}")], env=environment, check=True)
+                        arguments = captured.read_text().splitlines()
+                        self.assertEqual(str(ROOT / ".mise/lib/user_convergence.py"), arguments[0])
+                        self.assertEqual(mode, arguments[1])
+                        self.assertEqual("--force-dotfiles" in arguments, force_dotfiles)
+
+    def test_aggregate_plan_forwards_force_dotfiles_to_user_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            fake_bin = temp / "bin"
+            fake_bin.mkdir()
+            captured = temp / "mise-arguments"
+            executable(
+                fake_bin / "mise",
+                "#!/bin/sh\nprintf '<%s>' \"$@\" >> \"$MAISON_CAPTURE\"; printf '\\n' >> \"$MAISON_CAPTURE\"\n",
+            )
+            environment = {
+                **os.environ,
+                "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+                "MAISON_CAPTURE": str(captured),
+                "usage_force_dotfiles": "true",
+            }
+            run([str(ROOT / ".mise/tasks/plan")], env=environment, check=True)
+            calls = captured.read_text().splitlines()
+            self.assertEqual("<run><system:plan><-->", calls[0])
+            self.assertEqual("<run><user:plan><--><--force-dotfiles>", calls[1])
 
 
 if __name__ == "__main__":

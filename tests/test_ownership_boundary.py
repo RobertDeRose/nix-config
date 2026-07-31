@@ -82,10 +82,6 @@ class OwnershipBoundaryTest(unittest.TestCase):
         self.assertNotIn("config.macos-x64.toml", root_config)
         self.assertNotIn('"~/.config/mise/mise.lock"', root_config)
 
-        plan = read(".mise/tasks/user/plan")
-        apply = read(".mise/tasks/user/apply")
-        self.assertIn('user-link-mise-lock.sh" --dry-run', plan)
-        self.assertIn('user-link-mise-lock.sh"', apply)
         lock_script = read("scripts/user-link-mise-lock.sh")
         self.assertIn("mise.lock", lock_script)
         self.assertIn("config.macos.lock", lock_script)
