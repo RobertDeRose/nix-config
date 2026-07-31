@@ -51,6 +51,7 @@
   - [MAISON-010: Shared inventory schema validation](./features/maison-010-shared-inventory-schema/index.md)
   - [MAISON-011: Bounded deterministic test suite](./features/maison-011-deterministic-test-suite/index.md)
   - [MAISON-012: Plan/apply semantic parity](./features/maison-012-plan-apply-parity/index.md)
+  - [MAISON-013: Exact dotfile backup manifests](./features/maison-013-dotfile-backup-manifests/index.md)
   <!-- END IMPLEMENTED FEATURES -->
 [Refactor Report](./refactor-report.md)
 

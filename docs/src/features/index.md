@@ -18,4 +18,5 @@ Planned or partially implemented work remains in [Planned features](../planned-f
 - [MAISON-010: Shared inventory schema validation](maison-010-shared-inventory-schema/index.md)
 - [MAISON-011: Bounded deterministic test suite](maison-011-deterministic-test-suite/index.md)
 - [MAISON-012: Plan/apply semantic parity](maison-012-plan-apply-parity/index.md)
+- [MAISON-013: Exact dotfile backup manifests](maison-013-dotfile-backup-manifests/index.md)
 <!-- END IMPLEMENTED FEATURES -->
