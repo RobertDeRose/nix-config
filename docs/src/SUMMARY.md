@@ -49,6 +49,7 @@
   - [MAISON-008: Repository mutation locking and journals](./features/maison-008-repository-mutation-locking/index.md)
   - [MAISON-009: Authoring checkout guard](./features/maison-009-authoring-checkout-guard/index.md)
   - [MAISON-010: Shared inventory schema validation](./features/maison-010-shared-inventory-schema/index.md)
+  - [MAISON-011: Bounded deterministic test suite](./features/maison-011-deterministic-test-suite/index.md)
   <!-- END IMPLEMENTED FEATURES -->
 [Refactor Report](./refactor-report.md)
 
