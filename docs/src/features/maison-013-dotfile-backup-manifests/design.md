@@ -69,7 +69,9 @@ reader documentation under `docs/` describes the target operations and must be r
 
 ## Proposed Design
 
-Implement dotfile backups through a Python manifest writer. Files and directories are copied without following symlinks outside the target; symlinks are recreated as symlinks in the backup and recorded by target string. Restore operations read the manifest and validate existing paths before replacing anything.
+Implement dotfile backups through one Python-stdlib manifest module, called by the existing forced-handoff shell adapter. Each backup directory contains an atomically written `manifest.json` with a version, home-relative source path, object type, mode, supported timestamps, backup-relative payload path, symlink target where applicable, and per-entry restore status. The module snapshots objects using `lstat`: regular files and directories retain metadata, symlinks are recreated by their target string without traversal, and socket, FIFO, block, and character objects fail before any source is removed.
+
+Expose restoration as `maison user restore-dotfiles <backup-directory> --force`. It accepts only a backup directory below `$HOME/.local/state/maison/backups/dotfiles`, validates every manifest path and payload containment before changing targets, and requires `--force` to replace an existing target. It restores only manifest-recorded pending entries; after each successful entry it atomically records `restored` status. A failed entry stops the operation and leaves prior statuses durable for a safe retry.
 
 ## Architecture Consistency
 
@@ -89,7 +91,7 @@ Implement dotfile backups through a Python manifest writer. Files and directorie
 
 ### New Decisions Introduced
 
-- This feature adopts the concrete behavior described in **Proposed Design** as the supported Maison contract.
+- This feature adopts the concrete behavior described in **Proposed Design** as the supported Maison contract: manifest data is authoritative for restore and audit; backup preserves `lstat` object identity and never traverses a refused-target symlink.
 
 ### Architecture Documentation Changes
 
@@ -115,20 +117,21 @@ and external package-manager side effects when those concerns apply.
 
 ## Validation Strategy
 
-- Backup/restore tests for regular files, directories, symlinks, missing targets, and unsupported objects.
-- Tests proving external symlink targets are not copied into backups.
+- Backup/restore tests for regular files, directories, symlinks, missing targets, malformed manifests, and unsupported objects.
+- Tests proving external symlink targets are not copied into backups and restore cannot traverse outside `$HOME` or the supplied backup directory.
+- Tests proving restore requires `--force`, preserves pending/restored manifest status across a partial failure, and replaces only manifest-recorded targets.
 - `mise -E dev run check` and `uv run scripts/check-docs.py`.
 
 ## Implementation Decomposition
 
-- `maison-013-dotfile-backup-manifests backup-contract` — Add exact dotfile backup and restore tests.
-- `maison-013-dotfile-backup-manifests backup-implementation` — Implement manifest-backed dotfile backups.
+- `maison-013-dotfile-backup-manifests backup-contract` — Add failing tests for manifest schema, exact backup/restore identity, rejected paths/types, force requirement, and partial restore status.
+- `maison-013-dotfile-backup-manifests backup-implementation` — Implement the stdlib manifest module, existing handoff adapter, restore task, reader docs, and contract tests.
 
 ## Dependencies and Parallelism
 
-This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. Sibling
-implementation tasks may run in parallel only when they do not edit the same command path, test file, or documentation
-page.
+This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation.
+`backup-contract` precedes `backup-implementation`, because its fixtures and assertions define the manifest and restore
+contract. No implementation tasks run in parallel for this feature.
 
 ## Rollout and Migration
 
@@ -159,6 +162,7 @@ None.
 
 ### Questions Asked and Answers
 
+- Restoration is exposed as `maison user restore-dotfiles <backup-directory> --force`; the explicit force flag is required for any target replacement.
 - Stateful Maison behavior should move into tested Python implementations. `.mise/tasks/` may contain Python task files
   and may use `usage` comments, task templating, and sandboxing.
 - The default privileged deployment account is `maison-deploy`.
