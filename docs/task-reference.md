@@ -29,7 +29,8 @@
 | Task | Behavior |
 | --- | --- |
 | `user:plan [--force-dotfiles]` | Preview dotfile handoff, package dry-run support, tools, preferences, and lock links without mutation; force is opt-in and matches user apply |
-| `user:apply [--force-dotfiles]` | Sanitize live app backups, then apply dotfiles, packages, tools, apps, and preferences; explicitly forced conflicts are backed up before replacement |
+| `user:apply [--force-dotfiles]` | Sanitize live app backups, then apply dotfiles, packages, tools, apps, and preferences; explicitly forced conflicts receive exact manifest-backed snapshots before replacement |
+| `user:restore-dotfiles <backup-directory> --force` | Restore pending entries from a Maison dotfile backup manifest; force is required to replace existing targets |
 | `user:status` | Report user-environment drift |
 | `user:update` | Show outdated mise tools, then upgrade those tools |
 | `package:update` | Upgrade configured Homebrew formulae |

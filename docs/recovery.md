@@ -82,6 +82,18 @@ Targeted migration backups are stored under:
 ~/.local/state/maison/backups/pi
 ```
 
+Each dotfile backup contains `manifest.json` and exact file, directory, or symlink payloads. Inspect the manifest before
+restoring. It is authoritative for the original home-relative targets and records each entry as `pending` or `restored`.
+To restore a snapshot, including replacing paths created by a later convergence, run:
+
+```bash
+maison user restore-dotfiles ~/.local/state/maison/backups/dotfiles/<timestamp> --force
+```
+
+Restore refuses backup paths outside Maison's dotfile backup root, malformed or escaping manifest entries, and missing
+payloads. It stops on the first failed entry; rerun the same command after repair to restore only entries still marked
+`pending`. Do not edit the manifest or payload tree unless performing forensic recovery.
+
 Before package convergence on macOS, Maison also sanitizes this backup tree. Any live `.app` bundle is archived
 in place as `.app.zip`, unregistered from LaunchServices, and removed only after the archive is non-empty and passes ZIP verification.
 Maison also creates `.metadata_never_index` at the backup root. This prevents Mac App Store installers from

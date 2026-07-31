@@ -482,9 +482,14 @@ class MigrationBehaviorTest(unittest.TestCase):
             backup = backups[0]
             self.assertEqual((backup / ".miserc.toml").read_text(), 'auto_env = true\n')
             self.assertEqual((backup / ".config/zed/settings.json").read_text(), '{"theme":"Ayu"}\n')
-            keymap_backup = backup / ".config/zed/keymap.json"
-            self.assertFalse(keymap_backup.is_symlink())
-            self.assertEqual(keymap_backup.read_text(), '[{"key":"ctrl-p"}]\n')
+            manifest = json.loads((backup / "manifest.json").read_text())
+            entries = {entry["source"]: entry for entry in manifest["entries"]}
+            keymap_entry = entries[".config/zed/keymap.json"]
+            keymap_backup = backup / keymap_entry["backup_path"]
+            self.assertTrue(keymap_backup.is_symlink())
+            self.assertEqual(os.readlink(keymap_backup), str(keymap_source))
+            self.assertEqual(keymap_entry["symlink_target"], str(keymap_source))
+            self.assertEqual(keymap_entry["restore_status"], "pending")
 
     def test_mise_lockfile_links_are_plannable_and_applied_directly(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

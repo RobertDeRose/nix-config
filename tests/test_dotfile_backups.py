@@ -45,6 +45,16 @@ def restore(home: Path, backup_dir: Path, *, force: bool = False):
     return run(arguments, cwd=ROOT)
 
 
+def restore_task(home: Path, backup_dir: Path):
+    env = os.environ | {
+        "HOME": str(home),
+        "MISE_PROJECT_ROOT": str(ROOT),
+        "usage_backup_directory": str(backup_dir),
+        "usage_force": "true",
+    }
+    return run([str(ROOT / ".mise/tasks/user/restore-dotfiles")], cwd=ROOT, env=env)
+
+
 class DotfileBackupTest(unittest.TestCase):
     def test_backup_preserves_objects_and_writes_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -119,7 +129,7 @@ class DotfileBackupTest(unittest.TestCase):
             self.assertIn("--force", refused.stderr)
             self.assertEqual(regular.read_text(), "replacement\n")
 
-            applied = restore(home, backup_dir, force=True)
+            applied = restore_task(home, backup_dir)
             self.assertEqual(applied.returncode, 0, applied.stderr)
             self.assertEqual(regular.read_text(), "original\n")
             self.assertEqual((nested / "child").read_text(), "child\n")

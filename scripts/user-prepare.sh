@@ -100,6 +100,7 @@ archive_backup_application_bundles() {
 
 backup_conflicting_dotfiles() {
   local output_file status backup_dir conflict target relative backup count
+  local -a targets helper_args
   output_file="$(mktemp)"
   status=0
 
@@ -147,16 +148,8 @@ backup_conflicting_dotfiles() {
       continue
     fi
 
-    mkdir -p "$(dirname "$backup")"
-    if [ -L "$target" ] && [ ! -e "$target" ]; then
-      printf '%s\n' "$(readlink "$target")" > "$backup.broken-symlink-target"
-    else
-      cp -RLp "$target" "$backup"
-    fi
-
-    rm -rf "$target"
+    targets+=("$target")
     count=$((count + 1))
-    printf 'Backed up conflicting dotfile %s to %s\n' "$target" "$backup"
   done < <(
     awk '
       /refusing to overwrite existing files/ { conflicts = 1; next }
@@ -174,9 +167,21 @@ backup_conflicting_dotfiles() {
   rm -f "$output_file"
   if [ "$dry_run" = true ]; then
     printf 'Would use dotfile migration backup: %s\n' "$backup_dir"
-  else
-    printf 'Dotfile migration backup: %s\n' "$backup_dir"
+    return 0
   fi
+
+  helper_args=(backup --home "$HOME" --backup-dir "$backup_dir")
+  for target in "${targets[@]}"; do
+    helper_args+=(--target "$target")
+  done
+  python3 "$root/.mise/lib/dotfile_backups.py" "${helper_args[@]}"
+  for target in "${targets[@]}"; do
+    relative="${target#"$HOME"/}"
+    backup="$backup_dir/$relative"
+    rm -rf "$target"
+    printf 'Backed up conflicting dotfile %s to %s\n' "$target" "$backup"
+  done
+  printf 'Dotfile migration backup: %s\n' "$backup_dir"
 }
 
 archive_backup_application_bundles

@@ -35,7 +35,19 @@ maison user apply --force-dotfiles
 ```
 
 `maison plan --force-dotfiles` forwards the same user-layer flag after the system preview. Forced plan reports ownership
-conflicts without changing files; forced apply backs up the exact refused targets before replacement.
+conflicts without changing files; forced apply snapshots the exact refused targets before replacement. Each snapshot has
+an atomic `manifest.json` under `~/.local/state/maison/backups/dotfiles/<timestamp>/`; it records the home-relative
+source, file/directory/symlink identity, supported metadata, payload path, symlink target, and restore status. Symlink
+payloads remain symlinks, so Maison never copies external symlink target content.
+
+Inspect that manifest before recovery. To restore pending entries from one snapshot, explicitly permit replacement:
+
+```bash
+maison user restore-dotfiles ~/.local/state/maison/backups/dotfiles/<timestamp> --force
+```
+
+The command accepts only Maison dotfile backup directories, validates manifest paths before mutation, stops at the first
+failure, and records each successful restoration so it can be safely retried.
 
 ## Apply
 
