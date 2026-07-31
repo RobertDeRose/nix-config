@@ -7,7 +7,7 @@
 - Design path: `docs/src/features/maison-012-plan-apply-parity/design.md`
 - Implemented record: `docs/src/features/maison-012-plan-apply-parity/index.md`
 - Base branch: `dev`
-- Status: draft
+- Status: reviewed
 - Review priority: `P1`
 
 ## Feature Summary
@@ -21,8 +21,9 @@ Make `maison user plan` execute the same semantics as `maison user apply`, diffe
 ## Goals
 
 - Plan and apply share one argument-construction path.
-- Dry-run is the only semantic difference unless an option explicitly documents otherwise.
-- Dotfile force behavior is visible and consistent.
+- Dry-run is the only semantic difference for a given flag set unless an option explicitly documents otherwise.
+- Dotfile force behavior is visible and consistent: plan and apply default to no forced replacement, and
+  `--force-dotfiles` is explicit for both preview and apply.
 
 ## Non-Goals
 
@@ -39,9 +40,12 @@ is unsafe or unsupported, Maison fails with an actionable message instead of sil
 
 ### Functional Requirements
 
-- Centralize user-layer argument construction for plan and apply.
-- Tests prove force-dotfile flags, package/app/tool flags, lock handling, and preferences are identical except dry-run execution.
-- Docs accurately describe preview and apply behavior.
+- Centralize user-layer argument construction for plan and apply in a testable Python module or function.
+- `maison user plan`, `maison user apply`, aggregate `maison plan`, and aggregate `maison apply` use the same
+  force-dotfile flag semantics: default false, explicit `--force-dotfiles` true.
+- Tests prove force-dotfile flags, package/app/tool command steps, lock handling, and preference steps are identical for
+  plan and apply except dry-run execution and explicitly documented command substitutions.
+- Docs accurately describe preview, apply, default dotfile safety, and force-dotfile preview/apply behavior.
 
 ### Quality Requirements
 
@@ -67,7 +71,16 @@ reader documentation under `docs/` describes the target operations and must be r
 
 ## Proposed Design
 
-Move user convergence argument construction into one tested Python function or task module. `user plan` and `user apply` call the same builder with only an execution mode parameter. The builder emits a structured command plan used by tests and by both task entrypoints.
+Move user convergence argument construction into one tested Python module or function. `user plan` and `user apply` call
+the same builder with an execution mode and the same parsed user flags. The builder emits a structured command plan used
+by tests and both task entrypoints. It preserves the existing command order: prepare dotfiles, apply or preview dotfiles,
+link or preview mise lockfiles, run package convergence or its supported dry-run substitute, apply or preview remaining
+mise user state, and run finalize only for apply.
+
+Default dotfile force behavior is safe and identical: no forced replacement unless `--force-dotfiles` is supplied.
+`user plan --force-dotfiles` previews the same forced dotfile handoff that `user apply --force-dotfiles` performs, but
+with dry-run execution. Aggregate `maison plan --force-dotfiles` forwards the same user-layer flag just as aggregate
+`maison apply --force-dotfiles` does.
 
 ## Architecture Consistency
 
@@ -87,7 +100,9 @@ Move user convergence argument construction into one tested Python function or t
 
 ### New Decisions Introduced
 
-- This feature adopts the concrete behavior described in **Proposed Design** as the supported Maison contract.
+- User plan/apply command construction is owned by one structured command-plan builder.
+- For the same user flags, plan and apply differ only by dry-run execution and documented command substitutions.
+- Forced dotfile replacement remains opt-in for both preview and apply.
 
 ### Architecture Documentation Changes
 
@@ -104,29 +119,32 @@ and external package-manager side effects when those concerns apply.
 
 | Exact page | Create or update | Planned change | Owning Beads task |
 |------------|------------------|----------------|-------------------|
-| docs/operations.md | Update | Align reader-facing contract with MAISON-012: Plan/apply semantic parity | Implementation tasks |
-| docs/recovery.md | Update | Align reader-facing contract with MAISON-012: Plan/apply semantic parity | Implementation tasks |
-| docs/task-reference.md | Update | Align reader-facing contract with MAISON-012: Plan/apply semantic parity | Implementation tasks |
+| docs/operations.md | Update | Document plan/apply parity, default no-force dotfile behavior, and `--force-dotfiles` preview/apply flow | Implementation tasks |
+| docs/recovery.md | Update | Replace force-enabled dry-run wording with explicit `user plan --force-dotfiles` then `user apply --force-dotfiles` recovery guidance | Implementation tasks |
+| docs/task-reference.md | Update | Document `plan`/`user:plan` force-dotfile flag behavior and dry-run-only command differences | Implementation tasks |
 | `docs/src/features/maison-012-plan-apply-parity/index.md` | Create during close-out | Preserve delivery and audit history | Close-out documentation |
 | `docs/src/planned-features.md` | Update | Track roadmap status and Beads root | Planning |
 | `docs/src/SUMMARY.md` | Update | Register this design and delivered record links | Planning / close-out |
 
 ## Validation Strategy
 
-- Focused tests comparing generated plan/apply argument vectors and structured command plans.
+- Focused tests comparing generated plan/apply structured command plans for default and `--force-dotfiles` modes.
+- Behavioral tests for aggregate `plan` and `apply` force-dotfile forwarding.
 - Behavioral tests for force-dotfile conflict previews and applies.
 - `mise -E dev run check` and `uv run scripts/check-docs.py`.
 
 ## Implementation Decomposition
 
-- `maison-012-plan-apply-parity parity-contract` — Add user plan/apply parity tests.
-- `maison-012-plan-apply-parity parity-implementation` — Centralize user convergence argument construction.
+- `maison-012-plan-apply-parity parity-contract` — Add user plan/apply parity tests for structured command plans,
+  force-dotfile defaults, explicit force mode, package/tool/app/lock/preference steps, and aggregate flag forwarding.
+- `maison-012-plan-apply-parity parity-implementation` — Centralize user convergence argument construction and update
+  task entrypoints/docs to use the shared builder.
 
 ## Dependencies and Parallelism
 
-This feature follows the Maison review order. Its implementation tasks depend on specification reconciliation. Sibling
-implementation tasks may run in parallel only when they do not edit the same command path, test file, or documentation
-page.
+This feature follows the Maison review order. Both implementation tasks depend on specification reconciliation. The
+parity-implementation task depends on the parity-contract task because the tests define the accepted command-plan and
+flag-forwarding behavior. The implementation tasks are sequential.
 
 ## Rollout and Migration
 
@@ -174,6 +192,15 @@ None.
 
 - The private inventory model changed from untracked local TOML to a tracked private overlay repository to preserve
   Maison's durability and replication goals.
+
+### Design Changes During Specification Review
+
+- Clarified that plan/apply parity applies for the same user flags and that forced dotfile replacement is opt-in for
+  both preview and apply.
+- Added aggregate `maison plan --force-dotfiles` flag-forwarding to match aggregate apply semantics.
+- Scoped the builder to user-convergence command-plan construction rather than replacing package-manager behavior or
+  broad shell orchestration.
+- Made implementation tasks sequential: contract tests first, shared builder implementation second.
 
 ### Source Material
 
