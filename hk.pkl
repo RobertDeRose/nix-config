@@ -2,6 +2,35 @@ amends "package://github.com/jdx/hk/releases/download/v1.41.0/hk@1.41.0#/Config.
 
 import "package://github.com/jdx/hk/releases/download/v1.41.0/hk@1.41.0#/Builtins.pkl"
 
+local ruff = new Step {
+  glob = List("**/*.py", "**/*.pyi")
+  check = "ruff check --force-exclude --config line-length=120 {{ files }}"
+  fix = "ruff check --force-exclude --config line-length=120 --fix {{ files }}"
+}
+
+local ruff_format = new Step {
+  glob = List("**/*.py", "**/*.pyi")
+  check_diff = "ruff format --quiet --force-exclude --config line-length=120 --diff {{ files }}"
+  fix = "ruff format --quiet --force-exclude --config line-length=120 {{ files }}"
+}
+
+local ty = new Step {
+  glob = List("**/*.py", "**/*.pyi")
+  check = "ty check {{ files }}"
+}
+
+local biome = new Step {
+  glob = List("**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts")
+  check = "biome check --no-errors-on-unmatched {{ files }}"
+  fix = "biome check --write --no-errors-on-unmatched {{ files }}"
+}
+
+local rustfmt = new Step {
+  glob = List("**/*.rs")
+  check = "rustfmt --check --edition 2024 {{ files }}"
+  fix = "rustfmt --edition 2024 {{ files }}"
+}
+
 local linters = new Mapping<String, Step> {
   ["actionlint"] = Builtins.actionlint
   ["check_byte_order_marker"] = Builtins.check_byte_order_marker

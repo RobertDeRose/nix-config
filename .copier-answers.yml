@@ -1,75 +1,24 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # This file is managed by Copier. Do not edit it manually.
-_commit: v0.5.11
+_commit: 5fe50b5e3bd5a64f1150b3440c28cdd3bc4a2e9f
 _src_path: gh:RobertDeRose/dstack
 language_profiles:
 - other
 project_boundaries: Maison does not support Intel macOS, Home Manager, arbitrary unmanaged
-    package ownership, strict offline byte-for-byte reproduction, or storing private
-    infrastructure identity and trusted access material in the public control plane.
+  package ownership, strict offline byte-for-byte reproduction, or storing private
+  infrastructure identity and trusted access material in the public control plane.
 project_kind: infrastructure
 project_name: Maison
 project_purpose: Maison is a two-layer macOS and Linux configuration system that uses
-    Nix/Lix for privileged system state and mise for user tools, packages, applications,
-    preferences, and dotfiles.
+  Nix/Lix for privileged system state and mise for user tools, packages, applications,
+  preferences, and dotfiles.
 project_scope: Maison manages Apple Silicon macOS, aarch64 Linux, and x86_64 Linux
-    host configuration; local system activation; remote Linux deployment; user-environment
-    convergence; inventory validation; package/tool/app authoring commands; recovery;
-    and project documentation.
+  host configuration; local system activation; remote Linux deployment; user-environment
+  convergence; inventory validation; package/tool/app authoring commands; recovery;
+  and project documentation.
 project_slug: maison
 project_users: The primary users are the repository maintainer and future contributors/operators
-    who need to bootstrap, validate, apply, recover, and remotely deploy supported
-    Maison-managed hosts.
+  who need to bootstrap, validate, apply, recover, and remotely deploy supported Maison-managed
+  hosts.
 repository_default_branch: dev
 repository_layout: single-package
+dstack_template_channel: stable
