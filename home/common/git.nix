@@ -45,7 +45,10 @@
         diff = "hunk pager";
         show = "hunk pager";
       };
-      commit.gpgsign = pkgs.stdenv.isDarwin;
+      commit = {
+        gpgsign = pkgs.stdenv.isDarwin;
+        verbose = false;
+      };
       credential.helper = "cache --timeout=3600";
       grep.lineNumber = true;
       gpg.ssh.allowedSignersFile = "~/.config/git/allowed_signers";
@@ -66,6 +69,7 @@
       };
       url."git@github.com:".insteadOf = "https://github.com/";
       tar."tar.xz".command = "xz -c";
+
     };
     includes = [
       {

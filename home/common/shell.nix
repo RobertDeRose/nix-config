@@ -216,8 +216,8 @@ in
     gst = "git status";
     gd = "git diff";
     ga = "git add";
-    gc = "git commit --verbose";
-    "gc!" = "git commit --verbose --amend";
+    gc = "git commit";
+    "gc!" = "git commit --amend";
     gco = "git checkout";
     gdca = "git diff --cached";
     gbD = "git branch --delete --force";
