@@ -4,15 +4,15 @@ experimental = true
 env_shell_expand = true
 
 [tools]
-hk = { version = "1.41", arch = "aarch64" }
+hk = { version = "1.57", arch = "aarch64" }
 actionlint = "1.7.12"
 jq = "latest"
-mdbook = "0.5.2"
-pkl = "0.31.1"
+mdbook = "0.5.4"
+pkl = "0.32.1"
 shellcheck = "0.11.0"
-shfmt = "3.13.1"
-tombi = "0.9.16"
-"nix:nixfmt" = "1.2.0"
+shfmt = "3.14.0"
+tombi = "1.5.2"
+"aqua:Mic92/nixfmt-rs" = "latest"
 
 [env]
 HK_MISE = 1
