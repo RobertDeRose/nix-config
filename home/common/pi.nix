@@ -138,7 +138,6 @@ in
     tmp_file="$(${pkgs.coreutils}/bin/mktemp)"
     if ${pkgs.jq}/bin/jq '. * {
       packages: ((.packages // []) + [
-        "git:github.com/DietrichGebert/ponytail",
         "npm:pi-subagents",
         "npm:pi-intercom",
         "npm:pi-web-access"
