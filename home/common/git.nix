@@ -31,6 +31,7 @@
       ".bash_history"
       ".shell"
       ".pi-subagents"
+      ".pi"
     ];
     settings = {
       core = {
