@@ -21,7 +21,7 @@
   home.file.".config/git/allowed_signers".text =
     "${useremail} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMh0unYuO0QLZdrqlTx63N1NwoIpwt4BfGwQVkYbOikA";
 
-  programs.difftastic.git.enable = !pkgs.stdenv.isDarwin;
+  programs.difftastic.git.enable = !pkgs.stdenv.hostPlatform.isDarwin;
 
   programs.git = {
     enable = true;
@@ -39,15 +39,15 @@
         editor = "hx";
         whitespace = "trailing-space,space-before-tab";
       }
-      // lib.optionalAttrs pkgs.stdenv.isDarwin {
+      // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
         pager = "bat -l gitlog -p";
       };
-      pager = lib.optionalAttrs pkgs.stdenv.isDarwin {
+      pager = lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
         diff = "hunk pager";
         show = "hunk pager";
       };
       commit = {
-        gpgsign = pkgs.stdenv.isDarwin;
+        gpgsign = pkgs.stdenv.hostPlatform.isDarwin;
         verbose = false;
       };
       credential.helper = "cache --timeout=3600";

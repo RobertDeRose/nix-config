@@ -17,7 +17,8 @@ in
       pane_frames = true;
       show_startup_tips = false;
       mouse_mode = true;
-      copy_command = if pkgs.stdenv.isDarwin then "pbcopy" else "${osc52-copy}/bin/osc52-copy";
+      copy_command =
+        if pkgs.stdenv.hostPlatform.isDarwin then "pbcopy" else "${osc52-copy}/bin/osc52-copy";
 
       theme = "ayu_mirage";
       themes.ayu_mirage = {

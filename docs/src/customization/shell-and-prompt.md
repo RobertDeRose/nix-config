@@ -5,10 +5,17 @@ consistent experience across macOS and Linux.
 
 ## Zsh
 
-Zsh is the default shell with these plugins:
+Zsh is the default shell with Home Manager-managed Oh My Zsh and these plugins:
 
+- **Oh My Zsh `git`** -- the full Git alias/function set
+- **Oh My Zsh `sudo`** -- `Esc Esc` toggles or edits a command as root
+- **Oh My Zsh `colored-man-pages`**, `command-not-found`, `extract`, `safe-paste`, `z`, and `brew`
 - **zsh-autosuggestions** -- fish-like history suggestions
 - **zsh-syntax-highlighting** -- command syntax coloring
+
+The Oh My Zsh prompt theme is disabled because Starship owns the prompt. Home
+Manager owns mise, direnv, fzf, yazi, worktrunk, and Starship; those are
+intentionally not loaded again as Oh My Zsh plugins.
 
 It also restores a few interactive behaviors that changed after the move to
 Home Manager-managed zsh:
@@ -16,7 +23,14 @@ Home Manager-managed zsh:
 - `Delete` performs forward delete instead of inserting `~`
 - `Up` and `Down` search history by the current typed prefix
 - `Ctrl-W` uses bash-style word boundaries
+- `Tab` uses Zsh completion directly instead of Fzf's optional `**` wrapper
 - `~/.zshrc.local` is sourced if present for machine-local shell experiments
+
+Mise and direnv refresh automatically when the working directory changes,
+rather than launching a subprocess after every command. `direnv allow`,
+`direnv deny`, and `direnv reload` also refresh the current shell immediately.
+After editing an active mise or direnv configuration in place, use `cd .` (or
+open a new shell) to apply it.
 
 ## Starship Prompt
 
@@ -53,7 +67,7 @@ Global aliases defined in `shell.nix`:
 | `gst`, `gd`, `ga`, `gc`... | git shortcuts | Common git operations |
 | `docker` | `container` | macOS only (Apple container runtime) |
 | `up N` | shell function | Navigate up N directories |
-| `..`, `...`, `....`, `.....` | `up 1..4` | Convenience directory aliases |
+| `..` and `up N` | `up 1` / `cd ../../..` | Convenience directory navigation |
 
 Per-host aliases go in `hosts/<arch>-darwin/<hostname>/home.nix` or
 `systems/<arch>-linux/<hostname>/home.nix` -- see
@@ -82,6 +96,11 @@ its shell integration configured in `home/common/default.nix`.
 
 - macOS adds `/opt/homebrew/bin` and `/opt/homebrew/sbin` to `$PATH`
 - The `docker` alias only applies on Darwin (maps to Apple's `container` runtime)
-- `Esc Esc` toggles a leading `sudo ` like the oh-my-zsh sudo plugin
-- `mise activate zsh` is loaded when `mise` is available
+- `Esc Esc` uses the Oh My Zsh sudo widget
+- `mise activate zsh` is loaded when available, with environment refreshes on directory changes
 - Ghostty shell integration is sourced manually (workaround for cmux)
+- The filtered Git grep and Markdown pager helpers are `ggrep` and `mdview`
+  (Oh My Zsh owns `gg` and `md`)
+
+Home Manager must be the only manager of `~/.zshrc`; do not also map that file
+from Maison's mise dotfile configuration.

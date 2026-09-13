@@ -5,6 +5,7 @@
   username,
   pkgs,
   inputs,
+  lib,
   ...
 }:
 {
@@ -19,22 +20,45 @@
   home.homeDirectory = "/Users/${username}";
 
   programs.worktrunk = {
+    # Homebrew's opt symlink is stable across formula upgrades; avoid the
+    # `brew --prefix` subprocess in every interactive shell.
+    enableZshIntegration = lib.mkForce false;
     package = pkgs.writeShellScriptBin "worktrunk" ''
-      if [ -x /opt/homebrew/bin/brew ]; then
-        brew_bin=/opt/homebrew/bin/brew
-      elif [ -x /usr/local/bin/brew ]; then
-        brew_bin=/usr/local/bin/brew
-      else
-        brew_bin=$(command -v brew) || {
-          echo "worktrunk wrapper: Homebrew not found" >&2
-          exit 127
-        }
-      fi
+      for wt in /opt/homebrew/opt/worktrunk/bin/wt /usr/local/opt/worktrunk/bin/wt; do
+        if [ -x "$wt" ]; then
+          exec "$wt" "$@"
+        fi
+      done
 
-      prefix="$($brew_bin --prefix worktrunk)" || exit $?
-      exec "$prefix/bin/wt" "$@"
+      echo "worktrunk wrapper: Homebrew worktrunk not found" >&2
+      exit 127
     '';
   };
+
+  # Worktrunk's shell integration is stable until the Homebrew wt binary
+  # changes. Cache it after the first shell instead of invoking wt every time.
+  programs.zsh.initContent = lib.mkAfter ''
+    if command -v worktrunk >/dev/null 2>&1 && command -v wt >/dev/null 2>&1; then
+      worktrunk_wt_bin="$(whence -p wt 2>/dev/null)"
+      worktrunk_cache_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/worktrunk"
+      worktrunk_cache="$worktrunk_cache_dir/init.zsh"
+      if [[ ! -s "$worktrunk_cache" ||
+        ( -n "$worktrunk_wt_bin" && "$worktrunk_wt_bin" -nt "$worktrunk_cache" ) ]]; then
+        mkdir -p "$worktrunk_cache_dir"
+        worktrunk_cache_tmp="$worktrunk_cache.$$"
+        if worktrunk config shell init zsh >| "$worktrunk_cache_tmp"; then
+          mv -f "$worktrunk_cache_tmp" "$worktrunk_cache"
+        else
+          rm -f "$worktrunk_cache_tmp"
+        fi
+      fi
+      if [[ -s "$worktrunk_cache" ]]; then
+        source "$worktrunk_cache"
+      else
+        eval "$(worktrunk config shell init zsh)"
+      fi
+    fi
+  '';
 
   fonts.fontconfig.enable = true;
 

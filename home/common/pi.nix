@@ -145,23 +145,22 @@ in
       theme: "ayu-mirage",
       steeringMode: "one-at-a-time",
       transport: "auto",
-      defaultProvider: "github-copilot",
-      defaultModel: "gpt-5.5",
+      defaultProvider: "openai-codex",
+      defaultModel: "gpt-5.6-luna",
       subagents: {
-        defaultModel: "openai-codex/gpt-5.6-terra",
+        defaultModel: "openai-codex/gpt-5.6-luna",
         agentOverrides: {
-          scout: { model: "openai-codex/gpt-5.6-terra", thinking: "medium" },
-          researcher: { model: "openai-codex/gpt-5.6-sol", thinking: "high" },
-          "context-builder": { model: "openai-codex/gpt-5.6-terra", thinking: "medium" },
+          scout: { model: "openai-codex/gpt-5.6-luna", thinking: "max" },
+          researcher: { model: "openai-codex/gpt-5.6-luna", thinking: "high" },
           planner: { model: "openai-codex/gpt-5.6-sol", thinking: "high" },
-          worker: { model: "openai-codex/gpt-5.6-terra", thinking: "high" },
+          worker: { model: "openai-codex/gpt-5.6-luna", thinking: "high" },
           reviewer: { model: "openai-codex/gpt-5.6-sol", thinking: "high" },
-          oracle: { model: "openai-codex/gpt-5.6-sol", thinking: "xhigh" },
-          delegate: { model: "openai-codex/gpt-5.6-terra", thinking: "medium" }
+          oracle: { model: "openai-codex/gpt-5.6-sol", thinking: "high" },
+          delegate: { model: "openai-codex/gpt-5.6-luna", thinking: "xhigh" }
         },
         watchdog: {
           enabled: true,
-          main: { model: "openai-codex/gpt-5.6-sol", thinking: "high" }
+          main: { model: "openai-codex/gpt-5.6-luna", thinking: "high" }
         }
       },
       defaultThinkingLevel: "low",

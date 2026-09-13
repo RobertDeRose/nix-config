@@ -204,7 +204,7 @@ machine. Missing user metadata is inferred from the current user/git config or p
 - Linux host directories live under `systems/<arch>-linux/<hostname>/`.
 - Optional per-host home-manager overrides can be added as `home.nix` inside a host directory.
 - Cross-platform CLI tools live in `home/common/core.nix`.
-- Platform-specific shell behavior in `home/common/shell.nix` is guarded with `pkgs.stdenv.isDarwin` or `pkgs.stdenv.isLinux`.
+- Platform-specific shell behavior in `home/common/shell.nix` is guarded with `pkgs.stdenv.hostPlatform.isDarwin` or `pkgs.stdenv.hostPlatform.isLinux`.
 
 ### Git Hooks (hk)
 

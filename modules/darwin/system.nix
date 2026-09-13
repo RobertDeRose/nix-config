@@ -27,8 +27,14 @@
 
   environment.shells = [ pkgs.zsh ];
 
-  # Required for nix-darwin's default shell
-  programs.zsh.enable = true;
+  # Home Manager/Oh My Zsh owns completion and the prompt. Do not initialize
+  # those systems again in nix-darwin's global /etc/zshrc.
+  programs.zsh = {
+    enable = true;
+    enableGlobalCompInit = false;
+    enableBashCompletion = false;
+    promptInit = "";
+  };
 
   # TouchID / WatchID for sudo
   security.pam.services.sudo_local = {

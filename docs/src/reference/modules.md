@@ -58,9 +58,10 @@ terminals.
 
 ### `home/common/shell.nix`
 
-Zsh with autosuggestions and syntax highlighting. Starship prompt with Ayu
-Mirage colors and Nerd Font pill segments. Navigation aliases, git shortcuts,
-double-Escape sudo toggling, `mise activate zsh`, and platform-aware PATH setup.
+Home Manager-managed Zsh with Oh My Zsh (`git`, `sudo`, and selected utility
+plugins), autosuggestions, and syntax highlighting. Starship prompt with a
+selectable Ayu Mirage or Maison theme. Navigation aliases, custom shell helpers,
+and platform-aware PATH setup.
 
 ### `home/common/git.nix`
 

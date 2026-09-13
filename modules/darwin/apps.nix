@@ -28,6 +28,9 @@ in
     enable = true;
     user = username;
     autoMigrate = true; # migrate existing manual Homebrew installs
+    # Home Manager supplies the stable Homebrew environment below. Avoid
+    # running `brew shellenv` for every interactive zsh process.
+    enableZshIntegration = false;
     extraEnv.HOMEBREW_NO_ENV_HINTS = "1";
   };
 
