@@ -35,7 +35,7 @@ home/common/default.nix        Aggregator -- imports all shared modules below
 home/common/core.nix           Cross-platform CLI tools and repo helper scripts
 home/common/shell.nix          zsh + starship prompt + aliases
 home/common/git.nix            git, gh, lazygit, SSH signing, difftastic
-home/common/direnv.nix         direnv + nix-direnv + mise integration
+home/common/mise.nix           mise configuration and GitHub credentials
 home/common/helix.nix          Helix editor + LSPs
 home/common/zellij.nix         Zellij multiplexer
 home/common/htop.nix           htop layout

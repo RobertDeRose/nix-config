@@ -54,7 +54,7 @@
 │   │   ├── core.nix           # CLI tools
 │   │   ├── shell.nix          # zsh + starship
 │   │   ├── git.nix            # git, gh, lazygit
-│   │   ├── direnv.nix         # direnv + nix-direnv + mise
+│   │   ├── mise.nix           # mise configuration
 │   │   ├── helix.nix          # Helix editor
 │   │   ├── zellij.nix         # Zellij multiplexer
 │   │   ├── ghostty.nix        # Ghostty terminal (macOS)

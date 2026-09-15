@@ -69,10 +69,10 @@ Git config with SSH commit signing (ed25519), difftastic as diff tool, merge
 style zdiff3, pull rebase, and conditional includes for per-workspace identity.
 GitHub CLI with credential helper. Lazygit.
 
-### `home/common/direnv.nix`
+### `home/common/mise.nix`
 
-direnv + nix-direnv for automatic Nix shell activation. Custom mise integration
-script that sources mise without pulling the package into the Nix closure.
+Mise configuration, including host-aware GitHub credential lookup through the
+GitHub CLI.
 
 ### `home/common/helix.nix`
 

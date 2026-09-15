@@ -4,8 +4,8 @@
 {
   imports = [
     ./core.nix
-    ./direnv.nix
     ./git.nix
+    ./mise.nix
     ./helix.nix
     ./herdr.nix
     ./htop.nix

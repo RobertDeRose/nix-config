@@ -111,7 +111,7 @@ Or if you've already cloned the repo:
         ├── core.nix           # Cross-platform CLI tools
         ├── shell.nix          # zsh, Starship, aliases, PATH, shell integration
         ├── git.nix            # git, gh, lazygit
-        ├── direnv.nix         # direnv + nix-direnv + mise
+        ├── mise.nix           # mise configuration
         ├── pi.nix             # Pi coding-agent customization
         └── *.ts               # Pi UI extension modules
 ```
