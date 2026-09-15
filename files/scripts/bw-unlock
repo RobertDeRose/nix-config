@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 || $1 != --shell ]]; then
+  # The command substitution in this usage text is intentionally literal.
+  # shellcheck disable=SC2016
+  printf '%s\n' 'Usage: eval "$(bw-unlock --shell)"' >&2
+  exit 2
+fi
+
+session="$(command bw unlock --raw)"
+if [[ -z $session ]]; then
+  echo "bw-unlock: Bitwarden returned an empty session key" >&2
+  exit 1
+fi
+
+printf 'export BW_SESSION=%q\n' "$session"

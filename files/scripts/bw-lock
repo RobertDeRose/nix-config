@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 || $1 != --shell ]]; then
+  # The command substitution in this usage text is intentionally literal.
+  # shellcheck disable=SC2016
+  printf '%s\n' 'Usage: eval "$(bw-lock --shell)"' >&2
+  exit 2
+fi
+
+command bw lock >&2
+printf 'unset BW_SESSION\n'

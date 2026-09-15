@@ -419,6 +419,10 @@ in
     less = "bat";
     cat = "bat";
     oc = "opencode";
+    # Executables cannot mutate their parent shell, so evaluate only the
+    # assignment/unset command emitted by these Home Manager-managed helpers.
+    "bw-unlock" = ''eval "$("$HOME/.local/bin/bw-unlock" --shell)"'';
+    "bw-lock" = ''eval "$("$HOME/.local/bin/bw-lock" --shell)"'';
   }
   // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
     # macOS-only aliases

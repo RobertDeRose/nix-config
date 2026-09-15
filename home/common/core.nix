@@ -96,6 +96,14 @@ in
 
   # Personal scripts — symlinked to ~/.local/bin/
   home.file = {
+    ".local/bin/bw-lock" = {
+      source = ../../files/scripts/bw-lock;
+      executable = true;
+    };
+    ".local/bin/bw-unlock" = {
+      source = ../../files/scripts/bw-unlock;
+      executable = true;
+    };
     ".local/bin/rund" = {
       source = ../../files/scripts/rund;
       executable = true;
