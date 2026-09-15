@@ -14,8 +14,8 @@ Zsh is the default shell with Home Manager-managed Oh My Zsh and these plugins:
 - **zsh-syntax-highlighting** -- command syntax coloring
 
 The Oh My Zsh prompt theme is disabled because Starship owns the prompt. Home
-Manager owns mise, direnv, fzf, yazi, worktrunk, and Starship; those are
-intentionally not loaded again as Oh My Zsh plugins.
+Manager owns mise, fzf, yazi, worktrunk, and Starship; those are intentionally
+not loaded again as Oh My Zsh plugins.
 
 It also restores a few interactive behaviors that changed after the move to
 Home Manager-managed zsh:
@@ -26,11 +26,9 @@ Home Manager-managed zsh:
 - `Tab` uses Zsh completion directly instead of Fzf's optional `**` wrapper
 - `~/.zshrc.local` is sourced if present for machine-local shell experiments
 
-Mise and direnv refresh automatically when the working directory changes,
-rather than launching a subprocess after every command. `direnv allow`,
-`direnv deny`, and `direnv reload` also refresh the current shell immediately.
-After editing an active mise or direnv configuration in place, use `cd .` (or
-open a new shell) to apply it.
+Mise refreshes automatically when the working directory changes, rather than
+launching a subprocess after every command. After editing an active mise
+configuration in place, use `cd .` (or open a new shell) to apply it.
 
 ## Starship Prompt
 
