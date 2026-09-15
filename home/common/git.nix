@@ -71,6 +71,7 @@
       url."git@github.com:".insteadOf = "https://github.com/";
       tar."tar.xz".command = "xz -c";
 
+      trim.bases = "main,dev";
     };
     includes = [
       {
