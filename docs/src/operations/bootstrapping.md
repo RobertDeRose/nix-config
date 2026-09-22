@@ -17,9 +17,8 @@ sh -c 'curl -sSfL https://raw.githubusercontent.com/RobertDeRose/nix-config/main
 2. Clones this repo to `~/workspace/personal/nix-config` (if not already inside it)
 3. Creates `hosts/<arch>-darwin/<hostname>/` from the darwin template (if it
    doesn't exist)
-4. Installs **Nix** (if missing):
-   - **x86_64-darwin** uses the upstream `nix-installer`
-   - all other macOS hosts use the **Lix** installer
+4. Installs **upstream Nix** (if missing) on every macOS architecture using
+   the official `nix-installer`
 5. Runs the repo activation flow, which builds and switches the nix-darwin
    configuration
 6. Lets `nix-homebrew` manage Homebrew during nix-darwin activation rather than
@@ -29,7 +28,7 @@ sh -c 'curl -sSfL https://raw.githubusercontent.com/RobertDeRose/nix-config/main
 
 1. Clones this repo (if not already inside it)
 2. Creates `systems/<arch>-linux/<hostname>/` from the linux template
-3. Installs **Lix** (if missing)
+3. Installs **upstream Nix** (if missing) using the official `nix-installer`
 4. Builds and activates **system-manager** configuration
 5. Builds and activates **home-manager** configuration
 

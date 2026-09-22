@@ -36,14 +36,14 @@ Or if you've already cloned the repo:
 2. Clones this repo (if not already inside it)
 3. Creates `hosts/<arch>-darwin/<hostname>/` from the Darwin template
 4. Installs Homebrew (if missing)
-5. Installs Nix/Lix (if missing; CppNix is used on Intel macOS)
+5. Installs upstream Nix (if missing)
 6. Builds and activates the nix-darwin configuration
 
 **Ubuntu / Linux (headless):**
 
 1. Clones this repo (if not already inside it)
 2. Creates `systems/<arch>-linux/<hostname>/` from the Linux template
-3. Installs Nix/Lix (if missing)
+3. Installs upstream Nix (if missing)
 4. Builds and activates the system-manager configuration
 5. Builds and activates the Linux home-manager configuration
 

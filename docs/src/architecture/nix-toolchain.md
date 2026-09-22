@@ -1,20 +1,18 @@
 # Nix Toolchain
 
-## Lix vs CppNix
+## Nix implementations
 
-This repo uses [Lix](https://lix.systems) (a Nix fork) on most platforms for
-its improved error messages and performance. The exception is **x86_64-darwin**
-(Intel Macs), where Lix dropped support -- those machines use the upstream
-CppNix package instead.
-
-The selection logic lives in `modules/darwin/config.nix`:
+This repo uses upstream [Nix](https://nixos.org/) (CppNix) on all supported
+platforms. Darwin selects the package explicitly in
+`modules/darwin/config.nix`:
 
 ```nix
-nix.package =
-  if pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.hostPlatform.isx86_64
-  then pkgs.nix
-  else pkgs.lixPackageSets.latest.lix;
+nix.package = pkgs.nix;
 ```
+
+Linux bootstrap and deployment also use the official upstream Nix installer.
+No existing Linux host was manually transitioned as part of the macOS
+migration.
 
 ## Experimental Features
 

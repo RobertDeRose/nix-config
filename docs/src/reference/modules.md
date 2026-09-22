@@ -14,8 +14,8 @@ drift between nix-darwin and system-manager.
 
 Nix daemon settings for nix-darwin hosts. Configures experimental features
 (`nix-command`, `flakes`), trusted users, binary caches (from
-`modules/common/cache.nix`), weekly garbage collection, and Lix/CppNix
-selection.
+`modules/common/cache.nix`), weekly garbage collection, and upstream Nix
+selection on Darwin. Linux uses the same upstream Nix installer.
 
 ### `modules/darwin/fonts.nix`
 

@@ -70,8 +70,6 @@ in
       "google-chrome"
       "maccy"
 
-      "anki" # Memory training
-      "iina" # Video player
       "raycast" # Launcher (alt/option + space)
       "stats" # System monitor
 

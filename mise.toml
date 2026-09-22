@@ -26,7 +26,7 @@ postinstall = "command -v hk >/dev/null && hk install --mise || true"
 
 # Hidden tasks — building blocks for nix:init, individually testable in CI
 [tasks.install-nix]
-description = "Install Nix or Lix if missing"
+description = "Install upstream Nix if missing"
 hide = true
 quiet = true
 raw = true
@@ -56,18 +56,12 @@ fi
 [ $(uname -s) = 'Darwin' ] && export NIX_INSTALLER_SSL_CERT_FILE='/etc/ssl/cert.pem'
 
 echo "==> Installing Nix..."
-if [ "$(uname -sm)" = "Darwin x86_64" ]; then
-  echo "Detected macOS on x86_64. Using nix instead of lix"
-  curl -sSfL https://artifacts.nixos.org/nix-installer | bash -s -- install
+if [ "$(uname -s)" = "Darwin" ]; then
+  echo "Detected macOS. Using upstream Nix"
 else
-  # Lix installer self-test may warn about daemon socket not being ready yet;
-  # this is a known race condition — verify nix works after a short wait.
-  lix_rc=0
-  curl -sSfL https://install.lix.systems/lix | bash -s -- install || lix_rc=$?
-  if [ $lix_rc -ne 0 ]; then
-    echo "WARNING: Lix installer exited with code $lix_rc (may be a known race condition — verifying...)"
-  fi
+  echo "Detected Linux. Using upstream Nix"
 fi
+curl -sSfL https://artifacts.nixos.org/nix-installer | bash -s -- install
 
 # Wait for the daemon socket to come up before continuing
 for i in $(seq 1 30); do
@@ -361,7 +355,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
   nix build "${NIX_FLAGS[@]}" --out-link "$REPO_ROOT/result" "${TARGET[@]}"
 
   # nix-darwin refuses to activate if /etc/nix/ contains config files it didn't
-  # write.  On first run (or after a Lix/Nix re-install), move them aside so
+  # write.  On first run (or after an installer re-install), move them aside so
   # nix-darwin can take ownership.  The settings from these files will be
   # managed by nix-darwin's nix.settings going forward.
   for f in /etc/nix/nix.conf; do
@@ -417,12 +411,12 @@ fi
 # ---------------------------------------------------------------------------
 
 [tasks."nix:init"]
-description = "Full init for a new machine: install Nix/Lix, then apply config"
+description = "Full init for a new machine: install upstream Nix, then apply config"
 depends = ["nix:trust"]
 quiet = true
 raw = true
 usage = '''
-arg "<hostname>" help="Hostname to assign" long_help="The hostname used as the nix config identifier. Delegates to add-host to create the host directory, then installs Nix/Lix and builds/activates the configuration. On Darwin, Homebrew is managed during nix-darwin activation."
+arg "<hostname>" help="Hostname to assign" long_help="The hostname used as the nix config identifier. Delegates to add-host to create the host directory, then installs upstream Nix and builds/activates the configuration. On Darwin, upstream Nix and Homebrew are managed during nix-darwin activation."
 '''
 run = '''
 #!/usr/bin/env bash
@@ -678,7 +672,7 @@ if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "$TARGET_HOST" true 2>/dev/null; t
 fi
 
 if ! ssh "$TARGET_HOST" 'command -v nix >/dev/null 2>&1 && command -v nix-store >/dev/null 2>&1'; then
-  echo "==> Nix not found on $TARGET_HOST. Installing Lix..."
+  echo "==> Nix not found on $TARGET_HOST. Installing upstream Nix..."
   ssh -t "$TARGET_HOST" "bash -c 'set -euo pipefail
 
 SUDO=()
@@ -694,7 +688,7 @@ fi
 if ! command -v nix >/dev/null 2>&1; then
   export NIX_INSTALLER_NO_CONFIRM=true
   export NIX_INSTALLER_ENABLE_FLAKES=true
-  curl -sSfL https://install.lix.systems/lix | sh -s -- install
+  curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install
 fi
 
 "${SUDO[@]}" mkdir -p /usr/local/bin
@@ -1037,13 +1031,13 @@ else
     fi
 fi
 
-# 2. Uninstall Nix via nix-installer
+# 2. Full uninstall via the installer (destructive; may remove /nix/store)
 if [[ -e /nix/nix-installer ]]; then
-    echo "==> Uninstalling Nix via nix-installer..."
+    echo "==> Uninstalling Nix via the installed nix-installer..."
     sudo /nix/nix-installer uninstall
 else
     echo "ERROR: /nix/nix-installer not found."
-    echo "       Nix may not have been installed via the Determinate nix-installer."
+    echo "       Nix may not have been installed via the upstream Nix installer."
     echo "       Refer to https://nix.dev for manual steps."
     exit 1
 fi
@@ -1227,7 +1221,7 @@ if [ "$SSH_READY" != true ]; then
 fi
 
 echo "==> Installing Nix on remote test target..."
-ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" 'export NIX_INSTALLER_NO_CONFIRM=true NIX_INSTALLER_ENABLE_FLAKES=true; curl -sSfL https://install.lix.systems/lix | sh -s -- install'
+ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" 'export NIX_INSTALLER_NO_CONFIRM=true NIX_INSTALLER_ENABLE_FLAKES=true; curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install'
 
 echo "==> Configuring trusted-users and PATH on remote target..."
 ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET@$IP" <<'EOF'
