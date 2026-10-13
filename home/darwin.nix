@@ -4,13 +4,11 @@
 {
   username,
   pkgs,
-  inputs,
   lib,
   ...
 }:
 {
   imports = [
-    inputs.worktrunk.homeModules.default
     ./common
     ./common/ghostty.nix
     ./common/zed.nix
