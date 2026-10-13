@@ -39,7 +39,10 @@ in
     enable = true;
     cpus = 4;
     memory = "8G";
-    maxJobs = 8;
+    # M1 Pro: no nested virtualization, so NixOS VM tests run under software
+    # emulation. More than two at once on 4 vCPUs/8G time out and can OOM the
+    # guest Nix daemon.
+    maxJobs = 2;
     cli.completions.enable = true;
     socktainer.enable = false;
     socktainer.setDockerHost = false;
