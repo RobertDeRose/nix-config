@@ -44,7 +44,5 @@ in
     # guest Nix daemon.
     maxJobs = 2;
     cli.completions.enable = true;
-    socktainer.enable = false;
-    socktainer.setDockerHost = false;
   };
 }
