@@ -317,6 +317,7 @@ description = "Activate host config (evaluate-only in CI)"
 depends = ["install-nix"]
 hide = true
 quiet = true
+raw = true
 usage = 'arg "[hostname]" help="Hostname to activate"'
 run = """
 #!/usr/bin/env bash
