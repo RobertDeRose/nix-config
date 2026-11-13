@@ -1,5 +1,5 @@
-# hosts/aarch64-darwin/USMBDEROSER1/home.nix
-# Per-host home-manager overrides for USMBDEROSER1 (work MacBook).
+# hosts/aarch64-darwin/USMBRDEROSE/home.nix
+# Per-host home-manager overrides for USMBRDEROSE (work MacBook).
 # This file is imported automatically when present beside default.nix.
 { config, pkgs, ... }:
 {

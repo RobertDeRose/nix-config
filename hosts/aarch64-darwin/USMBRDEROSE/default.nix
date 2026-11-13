@@ -1,5 +1,5 @@
-# hosts/aarch64-darwin/USMBDEROSER1/default.nix
-# Host-specific config for USMBDEROSER1 (work MacBook, replaces USMBDEROSER).
+# hosts/aarch64-darwin/USMBRDEROSE/default.nix
+# Host-specific config for USMBRDEROSE (work MacBook, replaces USMBDEROSER).
 #
 # ── Per-host packages ────────────────────────────────────────────────────────
 # These merge with the global lists in modules/darwin/apps.nix:
