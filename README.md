@@ -107,8 +107,8 @@ or pushing. See [Bootstrapping](docs/src/operations/bootstrapping.md).
     └── common/
         ├── default.nix        # Imports all shared home modules
         ├── core.nix           # Cross-platform CLI tools
-        ├── shell.nix          # zsh, Starship, aliases, PATH, shell integration
-        ├── git.nix            # git, gh, lazygit
+        ├── shell.nix          # zsh (native prompt), bash Starship, aliases, PATH, shell integration
+        ├── git.nix            # git, gh
         └── mise.nix           # mise configuration
 ```
 
