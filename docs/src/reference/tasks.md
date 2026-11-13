@@ -37,12 +37,6 @@ All tasks are defined in `mise.toml` and are safest to run as
 | `nix:trust` | Add current user to Nix trusted-users |
 | `nix:uninstall` | Fully uninstall Nix from the system |
 
-## iTerm2
-
-| Task | Description |
-|------|-------------|
-| `iterm:export` | Re-export iTerm2 preferences plist |
-
 ## Apple Container Tests (macOS only)
 
 | Task | Description |

@@ -11,8 +11,9 @@ nix.package = pkgs.nix;
 ```
 
 Linux bootstrap and deployment also use the official upstream Nix installer.
-No existing Linux host was manually transitioned as part of the macOS
-migration.
+To switch the Nix implementation on an existing Mac, change `nix.package` and
+run `mise run nix:switch`. Don't use `mise run nix:uninstall` for that: a full
+uninstall deletes the APFS Nix store and every generation.
 
 ## Experimental Features
 

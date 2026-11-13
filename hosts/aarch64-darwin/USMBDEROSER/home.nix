@@ -1,7 +1,7 @@
 # hosts/aarch64-darwin/USMBDEROSER/home.nix
 # Per-host home-manager overrides for USMBDEROSER (work MacBook).
 # This file is imported automatically when present beside default.nix.
-{ pkgs, ... }:
+{ config, pkgs, ... }:
 {
   home.packages = with pkgs; [ azure-cli ];
 
@@ -25,10 +25,21 @@
         HostName = "dev-ab.checkpoint-device.com";
         User = "root";
       };
+      # Interactive use: `ssh pool -t zsh -l`. No RemoteCommand, so scp and
+      # `ssh pool <cmd>` keep working.
+      "pool" = {
+        HostName = "pool.checkpoint-service.com";
+        User = "root";
+      };
+      # Not in DNS, so address it by IP.
+      "arm64-github-runner" = {
+        HostName = "172.174.200.195";
+        User = "service";
+      };
     };
 
     includes = [
-      ''"/Users/DeRoseR/Library/Application Support/NVIDIA/Sync/config/ssh_config"''
+      ''"${config.home.homeDirectory}/Library/Application Support/NVIDIA/Sync/config/ssh_config"''
     ];
   };
 

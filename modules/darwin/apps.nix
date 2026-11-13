@@ -16,10 +16,7 @@ in
   # Prefer home-manager's home.packages for user-level tools.
   environment.systemPackages = with pkgs; [
     bat
-    devenv
-    eza
     git
-    fastfetch
   ];
 
   # Homebrew installation managed declaratively via nix-homebrew.
@@ -49,19 +46,34 @@ in
         trusted = true;
       }
       {
-        name = "macos-fuse-t/cask";
+        name = "modem-dev/tap";
         trusted = true;
       }
       {
-        name = "modem-dev/tap";
+        name = "robertderose/tap";
+        trusted = true;
+      }
+      {
+        name = "stablyai/orca";
         trusted = true;
       }
     ];
 
-    # brew install — CLI tools that aren't in nixpkgs (or are marked EOL there)
+    # brew install — CLI tools that mise can't provide, or that must live in
+    # Homebrew's prefix. Prefer home/common/mise.nix for new CLI tools.
     brews = [
       "worktrunk" # Installed via Homebrew to avoid uncached local Rust builds
       "modem-dev/tap/hunk"
+
+      # Apple container stack. services.container-builder and the plugins
+      # below expect Homebrew's `container`, so keep all three here.
+      "container"
+      "robertderose/tap/container-compose-plugin" # `container compose`
+      # After install or upgrade, run `container-krun-runtime-setup` (sudo).
+      "robertderose/tap/container-krun-runtime"
+
+      "picocom" # serial console
+      "wget"
     ];
 
     # brew install --cask ...
@@ -71,22 +83,19 @@ in
       "maccy"
 
       "raycast" # Launcher (alt/option + space)
-      "stats" # System monitor
+      "tailscale-app"
+      "vorssaint" # Menu bar system monitor and keep-awake
 
       # Development
       "balenaetcher"
       "claude"
       "cmux" # Ghostty-based terminal for AI coding agents
-      "docker-desktop"
       "imageoptim"
-      "insomnia" # REST client
       "ghostty"
-      "iterm2"
-      "macos-fuse-t/cask/fuse-t"
-      "macos-fuse-t/cask/fuse-t-sshfs"
-      "obsidian"
+      "stablyai/orca/orca" # Orca agent IDE; bare `orca` is an unrelated Plotly cask
       "pearcleaner"
       "rectangle"
+      "t3-code@nightly" # T3 Code, nightly channel
       "zed"
     ]
     ++ lib.optionals isAarch64 [
@@ -103,7 +112,6 @@ in
     masApps = {
       Amphetamine = 937984704;
       Bitwarden = 1352778147;
-      "Keynote: Design Presentations" = 361285480;
       "Numbers: Make Spreadsheets" = 361304891;
       "Pages: Create Documents" = 361309726;
       "Windows App" = 1295203466;

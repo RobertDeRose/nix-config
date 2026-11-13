@@ -33,16 +33,20 @@ Or if you've already cloned the repo:
 **macOS:**
 
 1. Installs Xcode Command Line Tools (if missing)
-2. Clones this repo (if not already inside it)
-3. Creates `hosts/<arch>-darwin/<hostname>/` from the Darwin template
-4. Installs Homebrew (if missing)
-5. Installs upstream Nix (if missing)
-6. Builds and activates the nix-darwin configuration
+2. Clones this repo to `~/workspace/personal/nix-config` (if not already inside it; override with
+   `NIX_CONFIG_DIR`)
+3. Installs upstream Nix (if missing)
+4. Creates `hosts/<arch>-darwin/<hostname>/` from the Darwin template (skipped if the host is already
+   committed)
+5. Builds and activates the nix-darwin configuration; `nix-homebrew` installs Homebrew during activation
+
+Sign in to the Mac App Store first, and unlock Bitwarden with its SSH agent enabled before committing
+or pushing. See [Bootstrapping](docs/src/operations/bootstrapping.md).
 
 **Ubuntu / Linux (headless):**
 
 1. Clones this repo (if not already inside it)
-2. Creates `systems/<arch>-linux/<hostname>/` from the Linux template
+2. Creates `systems/<arch>-linux/<hostname>/` from the Linux template (skipped if already committed)
 3. Installs upstream Nix (if missing)
 4. Builds and activates the system-manager configuration
 5. Builds and activates the Linux home-manager configuration
@@ -58,16 +62,11 @@ Or if you've already cloned the repo:
 ├── bootstrap.sh               # One-liner bootstrap entry point
 │
 ├── hosts/                     # Darwin hosts only; auto-discovered by easy-hosts
-│   ├── aarch64-darwin/        # macOS Apple Silicon hosts
-│   │   └── <hostname>/
-│   │       ├── default.nix
-│   │       ├── user.nix       # Host user metadata
-│   │       └── home.nix       # Optional per-host macOS HM overrides
-│   └── x86_64-darwin/         # macOS Intel hosts
+│   └── aarch64-darwin/        # macOS Apple Silicon hosts
 │       └── <hostname>/
 │           ├── default.nix
-│           ├── user.nix
-│           └── home.nix
+│           ├── user.nix       # Host user metadata
+│           └── home.nix       # Optional per-host macOS HM overrides
 │
 ├── systems/                   # Non-NixOS Linux hosts; consumed by flake.nix
 │   ├── aarch64-linux/
@@ -97,8 +96,7 @@ Or if you've already cloned the repo:
 │   │   ├── system.nix         # macOS system settings (Dock, Finder, trackpad…)
 │   │   ├── apps.nix           # Homebrew casks, MAS apps, and system packages
 │   │   ├── fonts.nix          # macOS fonts
-│   │   ├── homebrew-mas-fix.nix
-│   │   └── iterm2.nix
+│   │   └── homebrew-mas-fix.nix
 │   └── linux/
 │       └── system.nix         # Shared system-manager config (SSH, users, packages…)
 │
@@ -111,9 +109,7 @@ Or if you've already cloned the repo:
         ├── core.nix           # Cross-platform CLI tools
         ├── shell.nix          # zsh, Starship, aliases, PATH, shell integration
         ├── git.nix            # git, gh, lazygit
-        ├── mise.nix           # mise configuration
-        ├── pi.nix             # Pi coding-agent customization
-        └── *.ts               # Pi UI extension modules
+        └── mise.nix           # mise configuration
 ```
 
 ---

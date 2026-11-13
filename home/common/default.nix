@@ -9,10 +9,7 @@
     ./helix.nix
     ./herdr.nix
     ./htop.nix
-    #./opencode.nix
-    #./pi.nix
     ./shell.nix
-    ./zellij.nix
   ];
 
   home = {

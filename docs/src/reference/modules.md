@@ -31,14 +31,13 @@ three-finger drag), Keyboard (Caps Lock remapped to Escape), security
 
 ### `modules/darwin/apps.nix`
 
-Declarative package management: nix system packages (bat, eza, git, fastfetch,
-devenv), Homebrew taps, brews, casks, and Mac App Store apps. Uses `zap`
-cleanup to remove anything not listed.
-
-### `modules/darwin/iterm2.nix`
-
-Copies the exported iTerm2 plist to a nix-managed location on activation.
-The plist is stored as a binary file in `config/iterm2/`.
+Declarative package management: nix system packages (bat, git), Homebrew taps,
+brews, casks, and Mac App Store apps. GUI apps are casks. Brews hold CLI tools
+that mise can't provide or that must live in Homebrew's prefix, such as Apple's
+`container` CLI with the `container-compose-plugin` and `container-krun-runtime`
+plugins. Cleanup is `none`, so manually installed Homebrew packages stay.
+After installing or upgrading `container-krun-runtime`, run
+`container-krun-runtime-setup` and restart Apple Container.
 
 ### `modules/linux/system.nix`
 
@@ -51,39 +50,37 @@ shell.
 
 ### `home/common/core.nix`
 
-Cross-platform CLI tools including `btop`, `jq`, `openspec`, `pstree`,
-`ripgrep`, `tmux`, `yazi`, `yq`, `git-town`, `git-trim`, and repo helper
-scripts (`rund`). Sets Helix as the default editor outside Zed-integrated
-terminals.
+Cross-platform CLI tools including `jq`, `ripgrep`, `yq`, `nmap`, `git-absorb`,
+`git-trim`, and repo helper scripts (`rund`). Sets Helix as the default editor
+outside Zed-integrated terminals. Linux-only tools (`btop`, `pstree`, `rlwrap`,
+`snitch`) live in `home/linux.nix`.
 
 ### `home/common/shell.nix`
 
 Home Manager-managed Zsh with Oh My Zsh (`git`, `sudo`, and selected utility
-plugins), autosuggestions, and syntax highlighting. Starship prompt with a
-selectable Ayu Mirage or Maison theme. Navigation aliases, custom shell helpers,
-and platform-aware PATH setup.
+plugins), autosuggestions, and syntax highlighting. A native Zsh prompt;
+Starship with the Maison theme (`dotfiles/starship/maison.toml`) drives Bash
+only. Navigation aliases, custom shell helpers (including `lab`), and
+platform-aware PATH setup.
 
 ### `home/common/git.nix`
 
 Git config with SSH commit signing (ed25519), difftastic as diff tool, merge
 style zdiff3, pull rebase, and conditional includes for per-workspace identity.
-GitHub CLI with credential helper. Lazygit.
+GitHub CLI with credential helper.
 
 ### `home/common/mise.nix`
 
-Mise configuration, including host-aware GitHub credential lookup through the
-GitHub CLI.
+Mise configuration fragments in `~/.config/mise/conf.d/`: host-aware GitHub
+credential lookup through the GitHub CLI, and the mise-managed CLI tools
+(`uv`, `prek`, and `bd` from `aqua:gastownhall/beads`). Add new CLI tools here
+when mise supports them.
 
 ### `home/common/helix.nix`
 
 Helix editor: Ayu Mirage theme, relative line numbers, rulers at 100/120 chars.
 Keybindings matching VSCode conventions. Language servers: harper-ls (grammar),
 marksman, markdown-oxide, rumdl.
-
-### `home/common/zellij.nix`
-
-Zellij terminal multiplexer with Ayu Mirage theme, compact layout. Platform-aware
-clipboard: `pbcopy` on macOS, OSC52 escape sequence on Linux.
 
 ### `home/common/ghostty.nix`
 
@@ -96,12 +93,6 @@ Homebrew).
 Zed editor config (macOS only): package managed outside Nix, theme set to Ayu
 Mirage, VSCode keymap with Helix mode, Copilot edit predictions, and custom
 keybindings matching Helix.
-
-### `home/common/opencode.nix`
-
-OpenCode AI coding agent. Uses the `opencode` flake input, currently backed by
-Numtide's `llm-agents.nix`, so the package can come from `cache.numtide.com`
-without rebuilding the upstream Bun workspace locally.
 
 ### `home/darwin/ssh.nix`
 

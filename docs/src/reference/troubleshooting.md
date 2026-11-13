@@ -15,18 +15,6 @@ sudo mv /etc/nix/nix.conf /etc/nix/nix.conf.bak
 sudo darwin-rebuild switch --flake .
 ```
 
-### iTerm2 preferences not applying
-
-iTerm2 preferences are deployed from an exported binary plist in
-`config/iterm2/`. If you make changes in iTerm2's UI, they won't persist
-across rebuilds unless you re-export:
-
-```bash
-mise iterm:export
-```
-
-This copies the live preferences back to the repo. Commit the updated plist.
-
 ### Font names don't match after update
 
 Nerd Fonts v3 changed font naming conventions. If your terminal or editor

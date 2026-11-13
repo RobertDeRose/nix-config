@@ -144,6 +144,21 @@ fi
 SYSTEM="${ARCH}-${OS}"
 HOST_BRANCH="host/${HOSTNAME}"
 
+# Darwin hosts live under hosts/ (managed by easy-hosts);
+# Linux hosts live under systems/ (managed by system-manager).
+if [ "${OS}" = "darwin" ]; then
+  HOST_DIR="hosts/${SYSTEM}/${HOSTNAME}"
+else
+  HOST_DIR="systems/${SYSTEM}/${HOSTNAME}"
+fi
+
+# An existing, tracked host is left untouched: no branch switch, no prompts,
+# and no rewrite of its committed user.nix or other files.
+if [ -f "${HOST_DIR}/user.nix" ] && git ls-files --error-unmatch "${HOST_DIR}/user.nix" &>/dev/null; then
+  echo "==> Host '${HOSTNAME}' already exists in ${HOST_DIR}; leaving it unchanged."
+  exit 0
+fi
+
 # Generate and validate user metadata before writing scaffold files.
 USERNAME="${usage_user:-$(whoami)}"
 FULLNAME="${usage_fullname:-$(git config user.name 2>/dev/null || echo "")}"
@@ -156,9 +171,16 @@ if [ "$USERNAME" = "root" ]; then
   exit 1
 fi
 
-if ! printf '%s' "$USERNAME" | grep -Eq '^[a-z_][a-z0-9_-]*$'; then
-  echo "ERROR: Invalid username '$USERNAME' for host scaffolding." >&2
-  echo "       Use --user with a portable POSIX account name." >&2
+# Linux account names must be lowercase POSIX names; macOS short names may
+# contain uppercase letters and dots (e.g. DeRoseR).
+if [ "${OS}" = "linux" ]; then
+  USERNAME_RE='^[a-z_][a-z0-9_-]*$'
+else
+  USERNAME_RE='^[A-Za-z_][A-Za-z0-9_.-]*$'
+fi
+if ! printf '%s' "$USERNAME" | grep -Eq "$USERNAME_RE"; then
+  echo "ERROR: Invalid username '$USERNAME' for ${OS} host scaffolding." >&2
+  echo "       Use --user with a valid ${OS} account name." >&2
   exit 1
 fi
 
@@ -179,40 +201,35 @@ ask() {
     echo "  This field is required. Please enter a value." >&2
   done
 }
-if [ -z "$FULLNAME" ]; then
-  if [[ "${CI:-false}" == "true" ]]; then
-    FULLNAME="CI User"
-  else
-    FULLNAME="$(ask "Full name: ")"
+# A kept user.nix needs no identity, so only prompt when generating one.
+if [ ! -f "${HOST_DIR}/user.nix" ]; then
+  if [ -z "$FULLNAME" ]; then
+    if [[ "${CI:-false}" == "true" ]]; then
+      FULLNAME="CI User"
+    else
+      FULLNAME="$(ask "Full name: ")"
+    fi
   fi
-fi
-if [ -z "$EMAIL" ]; then
-  if [[ "${CI:-false}" == "true" ]]; then
-    EMAIL="ci@localhost"
-  else
-    EMAIL="$(ask "Email: ")"
+  if [ -z "$EMAIL" ]; then
+    if [[ "${CI:-false}" == "true" ]]; then
+      EMAIL="ci@localhost"
+    else
+      EMAIL="$(ask "Email: ")"
+    fi
   fi
-fi
-if [ -z "$GITHUB" ]; then
-  if [[ "${CI:-false}" == "true" ]]; then
-    GITHUB="ci"
-  else
-    GITHUB="$(ask "GitHub username: ")"
+  if [ -z "$GITHUB" ]; then
+    if [[ "${CI:-false}" == "true" ]]; then
+      GITHUB="ci"
+    else
+      GITHUB="$(ask "GitHub username: ")"
+    fi
   fi
-fi
 
-if ! valid_github_username "$GITHUB"; then
-  echo "ERROR: Invalid GitHub username '$GITHUB' for host scaffolding." >&2
-  echo "       GitHub usernames must be 1-39 alphanumeric or hyphen characters and cannot start or end with a hyphen." >&2
-  exit 1
-fi
-
-# Darwin hosts live under hosts/ (managed by easy-hosts);
-# Linux hosts live under systems/ (managed by system-manager).
-if [ "${OS}" = "darwin" ]; then
-  HOST_DIR="hosts/${SYSTEM}/${HOSTNAME}"
-else
-  HOST_DIR="systems/${SYSTEM}/${HOSTNAME}"
+  if ! valid_github_username "$GITHUB"; then
+    echo "ERROR: Invalid GitHub username '$GITHUB' for host scaffolding." >&2
+    echo "       GitHub usernames must be 1-39 alphanumeric or hyphen characters and cannot start or end with a hyphen." >&2
+    exit 1
+  fi
 fi
 
 if [[ "${CI:-false}" != "true" ]]; then
@@ -232,11 +249,14 @@ if [[ "${CI:-false}" != "true" ]]; then
   fi
 fi
 
-if [ ! -d "${HOST_DIR}" ]; then
-  echo "==> Creating ${HOST_DIR} from templates/${OS}..."
-  mkdir -p "${HOST_DIR}"
-  cp -vr "templates/${OS}"/* "${HOST_DIR}/"
-fi
+# Copy only template files the host dir lacks; never overwrite existing files.
+mkdir -p "${HOST_DIR}"
+for tmpl in "templates/${OS}"/*; do
+  dest="${HOST_DIR}/$(basename "$tmpl")"
+  if [ ! -e "$dest" ]; then
+    cp -vR "$tmpl" "$dest"
+  fi
+done
 
 # Escape a value for safe inclusion in a Nix string literal.
 # For this use case, escape backslashes, double quotes, and ${ to prevent interpolation.
@@ -248,15 +268,19 @@ nix_escape() {
   printf '%s' "$val"
 }
 
-{
-  printf '{\n'
-  printf '  username = "%s";\n' "$(nix_escape "$USERNAME")"
-  printf '  fullname = "%s";\n' "$(nix_escape "$FULLNAME")"
-  printf '  useremail = "%s";\n' "$(nix_escape "$EMAIL")"
-  printf '  githubUsername = "%s";\n' "$(nix_escape "$GITHUB")"
-  printf '}\n'
-} > "${HOST_DIR}/user.nix"
-echo "    Generated ${HOST_DIR}/user.nix for user '${USERNAME}'"
+if [ -f "${HOST_DIR}/user.nix" ]; then
+  echo "    Keeping existing ${HOST_DIR}/user.nix"
+else
+  {
+    printf '{\n'
+    printf '  username = "%s";\n' "$(nix_escape "$USERNAME")"
+    printf '  fullname = "%s";\n' "$(nix_escape "$FULLNAME")"
+    printf '  useremail = "%s";\n' "$(nix_escape "$EMAIL")"
+    printf '  githubUsername = "%s";\n' "$(nix_escape "$GITHUB")"
+    printf '}\n'
+  } > "${HOST_DIR}/user.nix"
+  echo "    Generated ${HOST_DIR}/user.nix for user '${USERNAME}'"
+fi
 
 # Ensure host files are tracked — nix flakes only see git-tracked files.
 git add "${HOST_DIR}"
@@ -968,34 +992,6 @@ nix-collect-garbage --delete-older-than "$OLDER_THAN"
 description = "Format all .nix files in this repo"
 quiet = true
 run = "nix fmt"
-
-[tasks."iterm:export"]
-description = "Re-export iTerm2 preferences plist into the repo"
-quiet = true
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-
-if [ "$(uname -s)" != "Darwin" ]; then
-  echo "ERROR: iterm:export is macOS-only."
-  exit 1
-fi
-
-SRC="$HOME/Library/Preferences/com.googlecode.iterm2.plist"
-DST="config/iterm2/com.googlecode.iterm2.plist"
-
-if [ ! -e "$SRC" ]; then
-  echo "ERROR: iTerm2 preferences not found at $SRC"
-  exit 1
-fi
-
-echo "==> Copying iTerm2 plist into repo..."
-cp "$SRC" "$DST"
-echo "    Exported to $DST"
-echo ""
-echo "Review with: git diff --stat"
-echo "Then commit: git add -A && git commit -m 'chore: update iTerm2 preferences'"
-"""
 
 [tasks."nix:gcroot"]
 description = "Show auto GC roots in the nix store"

@@ -9,6 +9,7 @@
 #   sh -c 'curl -sSfL https://raw.githubusercontent.com/SomeoneElse/nix-config/main/bootstrap.sh | bash -s -- [hostname]'
 # The repo and branch are auto-detected from the curl URL visible in ps;
 # BRANCH and REPO env vars are still supported as overrides.
+# NIX_CONFIG_DIR sets the clone location (default: ~/workspace/personal/nix-config).
 
 set -euo pipefail
 
@@ -63,8 +64,8 @@ if [[ $REPO != "RobertDeRose/nix-config" || $BRANCH != "main" ]]; then
   echo "==> Using repo=$REPO branch=$BRANCH"
 fi
 REPO_URL="https://github.com/${REPO}.git"
-REPO_DIR="$(basename "$REPO")"
-MISE_CEILING_PATHS="$(realpath "$(pwd)/..")"
+# Clone under ~/workspace/personal/ so home/common/git.nix's includeIf applies.
+NIX_CONFIG_DIR="${NIX_CONFIG_DIR:-$HOME/workspace/personal/nix-config}"
 
 # ------------------------------------------------------------------ #
 # macOS: install Xcode Command Line Tools if missing
@@ -100,13 +101,22 @@ fi
 # ------------------------------------------------------------------ #
 # Ensure we're inside the nix-config repo
 # ------------------------------------------------------------------ #
-if ! git rev-parse --is-inside-work-tree &> /dev/null; then
-  echo "==> Cloning nix-config into ./$REPO_DIR (branch: $BRANCH)..."
-  git clone -b "$BRANCH" "$REPO_URL"
-  cd "$REPO_DIR"
+_repo_top="$(git rev-parse --show-toplevel 2> /dev/null || true)"
+if [[ -n $_repo_top && -f "$_repo_top/flake.nix" && -f "$_repo_top/bootstrap.sh" ]]; then
+  cd "$_repo_top"
+elif [[ -d "$NIX_CONFIG_DIR/.git" ]]; then
+  echo "==> Using existing clone at $NIX_CONFIG_DIR"
+  cd "$NIX_CONFIG_DIR"
+else
+  echo "==> Cloning nix-config into $NIX_CONFIG_DIR (branch: $BRANCH)..."
+  mkdir -p "$(dirname "$NIX_CONFIG_DIR")"
+  git clone -b "$BRANCH" "$REPO_URL" "$NIX_CONFIG_DIR"
+  cd "$NIX_CONFIG_DIR"
 fi
+unset _repo_top
 
 export MISE_TRUSTED_CONFIG_PATHS="${PWD}"
+MISE_CEILING_PATHS="$(dirname "$PWD")"
 
 # ------------------------------------------------------------------ #
 # Install mise if missing

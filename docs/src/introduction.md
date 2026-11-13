@@ -41,7 +41,5 @@ See [Bootstrapping](./operations/bootstrapping.md) for details.
 - **Shared modules, per-host overrides** -- global config in `modules/` and `home/`,
   host-specific additions in `hosts/<arch>-darwin/<hostname>/` or
   `systems/<arch>-linux/<hostname>/`.
-- **Declarative Homebrew** -- casks, brews, and Mac App Store apps are managed via Nix
-  and cleaned up automatically.
-- **Consistent Ayu Mirage theme** -- terminal, editor, multiplexer, and prompt all share
-  the same color palette.
+- **Declarative Homebrew** -- casks, brews, and Mac App Store apps are managed via Nix.
+- **Consistent Ayu Mirage theme** -- terminals and editors share the same color palette.

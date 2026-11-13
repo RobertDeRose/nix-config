@@ -9,13 +9,11 @@
 ├── hk.pkl                     # Pre-commit hook config (Pkl language)
 │
 ├── hosts/                     # macOS hosts (auto-discovered by easy-hosts)
-│   ├── aarch64-darwin/
-│   │   └── <hostname>/
-│   │       ├── default.nix    # System config (required)
-│   │       ├── user.nix       # Username, name, email, GitHub username
-│   │       └── home.nix       # Per-host HM overrides (optional)
-│   └── x86_64-darwin/
-│       └── <hostname>/...
+│   └── aarch64-darwin/
+│       └── <hostname>/
+│           ├── default.nix    # System config (required)
+│           ├── user.nix       # Username, name, email, GitHub username
+│           └── home.nix       # Per-host HM overrides (optional)
 │
 ├── systems/                   # Linux hosts (custom discovery in flake.nix)
 │   ├── x86_64-linux/
@@ -41,8 +39,7 @@
 │   │   ├── config.nix         # nix-darwin Nix daemon settings
 │   │   ├── fonts.nix          # Darwin-only system fonts
 │   │   ├── system.nix         # macOS defaults (Dock, Finder, trackpad...)
-│   │   ├── apps.nix           # Homebrew + nix system packages
-│   │   └── iterm2.nix         # iTerm2 plist management
+│   │   └── apps.nix           # Homebrew + nix system packages
 │   └── linux/
 │       └── system.nix         # system-manager: SSH, users, packages
 │
@@ -53,20 +50,14 @@
 │   │   ├── default.nix        # Aggregator: imports all shared modules
 │   │   ├── core.nix           # CLI tools
 │   │   ├── shell.nix          # zsh + starship
-│   │   ├── git.nix            # git, gh, lazygit
+│   │   ├── git.nix            # git, gh
 │   │   ├── mise.nix           # mise configuration
 │   │   ├── helix.nix          # Helix editor
-│   │   ├── zellij.nix         # Zellij multiplexer
 │   │   ├── ghostty.nix        # Ghostty terminal (macOS)
 │   │   ├── zed.nix            # Zed editor (macOS)
-│   │   ├── htop.nix           # htop config
-│   │   └── opencode.nix       # OpenCode AI agent
+│   │   └── htop.nix           # htop config
 │   └── darwin/
 │       └── ssh.nix            # Bitwarden Desktop SSH agent config
-│
-├── config/
-│   └── iterm2/
-│       └── com.googlecode.iterm2.plist  # Exported iTerm2 preferences
 │
 ├── files/
 │   ├── scripts/

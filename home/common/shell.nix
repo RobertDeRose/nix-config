@@ -15,82 +15,12 @@ let
   nf = s: builtins.fromJSON ''"${s}"'';
 
   # ── Nerd Font icons (Private Use Area) ──────────────────────────────
-  # makePill icons
   iconCmdDuration = nf ''\uF0E7'';
   iconDirectory = nf ''\uDB83\uDDCF''; # U+F0DCF 󰷏
-  iconShell = nf ''\uF489'';
-  iconTime = nf ''\uDB82\uDD96''; # U+F0996 󰦖
-  iconUsername = nf ''\uF21B'';
-
-  # Module symbols
-  iconC = nf ''\uE61E'';
   iconGitBranch = nf ''\uF417'';
-  iconNodejs = nf ''\uDB80\uDF99''; # U+F0399 󰎙
-  iconPython = nf ''\uE73C'';
-  iconRust = nf ''\uE68B'';
-  iconSudo = nf ''\uF13E'';
-
-  # Directory
-  iconHome = nf ''\uF015'';
-  iconTruncation = nf ''\uEBDF'';
-  iconReadOnly = nf ''\uDB86\uDDF5''; # U+F19F5 󱧵
-
-  # OS symbols
-  osAlpine = nf ''\uF300'';
-  osAmazon = nf ''\uF270'';
-  osAndroid = nf ''\uE70E'';
-  osArch = nf ''\uF303'';
-  osCentOS = nf ''\uF304'';
-  osDebian = nf ''\uF306'';
-  osEndeavourOS = nf ''\uF322'';
-  osFedora = nf ''\uF30A'';
-  osFreeBSD = nf ''\uF30C'';
-  osGaruda = nf ''\uF17C'';
-  osGentoo = nf ''\uF30D'';
+  iconTime = nf ''\uDB82\uDD96''; # U+F0996 󰦖
   osLinux = nf ''\uF17C'';
   osMacos = nf ''\uF302'';
-  osManjaro = nf ''\uF312'';
-  osMariner = nf ''\uF17C'';
-  osMint = nf ''\uF30E'';
-  osNetBSD = nf ''\uF17C'';
-  osNixOS = nf ''\uF313'';
-  osOpenBSD = nf ''\uF328'';
-  osOpenCloudOS = nf ''\uEBAA'';
-  osopenEuler = nf ''\uF17C'';
-  osopenSUSE = nf ''\uF314'';
-  osPop = nf ''\uF32A'';
-  osRaspbian = nf ''\uF315'';
-  osRedhat = nf ''\uF316'';
-  osRedHatEnterprise = nf ''\uF316'';
-  osSolus = nf ''\uF32D'';
-  osSUSE = nf ''\uF314'';
-  osUbuntu = nf ''\uF31B'';
-  osUnknown = nf ''\uF108'';
-  osWindows = nf ''\uE70F'';
-
-  # Powerline glyphs used in makePill
-  plRight = nf ''\uE0B6'';
-  plLeft = nf ''\uE0B4'';
-
-  # ── makePill: generates a starship "pill" segment ───────────────────
-  makePill =
-    symbol: info: color:
-    lib.concatStrings [
-      "[─](fg:current_line)"
-      "[${plRight}](fg:${color})"
-      "[${symbol}](fg:primary bg:${color})"
-      "[${plLeft}](fg:${color} bg:box)"
-      "[ ${info}](fg:foreground bg:box)"
-      "[${plLeft}](fg:box)"
-    ];
-
-  # Starship remains available for Bash and manual use, but Zsh uses the
-  # synchronous-process-free prompt below.
-  starshipTheme = "maison";
-  starshipThemeFiles = {
-    maison = ../../dotfiles/starship/maison.toml;
-    maison-minimal = ../../dotfiles/starship/maison-minimal.toml;
-  };
 
   # nix-homebrew's managed prefix is stable on each supported macOS
   # architecture, so shell startup does not need to invoke `brew` to find it.
@@ -282,10 +212,73 @@ in
         git grep "$@" -- ':!*.svg' ':!*.min.js' ':!*.min.css' ':!*/vendor/*.css' ':!*/vendor/*.js'
       }
 
-      # `md` belongs to the Oh My Zsh core aliases. Keep Maison's Markdown
-      # pager helper under a distinct name instead of overriding it.
-      mdview() {
-        pi --no-session -nc -nbt --offline --pager "$1"; clear
+      # `lab <host>`: open a root shell on a lab host. If root does not yet
+      # accept key auth, log in as `service`, `su` to root (prompts for the
+      # root password), and append a public key to root's authorized_keys.
+      # The key comes from LAB_SSH_PUBKEY (a .pub path) or the SSH agent.
+      lab() {
+        emulate -L zsh
+        if (( $# != 1 )) || [[ -z "$1" || "$1" == -* ]]; then
+          print -u2 "usage: lab <host>"
+          return 2
+        fi
+        local host="$1" pubkey label root_script
+        local -a keys labels
+
+        if ssh -o BatchMode=yes -o ConnectTimeout=10 "root@$host" true 2>/dev/null; then
+          ssh "root@$host"
+          return
+        fi
+
+        if [[ -n "''${LAB_SSH_PUBKEY:-}" ]]; then
+          if [[ ! -r "$LAB_SSH_PUBKEY" ]]; then
+            print -u2 "lab: cannot read LAB_SSH_PUBKEY ($LAB_SSH_PUBKEY)"
+            return 1
+          fi
+          keys=("''${(@f)$(<"$LAB_SSH_PUBKEY")}")
+        else
+          keys=("''${(@f)$(ssh-add -L 2>/dev/null)}")
+        fi
+        keys=("''${(@M)keys:#(ssh-|ecdsa-|sk-)*}")
+        if (( ''${#keys} == 0 )); then
+          print -u2 "lab: no SSH public key found; unlock the Bitwarden SSH agent or set LAB_SSH_PUBKEY"
+          return 1
+        elif (( ''${#keys} == 1 )); then
+          pubkey="''${keys[1]}"
+        else
+          for pubkey in "''${keys[@]}"; do
+            labels+=("''${pubkey[(w)1]} ''${pubkey[(w)3,-1]}")
+          done
+          pubkey=""
+          local PS3="Key to authorize for root@$host: "
+          select label in "''${labels[@]}"; do
+            [[ -n "$label" ]] && { pubkey="''${keys[REPLY]}"; break; }
+          done
+          [[ -n "$pubkey" ]] || return 1
+        fi
+
+        root_script='set -e
+      f=/root/.ssh/authorized_keys
+      umask 077
+      mkdir -p /root/.ssh
+      chmod 700 /root/.ssh
+      touch "$f"
+      chmod 600 "$f"
+      if [ -s "$f" ] && [ -n "$(tail -c 1 "$f")" ]; then echo >> "$f"; fi
+      if grep -qxF -- "$key" "$f"; then
+        echo "lab: key already authorized for root"
+      else
+        printf "%s\n" "$key" >> "$f"
+        echo "lab: key authorized for root"
+      fi'
+        root_script="key=''${(qq)pubkey}"$'\n'"$root_script"
+
+        print -u2 "lab: setting up root key auth on $host via service (enter the root password)"
+        ssh -t "service@$host" "su -c ''${(qq)root_script}" || {
+          print -u2 "lab: key setup on $host failed"
+          return 1
+        }
+        ssh "root@$host"
       }
 
       # Render the prompt in Zsh itself. Only Git status uses an external
@@ -418,7 +411,6 @@ in
     lt = "eza --tree --icons=auto --git";
     less = "bat";
     cat = "bat";
-    oc = "opencode";
     # Executables cannot mutate their parent shell, so evaluate only the
     # assignment/unset command emitted by these Home Manager-managed helpers.
     "bw-unlock" = ''eval "$("$HOME/.local/bin/bw-unlock" --shell)"'';
@@ -432,159 +424,7 @@ in
     enable = true;
     enableBashIntegration = true;
     enableZshIntegration = false;
-    settings =
-      if starshipTheme == "ayu-mirage" then
-        {
-          continuation_prompt = "[ ▶▶](fg:lightgreen) ";
-          format = lib.concatStrings [
-            "[╭──](fg:current_line)"
-            "$os"
-            "$directory"
-            "$git_branch"
-            "$fill"
-            "$nodejs"
-            "$rust"
-            "$python"
-            "$c$cmd_duration"
-            "$shell"
-            "$time"
-            "$username"
-            "$line_break"
-            "[╰─](fg:current_line)"
-            "$character"
-          ];
-          palette = "ayu_mirage";
-          palettes.ayu_mirage = {
-            background = "#1F2430";
-            black = "#191E2A";
-            blue = "#73D0FF";
-            box = "#44475A";
-            brightblue = "#59C2FF";
-            current_line = "#44475A";
-            cyan = "#95E6CB";
-            foreground = "#CBCCC6";
-            green = "#AAD94C";
-            lavender = "#D4BFFF";
-            lightgreen = "#D5FF80";
-            maroon = "#F28779";
-            orange = "#FFAD66";
-            orangeyellow = "#FFD173";
-            peach = "#FFCC66";
-            pink = "#F29E74";
-            primary = "#1F2430";
-            purple = "#D4BFFF";
-            red = "#F28779";
-            sapphire = "#5CCFE6";
-            sky = "#73D0FF";
-            teal = "#95E6CB";
-            white = "#FFFFFF";
-            yellow = "#FFD173";
-          };
-          os = {
-            disabled = false;
-            format = "(fg:current_line)[${plRight}](fg:foreground)[$symbol](fg:primary bg:foreground)[${plLeft}](fg:foreground)";
-            symbols = {
-              Alpine = osAlpine;
-              Amazon = osAmazon;
-              Android = osAndroid;
-              Arch = osArch;
-              CentOS = osCentOS;
-              Debian = osDebian;
-              EndeavourOS = osEndeavourOS;
-              Fedora = osFedora;
-              FreeBSD = osFreeBSD;
-              Garuda = osGaruda;
-              Gentoo = osGentoo;
-              Linux = osLinux;
-              Macos = osMacos;
-              Manjaro = osManjaro;
-              Mariner = osMariner;
-              Mint = osMint;
-              NetBSD = osNetBSD;
-              NixOS = osNixOS;
-              OpenBSD = osOpenBSD;
-              OpenCloudOS = osOpenCloudOS;
-              openEuler = osopenEuler;
-              openSUSE = osopenSUSE;
-              OracleLinux = "⊂⊃";
-              Pop = osPop;
-              Raspbian = osRaspbian;
-              Redhat = osRedhat;
-              RedHatEnterprise = osRedHatEnterprise;
-              Solus = osSolus;
-              SUSE = osSUSE;
-              Ubuntu = osUbuntu;
-              Unknown = osUnknown;
-              Windows = osWindows;
-            };
-          };
-          directory = {
-            format = makePill iconDirectory "$read_only$truncation_symbol$path" "blue";
-            home_symbol = "${iconHome} ";
-            read_only = "${iconReadOnly} ";
-            read_only_style = "";
-            truncation_length = 2;
-            truncation_symbol = "${iconTruncation} ";
-          };
-          character = {
-            format = "[$symbol](fg:current_line) ";
-            error_symbol = "[!](fg:bold red)";
-            success_symbol = "[\\$](fg:lightgreen)";
-          };
-          fill = {
-            style = "fg:current_line";
-            symbol = "─";
-          };
-          sudo = {
-            # The sudo module shells out to `sudo -n true` on every prompt render.
-            # That adds avoidable latency and has caused prompt-time interference
-            # during interactive git workflows, so keep it disabled.
-            disabled = true;
-            format = "[$symbol](yellow)";
-            symbol = iconSudo;
-          };
-          c = {
-            format = makePill "$symbol" "$version" "blue";
-            symbol = "${iconC} C";
-          };
-          cmd_duration = {
-            format = makePill iconCmdDuration "$duration " "orange";
-            min_time = 500;
-          };
-          git_branch = {
-            format = makePill "$symbol" "$branch" "green";
-            symbol = "${iconGitBranch} ";
-          };
-          nodejs = {
-            format = makePill "$symbol" "$version" "green";
-            symbol = "${iconNodejs} Node.js";
-          };
-          python = {
-            format = makePill "$symbol" "$version" "brightblue";
-            symbol = iconPython;
-          };
-          rust = {
-            format = makePill "$symbol" "$version" "red";
-            symbol = iconRust;
-          };
-          shell = {
-            disabled = false;
-            fish_indicator = "fish";
-            format = makePill iconShell "$indicator" "blue";
-            powershell_indicator = "powershell";
-            unknown_indicator = "shell";
-          };
-          time = {
-            disabled = false;
-            format = makePill iconTime "$time" "purple";
-            time_format = "%H:%M";
-          };
-          username = {
-            format = makePill iconUsername "$user" "sapphire";
-            show_always = true;
-          };
-        }
-      else
-        builtins.fromTOML (builtins.readFile (builtins.getAttr starshipTheme starshipThemeFiles));
+    # Starship drives Bash only; Zsh uses the native prompt above.
+    settings = builtins.fromTOML (builtins.readFile ../../dotfiles/starship/maison.toml);
   };
 }

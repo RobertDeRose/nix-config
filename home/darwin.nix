@@ -70,9 +70,5 @@
       source = ../files/workflows + "/Open in cmux.workflow";
       recursive = true;
     };
-    "Library/Services/Open in iTerm2.workflow" = {
-      source = ../files/workflows + "/Open in iTerm2.workflow";
-      recursive = true;
-    };
   };
 }

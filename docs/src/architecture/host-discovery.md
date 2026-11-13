@@ -11,16 +11,11 @@ entries automatically.
 
 ```
 hosts/
-├── aarch64-darwin/
-│   └── USMBDEROSER/        ← auto-discovered as darwinConfigurations.USMBDEROSER
-│       ├── default.nix     ← system config (required)
-│       ├── user.nix        ← username + email (required)
-│       └── home.nix        ← per-host HM overrides (optional)
-└── x86_64-darwin/
-    └── <hostname>/
-        ├── default.nix
-        ├── user.nix
-        └── home.nix
+└── aarch64-darwin/
+    └── USMBDEROSER/        ← auto-discovered as darwinConfigurations.USMBDEROSER
+        ├── default.nix     ← system config (required)
+        ├── user.nix        ← username + email (required)
+        └── home.nix        ← per-host HM overrides (optional)
 ```
 
 The `default.nix` must import `user.nix` and wire up `_module.args` and

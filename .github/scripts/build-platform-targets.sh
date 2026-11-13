@@ -136,7 +136,7 @@ EOF
 }
 
 case "$SYSTEM" in
-  aarch64-darwin | x86_64-darwin | aarch64-linux | x86_64-linux)
+  aarch64-darwin | aarch64-linux | x86_64-linux)
     ;;
 
   *)
@@ -146,7 +146,7 @@ case "$SYSTEM" in
 esac
 
 case "$SYSTEM" in
-  aarch64-darwin | x86_64-darwin)
+  aarch64-darwin)
     read_hosts "hosts/$SYSTEM"
 
     if [ "${#hosts[@]}" -eq 0 ]; then

@@ -8,15 +8,14 @@ previous one, and Nix's module system merges lists and attribute sets automatica
 ```
 modules/darwin/system.nix      macOS defaults (Dock, Finder, keyboard, trackpad)
 modules/darwin/apps.nix        Homebrew casks/brews/masApps + nix system packages
-modules/darwin/iterm2.nix      Declarative iTerm2 plist management
 modules/common/cache.nix       Shared binary cache URLs and public keys
 modules/darwin/config.nix      nix-darwin Nix daemon, GC, experimental features
 modules/darwin/fonts.nix       Nerd Fonts, Font Awesome, Material Design Icons
 ```
 
 These make up the Darwin system layer for every macOS host. `flake.nix` imports
-`modules/darwin/config.nix`, `modules/darwin/system.nix`, `modules/darwin/apps.nix`,
-and `modules/darwin/iterm2.nix`; `config.nix` and `system.nix` then pull in the
+`modules/darwin/config.nix`, `modules/darwin/system.nix`, and
+`modules/darwin/apps.nix`; `config.nix` and `system.nix` then pull in the
 shared cache data and font packages. A host's `default.nix` can set any of the same
 options to add packages, change defaults, or enable features like the linux-builder.
 
@@ -34,12 +33,10 @@ modules/linux/system.nix       system-manager: SSH hardening, users, packages,
 home/common/default.nix        Aggregator -- imports all shared modules below
 home/common/core.nix           Cross-platform CLI tools and repo helper scripts
 home/common/shell.nix          zsh + starship prompt + aliases
-home/common/git.nix            git, gh, lazygit, SSH signing, difftastic
-home/common/mise.nix           mise configuration and GitHub credentials
+home/common/git.nix            git, gh, SSH signing, difftastic
+home/common/mise.nix           mise configuration, GitHub credentials, mise-managed CLI tools
 home/common/helix.nix          Helix editor + LSPs
-home/common/zellij.nix         Zellij multiplexer
 home/common/htop.nix           htop layout
-home/common/opencode.nix       OpenCode AI agent
 home/common/herdr.nix          Herdr terminal multiplexer
 home/common/ghostty.nix        Ghostty terminal (macOS only, imported by home/darwin.nix)
 home/common/zed.nix            Zed editor config (macOS only, imported by home/darwin.nix)
@@ -64,15 +61,15 @@ and it will be added to the global list -- no need to modify `apps.nix`.
 
 Some tools are provided by external flake inputs (e.g. `llmagents`) rather than
 nixpkgs. When a tool has a home-manager module (`programs.<name>`), create a
-module like `home/common/opencode.nix`:
+module that passes the input's package to it:
 
 ```nix
 { pkgs, inputs, ... }:
 let
-  pkg = inputs.llmagents.packages.${pkgs.stdenv.hostPlatform.system}.opencode;
+  pkg = inputs.llmagents.packages.${pkgs.stdenv.hostPlatform.system}.<name>;
 in
 {
-  programs.opencode = {
+  programs.<name> = {
     enable = true;
     package = pkg;
   };

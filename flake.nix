@@ -174,7 +174,6 @@
       systems = [
         "aarch64-darwin"
         "aarch64-linux"
-        "x86_64-darwin"
         "x86_64-linux"
       ];
 
@@ -187,7 +186,6 @@
               system-manager = inputs.system-manager.packages.${system}.default;
             }
             // lib.optionalAttrs (builtins.hasAttr system inputs.llmagents.packages) {
-              opencode = inputs.llmagents.packages.${system}.opencode;
               herdr = inputs.llmagents.packages.${system}.herdr;
             }
             // lib.optionalAttrs (builtins.hasAttr system inputs.worktrunk.packages) {
@@ -213,7 +211,6 @@
                 ./modules/darwin/config.nix
                 ./modules/darwin/system.nix
                 ./modules/darwin/apps.nix
-                ./modules/darwin/iterm2.nix
 
                 inputs."nix-hex-box".darwinModules.default
                 inputs.nix-homebrew.darwinModules.nix-homebrew
